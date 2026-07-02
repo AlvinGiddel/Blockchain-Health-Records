@@ -7,7 +7,7 @@
 
 ## 1. System Architecture
 
-The system is structured as a responsive, multi-portal **React Web Application** running on a lightweight **Vite** frontend platform, communicating via HTTPS with a **Node.js/Express** backend API layer. Data storage is split between a secure **MongoDB** database for transaction records and an in-memory **Blockchain Ledger Engine** that implements consensus rules, cryptographic linkage, and proof-of-work mining.
+The system is structured as a responsive, multi-portal **React Web Application** running on a lightweight **Vite** frontend platform, communicating via HTTPS with a **Node.js/Express** backend API layer. Data storage is split between a secure **PostgreSQL** database (hosted on Supabase) for transaction records and an in-memory **Blockchain Ledger Engine** that implements consensus rules, cryptographic linkage, and proof-of-work mining.
 
 ### Architecture Topology Diagram
 ```mermaid
@@ -24,12 +24,12 @@ graph TD
     end
     
     subgraph Data & Storage Layer
-        MongoDb[("MongoDB Database<br/>(AES-256 Encrypted-at-Rest)")]
+        PostgreSql[("PostgreSQL Database<br/>(AES-256 Encrypted-at-Rest)")]
         IPFSSim["Mock IPFS Gateway<br/>(Off-Chain Scan Attachments)"]
     end
 
     ReactWeb -->|HTTPS API Requests| ExpressAPI
-    ExpressAPI -->|Read/Write Encrypted Records| MongoDb
+    ExpressAPI -->|Read/Write Encrypted Records| PostgreSql
     ExpressAPI -->|Sync Block Data| BlockchainEngine
     ReactWeb -.->|References CIDs| IPFSSim
 ```
@@ -38,7 +38,7 @@ graph TD
 1. **Frontend Web UI**: Built as a responsive interface using pure HTML, JavaScript, and React. It dynamically adapts to mobile screens, tablets, and desktops using flexible media queries.
 2. **Client-Side Cryptographic Handlers**: Performs browser-based RSA key generation. Digital signatures of medical records are simulated and verified using doctor public keys.
 3. **Application Server**: Coordinates Express.js routing, handles authentication token issuance, routes queries to the database, and exposes blockchain consensus modules.
-4. **Database (AES-256)**: Performs automatic encryption of sensitive diagnoses and treatment plans at rest using AES-256-CBC field level hooks.
+4. **Database (AES-256)**: Performs encryption of sensitive diagnoses and treatment plans before storing them in the PostgreSQL database.
 5. **Ledger Engine (Mempool & Proof of Work)**: Aggregates signed medical transactions in a mempool, mines blocks using SHA-256 hashes with custom difficulty constraints, and validates chain hashes recursively.
 
 ---
@@ -51,12 +51,12 @@ graph TD
 * **FR3: Patient-Controlled Access Control (Consent Registry)**:
   * Patients must be able to view registered doctors and grant or revoke access permissions.
   * Doctors must only be allowed to view dossiers or write clinical logs for patients who have granted them active consent.
-* **FR4: Field-Level Data Encryption**: Sensitive clinical data (diagnoses and treatment plans) must be encrypted at rest in MongoDB.
+* **FR4: Field-Level Data Encryption**: Sensitive clinical data (diagnoses and treatment plans) must be encrypted at rest in the database.
 * **FR5: Digital Record Signing**: Doctor profiles must cryptographically sign records using their private keys upon submission.
 * **FR6: Proof-of-Work Blockchain Mining**: Mempool records must be mined into a block using proof-of-work validations.
 * **FR7: Integrity Auditing & Self-Healing**:
   * Administrators must have access to a Security Lab to view validation logs and simulate raw database tampering.
-  * The system must offer a self-healing mechanism that automatically recovers MongoDB records using valid blockchain ledger logs.
+  * The system must offer a self-healing mechanism that automatically recovers PostgreSQL database records using valid blockchain ledger logs.
 
 ### 2.2 Non-Functional Requirements
 * **NFR1: Responsiveness**: The web application must render adaptively on mobile phones, tablets, and desktops without layout breaks.
@@ -68,132 +68,108 @@ graph TD
 
 ## 3. Database Design
 
-The schema structure uses MongoDB as the primary backend database. It consists of three main collections: `User`, `Record`, and `Block`.
+The database schema is structured for PostgreSQL. It consists of five main tables: `users`, `appointments`, `records`, `blocks`, and `audit_logs`.
 
 ### Entity Relationship Model (ERD)
 ```mermaid
 erDiagram
-    USER {
-        ObjectId id PK
+    users {
+        UUID id PK
         string name
         string email
-        string password_hash
+        string password
         string role "patient | doctor | admin"
-        string publicKey
-        string privateKey
-        object patientProfile "age, gender, bloodType, allergies, authorizedDoctors"
-        object doctorProfile "specialization, licenseNumber, hospital"
+        string public_key
+        string private_key
+        jsonb patient_profile
+        jsonb doctor_profile
+        timestamp created_at
     }
-    RECORD {
-        ObjectId id PK
-        ObjectId patientId FK
-        ObjectId doctorId FK
-        string doctorName
+    records {
+        UUID id PK
+        UUID patient_id FK
+        UUID doctor_id FK
+        string doctor_name
         string diagnosis "AES-256 Encrypted"
         string treatment "AES-256 Encrypted"
-        string[] prescriptions
-        string ipfsHash
+        jsonb prescriptions
+        string ipfs_hash
         string signature
-        string doctorPublicKey
-        boolean isMined
-        int blockIndex
+        string doctor_public_key
+        boolean is_mined
+        int block_index
         string timestamp
     }
-    BLOCK {
-        int index PK
+    blocks {
+        UUID id PK
+        int index
         string timestamp
-        array records "Array of RecordSubSchema"
-        string previousHash
-        int nonce
+        jsonb records
+        string previous_hash
+        bigint nonce
         string hash
     }
     
-    USER ||--o{ RECORD : "owns / writes"
-    BLOCK ||--o{ RECORD : "packages"
+    users ||--o{ records : "owns / writes"
+    blocks ||--o{ records : "packages"
 ```
 
-### MongoDB Collection Specifications
+### PostgreSQL Table Specifications
 
-#### Collection 1: `users`
+#### Table 1: `users`
 * Stores user credentials, profiles, cryptographic identity keys, and access consent states.
 * **Schema Definition**:
-```json
-{
-  "_id": "ObjectId",
-  "name": "String (Required)",
-  "email": "String (Required, Unique, Lowercase)",
-  "password": "String (Required, Bcrypt Hash)",
-  "role": "String (Enum: ['patient', 'doctor', 'admin'])",
-  "publicKey": "String (PEM format, RSA-2048)",
-  "privateKey": "String (PEM format, RSA-2048)",
-  "patientProfile": {
-    "age": "Number",
-    "gender": "String",
-    "bloodType": "String",
-    "allergies": ["String"],
-    "emergencyContact": "String",
-    "authorizedDoctors": ["ObjectId (Ref: User)"] // Consent registry list
-  },
-  "doctorProfile": {
-    "specialization": "String",
-    "licenseNumber": "String",
-    "hospital": "String"
-  },
-  "createdAt": "Date"
-}
+```sql
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL CHECK (role IN ('patient', 'doctor', 'admin')),
+    public_key TEXT NOT NULL,
+    private_key TEXT NOT NULL,
+    patient_profile JSONB DEFAULT NULL,
+    doctor_profile JSONB DEFAULT NULL,
+    is_approved BOOLEAN DEFAULT true,
+    is_rejected BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-#### Collection 2: `records`
-* Stores clinical records. Sensitive text is encrypted at rest using AES-256-CBC and decrypted automatically upon database fetch.
+#### Table 2: `records`
+* Stores clinical records. Sensitive text (diagnosis, treatment) is encrypted at rest using AES-256-CBC.
 * **Schema Definition**:
-```json
-{
-  "_id": "ObjectId",
-  "patientId": "ObjectId (Ref: User, Required)",
-  "doctorId": "ObjectId (Ref: User, Required)",
-  "doctorName": "String (Required)",
-  "diagnosis": "String (AES-256 Encrypted, Required)",
-  "treatment": "String (AES-256 Encrypted, Required)",
-  "prescriptions": ["String"],
-  "ipfsHash": "String (Default: '')",
-  "signature": "String (Hex, SHA256-RSA, Required)",
-  "doctorPublicKey": "String (PEM format, Required)",
-  "isMined": "Boolean (Default: false)",
-  "blockIndex": "Number (Default: -1)",
-  "timestamp": "String (Required)"
-}
+```sql
+CREATE TABLE records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    doctor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    doctor_name VARCHAR(255) NOT NULL,
+    diagnosis TEXT NOT NULL,
+    treatment TEXT NOT NULL,
+    prescriptions JSONB DEFAULT '[]'::jsonb,
+    ipfs_hash VARCHAR(255) DEFAULT '',
+    signature TEXT NOT NULL,
+    doctor_public_key TEXT NOT NULL,
+    is_mined BOOLEAN DEFAULT false,
+    block_index INTEGER DEFAULT -1,
+    timestamp VARCHAR(100) NOT NULL
+);
 ```
 
-#### Collection 3: `blocks`
+#### Table 3: `blocks`
 * Stores mined ledger blocks, establishing immutable cryptographic links between blocks.
 * **Schema Definition**:
-```json
-{
-  "_id": "ObjectId",
-  "index": "Number (Required, Unique)",
-  "timestamp": "String (Required)",
-  "records": [
-    {
-      "recordId": "String",
-      "patientId": "String",
-      "patientName": "String",
-      "doctorId": "String",
-      "doctorName": "String",
-      "diagnosis": "String (Decrypted record text)",
-      "treatment": "String",
-      "prescriptions": ["String"],
-      "ipfsHash": "String",
-      "signature": "String",
-      "doctorPublicKey": "String",
-      "timestamp": "String",
-      "message": "String (Used in Genesis block)",
-      "doctor": "String (Used in Genesis block)"
-    }
-  ],
-  "previousHash": "String (Required)",
-  "nonce": "Number (Required)",
-  "hash": "String (SHA-256, Required, Unique)"
-}
+```sql
+CREATE TABLE blocks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    index INTEGER UNIQUE NOT NULL,
+    timestamp VARCHAR(100) NOT NULL,
+    records JSONB DEFAULT '[]'::jsonb,
+    previous_hash VARCHAR(255) NOT NULL,
+    nonce BIGINT NOT NULL,
+    hash VARCHAR(255) UNIQUE NOT NULL
+);
 ```
 
 ---
@@ -237,7 +213,7 @@ graph TD
 ### 5.1 Deployment Stack
 * **Vite React Frontend**: Runs locally on `http://localhost:3000`. Exposes proxy settings to route API data to port 5000.
 * **Express.js API Backend**: Runs locally on `http://localhost:5000`.
-* **MongoDB Database**: Runs locally on `mongodb://127.0.0.1:27017/blockchain_health`.
+* **PostgreSQL Database**: Hosted on Supabase (accessed securely via SSL connections).
 
 ### 5.2 Verification Scenarios (Web Tests)
 1. **Verification Scenario A: Enforcing Patient Consent Controls**
@@ -251,3 +227,4 @@ graph TD
    * Run the **Security Lab** simulator: pick a record, type modified diagnosis text, and select **Force Database Edit**.
    * Verify that the network status banner immediately alerts **COMPROMISED (TAMPER DETECTED)** and turns the tampered ledger block **Red**.
    * Click **Recover from Ledger** and check if the database values are automatically healed and ledger state returned to **SECURE**.
+

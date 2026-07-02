@@ -307,7 +307,7 @@ export default function Login({ onLoginSuccess }) {
             </div>
           )}
 
-          <div className="grid-2" style={{ gridTemplateColumns: isRegister ? '1fr 1fr' : '1fr', gap: '16px' }}>
+          <div className={isRegister ? 'grid-login-fields register' : 'grid-login-fields'}>
             <div>
               {isRegister && (
                 <div className="form-group">
@@ -412,7 +412,7 @@ export default function Login({ onLoginSuccess }) {
             </div>
 
             {isRegister && (
-              <div style={{ borderLeft: '1px solid var(--glass-border)', paddingLeft: '20px' }}>
+            <div className="login-register-details">
                 {role === 'patient' && (
                   <>
                     <h4 style={{ fontSize: '0.9rem', color: 'var(--color-primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>

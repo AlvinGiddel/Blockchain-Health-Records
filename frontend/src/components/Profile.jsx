@@ -114,7 +114,7 @@ export default function Profile({ user, onUpdateUser }) {
         </div>
 
         {/* Details Card */}
-        <div className="glass-card" style={{ gridColumn: 'span 2' }}>
+        <div className="glass-card span-2-desktop">
           {!isEditing ? (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -373,20 +373,7 @@ export default function Profile({ user, onUpdateUser }) {
         </div>
       </div>
 
-      {/* Cryptographic identity card */}
-      <div className="glass-card" style={{ marginTop: '24px' }}>
-        <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
-          <ShieldCheck size={20} /> Cryptographic Security Identity
-        </h3>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-          Your digital health folder is secured with end-to-end asymmetric cryptography. The public address below is your signature anchor on the distributed ledger.
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '12px 16px', fontFamily: 'monospace', fontSize: '0.8rem', wordBreak: 'break-all', color: 'var(--color-accent)' }}>
-            {user.publicKey}
-          </div>
-        </div>
-      </div>
+
     </div>
   );
 }

@@ -366,7 +366,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
           {/* Health Summary & Cryptographic Identity */}
           <div className="grid-3" style={{ gap: '24px', marginBottom: '24px' }}>
             {/* Health Summary Card */}
-            <div className="glass-card" style={{ gridColumn: 'span 2' }}>
+            <div className="glass-card span-2-desktop">
               <h3 style={{ fontSize: '1.2rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
                 <Activity size={20} /> Personal Health Summary
               </h3>
@@ -434,14 +434,14 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
           </div>
 
           {/* Grid: Actions + Booking & Activity Timeline */}
-          <div className="grid-2" style={{ gap: '24px', gridTemplateColumns: '1.1fr 0.9fr' }}>
+          <div className="grid-dashboard-main">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {/* Quick Actions Panel */}
               <div className="glass-card">
                 <h3 style={{ fontSize: '1.25rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-accent)' }}>
                   <Clipboard size={20} /> Quick Actions
                 </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div className="grid-quick-actions">
                   <button 
                     className="btn btn-secondary" 
                     style={{ fontSize: '0.85rem', padding: '14px', display: 'flex', gap: '8px', justifyContent: 'center', background: 'rgba(99, 102, 241, 0.05)' }}
@@ -778,7 +778,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                 </select>
               </div>
 
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <div className="form-group span-2-desktop">
                 <label>Working Days</label>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
                   {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {

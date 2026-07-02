@@ -248,7 +248,7 @@ export default function AdminPanel({ user }) {
 
       setTamperSuccess(data.message);
       setTamperDiagnosis('');
-      setLogs(prev => [...prev, `[ALERT] SECURITY BREACH: MongoDB modified. Record ID: ${tamperRecordId}`]);
+      setLogs(prev => [...prev, `[ALERT] SECURITY BREACH: Database modified. Record ID: ${tamperRecordId}`]);
       fetchAdminData();
     } catch (err) {
       setTamperError(err.message);
@@ -501,7 +501,7 @@ export default function AdminPanel({ user }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+      <div className="page-header-flex">
         <div>
           <h1 style={{ fontSize: '2.00rem', fontWeight: 800 }}>Admin Command Center</h1>
           <p style={{ color: 'var(--text-secondary)' }}>System metrics, P2P network diagnostics, and ledger security monitoring</p>
@@ -535,12 +535,12 @@ export default function AdminPanel({ user }) {
             </div>
           </>
         ) : (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div className="banner-flex" style={{ width: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <ShieldAlert size={24} />
               <div>
                 <strong style={{ display: 'block', fontSize: '1.05rem' }}>EHR Network Status: COMPROMISED (TAMPER DETECTED)</strong>
-                <span style={{ fontSize: '0.85rem', opacity: 0.9 }}>Direct database modification detected. Mismatch between MongoDB documents and block cryptographic hashes.</span>
+                <span style={{ fontSize: '0.85rem', opacity: 0.9 }}>Direct database modification detected. Mismatch between database records and block cryptographic hashes.</span>
               </div>
             </div>
             <button className="btn btn-secondary" onClick={handleRestoreDatabase} disabled={recovering} style={{ background: '#fff', color: '#000', border: 'none', padding: '8px 16px', fontSize: '0.85rem', fontWeight: 600 }}>
@@ -719,7 +719,7 @@ export default function AdminPanel({ user }) {
         </div>
       </div>
 
-      <div className="grid-3" style={{ gridTemplateColumns: '1.8fr 1.2fr', gap: '32px' }}>
+      <div className="grid-admin-main">
         
         {/* Left Column: Security Lab & Doctor registry */}
         <div>
@@ -730,7 +730,7 @@ export default function AdminPanel({ user }) {
             </h3>
             
             <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-              Simulate an unauthorized database modification (SQL/NoSQL injection bypass). This direct MongoDB rewrite changes the medical records without a corresponding signature renewal, causing verification algorithms to instantly fail.
+              Simulate an unauthorized database modification (SQL injection bypass). This direct database rewrite changes the medical records without a corresponding signature renewal, causing verification algorithms to instantly fail.
             </p>
 
             {tamperError && (
@@ -780,7 +780,7 @@ export default function AdminPanel({ user }) {
                   />
                 </div>
 
-                <button type="submit" className="btn btn-danger" style={{ gridColumn: 'span 2', gap: '8px' }}>
+                <button type="submit" className="btn btn-danger span-2-desktop" style={{ gap: '8px' }}>
                   <Flame size={16} /> Execute Database Intrusion
                 </button>
               </form>

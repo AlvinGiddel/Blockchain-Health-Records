@@ -158,7 +158,7 @@ export default function BlockchainExplorer({ user }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+      <div className="page-header-flex">
         <div>
           <h1 style={{ fontSize: '2.00rem', fontWeight: 800 }}>Blockchain Ledger Explorer</h1>
           <p style={{ color: 'var(--text-secondary)' }}>
@@ -195,7 +195,7 @@ export default function BlockchainExplorer({ user }) {
             </div>
           </>
         ) : (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+          <div className="banner-flex" style={{ width: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <ShieldAlert size={24} />
               <div>
@@ -210,7 +210,7 @@ export default function BlockchainExplorer({ user }) {
         )}
       </div>
 
-      <div className="grid-3" style={{ gridTemplateColumns: '2fr 1fr', gap: '32px' }}>
+      <div className="grid-explorer-main">
         
         {/* Visual Blockchain */}
         <div>
@@ -381,7 +381,7 @@ export default function BlockchainExplorer({ user }) {
               </h3>
               
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                Simulate a database intrusion. Directly edit a medical record stored in MongoDB to demonstrate how blockchain instantly flags database tampering.
+                Simulate a database intrusion. Directly edit a medical record stored in the database to demonstrate how blockchain instantly flags database tampering.
               </p>
 
               {tamperError && (

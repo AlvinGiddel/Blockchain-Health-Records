@@ -158,7 +158,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
   return (
     <div>
       {/* Header and selector if doctor */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
+      <div className="page-header-flex">
         <div>
           <h1 style={{ fontSize: '2.00rem', fontWeight: 800 }}>Medical Folders</h1>
           <p style={{ color: 'var(--text-secondary)' }}>
@@ -244,7 +244,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
         })()}
       </div>
 
-      <div className={user.role === 'doctor' && activePatient ? 'grid-3' : 'grid-2'} style={{ gridTemplateColumns: user.role === 'doctor' && activePatient ? '1.2fr 1.8fr' : '1fr' }}>
+      <div className={user.role === 'doctor' && activePatient ? 'grid-medical-records' : 'grid-medical-records single-col'}>
         
         {/* Doctor writing panel */}
         {user.role === 'doctor' && activePatient && (
@@ -334,7 +334,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
         )}
 
         {/* Record list panel */}
-        <div className="glass-card" style={{ gridColumn: user.role === 'doctor' && activePatient ? '2 / 4' : 'auto' }}>
+        <div className={`glass-card medical-history-card ${user.role === 'doctor' && activePatient ? 'doctor-view' : ''}`}>
           <h3 style={{ fontSize: '1.25rem', marginBottom: '20px' }}>
             {activePatient ? `Medical Dossier for ${activePatient.name}` : 'My Electronic Medical Folder'}
           </h3>

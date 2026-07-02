@@ -9,7 +9,7 @@ A research implementation for the Faculty of Computing and Information Technolog
 
 ## Project Overview
 
-This system is a secure, decentralized, and patient-centered health records application designed for low-resource environments. It combines a **React frontend** and an **Express/MongoDB backend** to manage sensitive medical documents securely using cryptographic keys, digital signatures, and a distributed ledger design.
+This system is a secure, decentralized, and patient-centered health records application designed for low-resource environments. It combines a **React frontend** and an **Express/PostgreSQL backend** to manage sensitive medical documents securely using cryptographic keys, digital signatures, and a distributed ledger design.
 
 ### Key Features
 
@@ -17,7 +17,7 @@ This system is a secure, decentralized, and patient-centered health records appl
    - **Patients**: Access decrypted diagnostic reports, view allergy histories, verify cryptographic digital signatures, and review block indexes.
    - **Doctors**: Register clinical profiles, browse the patient registry, create diagnoses/prescriptions, and digitally sign medical records client-side.
 2. **State-of-the-Art Security & Regulations**:
-   - **AES-256 Field Encryption**: Patient diagnoses and treatments are encrypted at rest in MongoDB. Even with direct database access, a hacker cannot read the records without the decryption key.
+   - **AES-256 Field Encryption**: Patient diagnoses and treatments are encrypted at rest in the database. Even with direct database access, a hacker cannot read the records without the decryption key.
    - **RSA-2048 Digital Signatures**: Every medical entry must be signed by the doctor's private key. The record is rejected by the ledger if the signature doesn't match the public key.
 3. **Decentralized Ledger Engine**:
    - **Proof of Work (PoW)**: Doctor-signed records sit in the Mempool until mined into a cryptographic block using a proof-of-work algorithm (mining).
@@ -25,7 +25,7 @@ This system is a secure, decentralized, and patient-centered health records appl
 4. **InterPlanetary File System (IPFS) Simulator**:
    - Large attachment scans are indexed using mock IPFS CIDs (`Qm...`) to represent off-chain decentralized file storage, optimizing block weight.
 5. **Interactive Security Attack Laboratory**:
-   - Allows students or examiners to directly edit/tamper with diagnoses in MongoDB (bypassing ledger signatures) and witness the ledger explorer immediately flagging the compromised block and breaking the cryptographic hash chain (turning it Red).
+   - Allows students or examiners to directly edit/tamper with diagnoses in the database (bypassing ledger signatures) and witness the ledger explorer immediately flagging the compromised block and breaking the cryptographic hash chain (turning it Red).
 
 ---
 
@@ -42,19 +42,19 @@ This system is a secure, decentralized, and patient-centered health records appl
                        |         Application Layer         |
                        |      (Express.js API Server)      |
                        +--------+-----------------+--------+
-                                |                 |
-                                v                 v
-               +----------------+---+   +---------+--------+
-               |  Database Storage  |   |  Ledger Engine   |
-               | (MongoDB w/ AES)   |   | (Crypto Blocks)  |
-               +--------------------+   +------------------+
+                                 |                 |
+                                 v                 v
+                +----------------+---+   +---------+--------+
+                |  Database Storage  |   |  Ledger Engine   |
+                | (PostgreSQL w/ AES)|   | (Crypto Blocks)  |
+                +--------------------+   +------------------+
 ```
 
 ---
 
 ## Portability & Setup
 
-This application has been engineered to run **portably** on standard Windows machines. You do **not** need to install Node.js, npm, or MongoDB globally on your computer.
+This application has been engineered to run **portably** on standard Windows machines. You do **not** need to install Node.js or npm globally on your computer. The database is hosted securely on PostgreSQL (Supabase).
 
 ### Step 1: Initialize the Environment (First-time run)
 Open **PowerShell** in the project directory and execute:
@@ -63,8 +63,7 @@ powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 This script will:
 - Download and extract portable Node.js (v20) to `.tools\node`.
-- Download and extract portable MongoDB Community Server to `.tools\mongodb`.
-- Automatically initialize the local MongoDB database directories.
+- Install all backend and frontend dependencies automatically.
 
 ### Step 2: Start the System
 In the same folder, run:
@@ -72,7 +71,6 @@ In the same folder, run:
 powershell -ExecutionPolicy Bypass -File .\run.ps1
 ```
 This orchestrator will:
-- Launch MongoDB in a minimized background console.
 - Launch the Node/Express backend in a separate terminal window (so you can view API logs).
 - Run the React Web App and automatically open it in your browser (`http://localhost:3000`).
 
