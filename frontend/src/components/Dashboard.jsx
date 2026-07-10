@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { User, Activity, AlertTriangle, ShieldCheck, Phone, Clipboard, CheckCircle, Clock, Calendar, Check, X, BookOpen, FileText, Copy, Lock, Database, Globe } from 'lucide-react';
-
 export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavigate }) {
   const [patients, setPatients] = useState([]);
   const [blocksCount, setBlocksCount] = useState(0);
@@ -16,7 +15,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
   const [viewingDoctorProfileModal, setViewingDoctorProfileModal] = useState(false);
   const [expandedBlockIndex, setExpandedBlockIndex] = useState(null);
   const [copiedKey, setCopiedKey] = useState(false);
-  
+
   // Appointment Form States (Patient)
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
   const [appointmentDate, setAppointmentDate] = useState('');
@@ -127,7 +126,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to update availability.');
-      
+
       setAvailSuccess('Availability settings updated successfully!');
       if (onUpdateUser) {
         onUpdateUser(data.doctor);
@@ -274,7 +273,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
   const handleUpdateApptStatus = async (apptId, status) => {
     // Optimistically update status in local state so the UI changes instantly
-    setAppointments(prev => prev.map(appt => 
+    setAppointments(prev => prev.map(appt =>
       (appt._id === apptId || appt.id === apptId) ? { ...appt, status } : appt
     ));
 
@@ -340,7 +339,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
         const blocks = await resBlocks.json();
         setAllBlocks(blocks);
         setBlocksCount(blocks.length);
-        
+
         let count = 0;
         blocks.forEach(b => {
           count += b.records ? b.records.length : 0;
@@ -370,7 +369,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
               <h3 style={{ fontSize: '1.2rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
                 <Activity size={20} /> Personal Health Summary
               </h3>
-              
+
               <div className="grid-2" style={{ gap: '20px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
@@ -442,29 +441,29 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                   <Clipboard size={20} /> Quick Actions
                 </h3>
                 <div className="grid-quick-actions">
-                  <button 
-                    className="btn btn-secondary" 
+                  <button
+                    className="btn btn-secondary"
                     style={{ fontSize: '0.85rem', padding: '14px', display: 'flex', gap: '8px', justifyContent: 'center', background: 'rgba(99, 102, 241, 0.05)' }}
                     onClick={() => onNavigate && onNavigate('records')}
                   >
                     <FileText size={16} color="var(--color-primary)" /> View My Health Folder
                   </button>
-                  <button 
-                    className="btn btn-secondary" 
+                  <button
+                    className="btn btn-secondary"
                     style={{ fontSize: '0.85rem', padding: '14px', display: 'flex', gap: '8px', justifyContent: 'center', background: 'rgba(6, 182, 212, 0.05)' }}
                     onClick={() => onNavigate && onNavigate('blockchain')}
                   >
                     <Globe size={16} color="var(--color-accent)" /> Ledger Explorer
                   </button>
-                  <button 
-                    className="btn btn-secondary" 
+                  <button
+                    className="btn btn-secondary"
                     style={{ fontSize: '0.85rem', padding: '14px', display: 'flex', gap: '8px', justifyContent: 'center', background: 'rgba(16, 185, 129, 0.05)' }}
                     onClick={() => onNavigate && onNavigate('profile')}
                   >
                     <User size={16} color="var(--color-success)" /> View Profile Details
                   </button>
-                  <button 
-                    className="btn btn-secondary" 
+                  <button
+                    className="btn btn-secondary"
                     style={{ fontSize: '0.85rem', padding: '14px', display: 'flex', gap: '8px', justifyContent: 'center', background: 'rgba(245, 158, 11, 0.05)' }}
                     onClick={() => onNavigate && onNavigate('profile')}
                   >
@@ -489,13 +488,13 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                   </div>
                 )}
                 {apptValidationWarning && (
-                  <div style={{ 
-                    padding: '10px 14px', 
-                    borderRadius: '8px', 
-                    marginBottom: '12px', 
-                    fontSize: '0.85rem', 
-                    color: 'var(--color-warning)', 
-                    border: '1px solid rgba(245, 158, 11, 0.3)', 
+                  <div style={{
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    marginBottom: '12px',
+                    fontSize: '0.85rem',
+                    color: 'var(--color-warning)',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
                     backgroundColor: 'rgba(245, 158, 11, 0.08)',
                     display: 'flex',
                     alignItems: 'center',
@@ -521,7 +520,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                         </option>
                       ))}
                     </select>
-                    
+
                     {selectedDoctorId && (() => {
                       const doc = doctors.find(d => (d._id || d.id) === selectedDoctorId);
                       if (!doc) return null;
@@ -540,14 +539,13 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                             <p style={{ margin: '0 0 4px 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Hospital: {doc.doctorProfile?.hospital || 'Affiliated Clinic'}</p>
                             <p style={{ margin: '0 0 4px 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Experience: {doc.doctorProfile?.yearsOfExperience || '0'} years</p>
                             <p style={{ margin: '0 0 6px 0', fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>License: {doc.doctorProfile?.licenseNumber || 'N/A'}</p>
-                            
+
                             <div style={{ marginTop: '8px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem' }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <span style={{ color: 'var(--text-secondary)' }}>Status:</span>
-                                <span className={`badge ${
-                                  (doc.doctorProfile?.availability?.status || 'available') === 'available' ? 'badge-success' :
-                                  (doc.doctorProfile?.availability?.status || 'available') === 'busy' ? 'badge-warning' : 'badge-error'
-                                }`} style={{ fontSize: '0.7rem', padding: '1px 6px', textTransform: 'capitalize' }}>
+                                <span className={`badge ${(doc.doctorProfile?.availability?.status || 'available') === 'available' ? 'badge-success' :
+                                    (doc.doctorProfile?.availability?.status || 'available') === 'busy' ? 'badge-warning' : 'badge-error'
+                                  }`} style={{ fontSize: '0.7rem', padding: '1px 6px', textTransform: 'capitalize' }}>
                                   {doc.doctorProfile?.availability?.status || 'available'}
                                 </span>
                               </div>
@@ -596,9 +594,9 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                       required
                     />
                   </div>
-                  <button 
-                    type="submit" 
-                    className="btn btn-primary" 
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
                     style={{ width: '100%', opacity: (apptValidationWarning || !selectedDoctorId) ? 0.6 : 1 }}
                     disabled={!!apptValidationWarning || !selectedDoctorId}
                   >
@@ -671,30 +669,27 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                             height: '10px',
                             borderRadius: '50%',
                             background: 'var(--bg-primary)',
-                            border: `2px solid ${
-                              evt.type === 'record' ? 'var(--color-success)' :
-                              evt.type === 'appointment' ? 'var(--color-primary)' : 'var(--color-accent)'
-                            }`,
-                            boxShadow: `0 0 8px ${
-                              evt.type === 'record' ? 'rgba(16, 185, 129, 0.4)' :
-                              evt.type === 'appointment' ? 'rgba(99, 102, 241, 0.4)' : 'rgba(6, 182, 212, 0.4)'
-                            }`
+                            border: `2px solid ${evt.type === 'record' ? 'var(--color-success)' :
+                                evt.type === 'appointment' ? 'var(--color-primary)' : 'var(--color-accent)'
+                              }`,
+                            boxShadow: `0 0 8px ${evt.type === 'record' ? 'rgba(16, 185, 129, 0.4)' :
+                                evt.type === 'appointment' ? 'rgba(99, 102, 241, 0.4)' : 'rgba(6, 182, 212, 0.4)'
+                              }`
                           }} />
-                          
+
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                               {evt.icon} {evt.title}
                             </span>
-                            <span className={`badge ${
-                              evt.type === 'record' ? 'badge-success' :
-                              evt.badge === 'Confirmed' ? 'badge-success' :
-                              evt.badge === 'Pending' ? 'badge-warning' :
-                              evt.type === 'security' ? 'badge-success' : 'badge-error'
-                            }`} style={{ fontSize: '0.65rem', padding: '1px 6px' }}>
+                            <span className={`badge ${evt.type === 'record' ? 'badge-success' :
+                                evt.badge === 'Confirmed' ? 'badge-success' :
+                                  evt.badge === 'Pending' ? 'badge-warning' :
+                                    evt.type === 'security' ? 'badge-success' : 'badge-error'
+                              }`} style={{ fontSize: '0.65rem', padding: '1px 6px' }}>
                               {evt.badge}
                             </span>
                           </div>
-                          
+
                           <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: 0, lineHeight: '1.4' }}>{evt.desc}</p>
                           <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
                             {evt.date.toLocaleDateString()} at {evt.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -873,11 +868,10 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                         <td>{appt.time}</td>
                         <td>{appt.reason}</td>
                         <td>
-                          <span className={`badge ${
-                            appt.status === 'Confirmed' ? 'badge-success' :
-                            appt.status === 'Pending' ? 'badge-warning' :
-                            appt.status === 'Completed' ? 'badge-primary' : 'badge-error'
-                          }`}>
+                          <span className={`badge ${appt.status === 'Confirmed' ? 'badge-success' :
+                              appt.status === 'Pending' ? 'badge-warning' :
+                                appt.status === 'Completed' ? 'badge-primary' : 'badge-error'
+                            }`}>
                             {appt.status}
                           </span>
                         </td>
@@ -1199,8 +1193,8 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
               <h3 style={{ fontSize: '1.3rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
                 <User size={22} /> Doctor Practitioner Profile
               </h3>
-              <button 
-                className="btn btn-secondary" 
+              <button
+                className="btn btn-secondary"
                 style={{ padding: '4px 8px', minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 onClick={() => {
                   setViewingDoctorProfileModal(false);
@@ -1241,10 +1235,9 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '8px' }}>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Live Availability Status</span>
-                <span className={`badge ${
-                  (user.doctorProfile?.availability?.status || 'available') === 'available' ? 'badge-success' :
-                  (user.doctorProfile?.availability?.status || 'available') === 'busy' ? 'badge-warning' : 'badge-error'
-                }`} style={{ textTransform: 'capitalize' }}>
+                <span className={`badge ${(user.doctorProfile?.availability?.status || 'available') === 'available' ? 'badge-success' :
+                    (user.doctorProfile?.availability?.status || 'available') === 'busy' ? 'badge-warning' : 'badge-error'
+                  }`} style={{ textTransform: 'capitalize' }}>
                   {user.doctorProfile?.availability?.status || 'available'}
                 </span>
               </div>
@@ -1328,16 +1321,16 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
               <h3 style={{ fontSize: '1.3rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-success)' }}>
                 <CheckCircle size={22} /> Decrypted Ledger Transactions Pool
               </h3>
-              <button 
+              <button
                 type="button"
-                className="btn btn-secondary" 
+                className="btn btn-secondary"
                 style={{ padding: '4px 8px', minWidth: 'auto' }}
                 onClick={() => setViewingRecordsModal(false)}
               >
                 <X size={16} />
               </button>
             </div>
-            
+
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '20px' }}>
               The following medical records and digital consultation logs have been cryptographically signed and successfully mined into blockchain blocks.
             </p>
@@ -1428,7 +1421,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                             </div>
                           </div>
                         )}
-                        
+
                         {rec.ipfsHash && (
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)', borderRadius: '6px', fontSize: '0.8rem', color: 'var(--color-accent)', marginBottom: '12px' }}>
                             <BookOpen size={12} />
@@ -1494,9 +1487,9 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
               <h3 style={{ fontSize: '1.3rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-warning)' }}>
                 <Database size={22} /> Ledger Chain Blocks Inspector
               </h3>
-              <button 
+              <button
                 type="button"
-                className="btn btn-secondary" 
+                className="btn btn-secondary"
                 style={{ padding: '4px 8px', minWidth: 'auto' }}
                 onClick={() => {
                   setViewingBlocksModal(false);
@@ -1506,7 +1499,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                 <X size={16} />
               </button>
             </div>
-            
+
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '20px' }}>
               Click any block in the chain to inspect its cryptographic properties, hashes, nonce, and decrypted transaction list.
             </p>
@@ -1614,7 +1607,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                           )}
                         </div>
                       )}
-                      
+
                       {!isExpanded && (
                         <div style={{ marginTop: '8px', fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'right', fontStyle: 'italic' }}>
                           Click to inspect records & details

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Shield, Lock, Mail, User, Activity, AlertCircle, Heart, Stethoscope, ArrowLeft, KeyRound, Eye, EyeOff } from 'lucide-react';
-
 export default function Login({ onLoginSuccess }) {
   const [isRegister, setIsRegister] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -55,7 +54,7 @@ export default function Login({ onLoginSuccess }) {
         body: JSON.stringify({ email })
       });
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Password reset request failed.');
       }
@@ -87,13 +86,13 @@ export default function Login({ onLoginSuccess }) {
     }
 
     const url = isRegister ? '/api/auth/register' : '/api/auth/login';
-    
+
     // Construct request body
     const body = { email, password };
     if (isRegister) {
       body.name = name;
       body.role = role;
-      
+
       if (role === 'patient') {
         body.profile = {
           age: parseInt(age),
@@ -120,7 +119,7 @@ export default function Login({ onLoginSuccess }) {
         body: JSON.stringify(body)
       });
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Authentication failed. Please check your credentials.');
       }
@@ -412,7 +411,7 @@ export default function Login({ onLoginSuccess }) {
             </div>
 
             {isRegister && (
-            <div className="login-register-details">
+              <div className="login-register-details">
                 {role === 'patient' && (
                   <>
                     <h4 style={{ fontSize: '0.9rem', color: 'var(--color-primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -478,7 +477,7 @@ export default function Login({ onLoginSuccess }) {
                     </div>
                   </>
                 )}
-                
+
                 {role === 'doctor' && (
                   <>
                     <h4 style={{ fontSize: '0.9rem', color: 'var(--color-primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
