@@ -469,3 +469,8 @@ module.exports = {
     sendDoctorApprovalEmail,
     sendDoctorRejectionEmail
 };
+
+// Pre-warm the transporter in the background on startup
+getTransporter().catch(err => {
+    console.warn('Failed to pre-warm Ethereal SMTP transporter on boot:', err.message);
+});

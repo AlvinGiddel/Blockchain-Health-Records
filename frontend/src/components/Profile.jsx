@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, Activity, Heart, ShieldCheck, AlertTriangle, Edit3, Save, X, Stethoscope, Briefcase, FileText } from 'lucide-react';
+import { User, Mail, Phone, Activity, Heart, ShieldCheck, AlertTriangle, Edit3, Save, X, Stethoscope, Briefcase, FileText, Lock } from 'lucide-react';
 
 export default function Profile({ user, onUpdateUser }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -10,8 +10,14 @@ export default function Profile({ user, onUpdateUser }) {
   const [editGender, setEditGender] = useState(user.patientProfile?.gender || '');
   const [editBloodType, setEditBloodType] = useState(user.patientProfile?.bloodType || '');
   const [editEmergencyContact, setEditEmergencyContact] = useState(user.patientProfile?.emergencyContact || '');
-  const [editPhone, setEditPhone] = useState(user.patientProfile?.phone || '');
+  const [editPhone, setEditPhone] = useState(user.patientProfile?.phone || user.doctorProfile?.phone || '');
   const [editAllergies, setEditAllergies] = useState(user.patientProfile?.allergies?.join(', ') || '');
+
+  // Doctor fields
+  const [editSpecialization, setEditSpecialization] = useState(user.doctorProfile?.specialization || '');
+  const [editHospital, setEditHospital] = useState(user.doctorProfile?.hospital || '');
+  const [editYearsOfExperience, setEditYearsOfExperience] = useState(user.doctorProfile?.yearsOfExperience || '');
+  const [editLicenseNumber, setEditLicenseNumber] = useState(user.doctorProfile?.licenseNumber || '');
   
   // Status feedback
   const [errorMsg, setErrorMsg] = useState('');
@@ -28,6 +34,12 @@ export default function Profile({ user, onUpdateUser }) {
       setEditEmergencyContact(user.patientProfile?.emergencyContact || '');
       setEditPhone(user.patientProfile?.phone || '');
       setEditAllergies(user.patientProfile?.allergies?.join(', ') || '');
+    } else if (user.role === 'doctor') {
+      setEditPhone(user.doctorProfile?.phone || '');
+      setEditSpecialization(user.doctorProfile?.specialization || '');
+      setEditHospital(user.doctorProfile?.hospital || '');
+      setEditYearsOfExperience(user.doctorProfile?.yearsOfExperience || '');
+      setEditLicenseNumber(user.doctorProfile?.licenseNumber || '');
     }
   }, [user]);
 
@@ -38,19 +50,30 @@ export default function Profile({ user, onUpdateUser }) {
     setSaving(true);
 
     try {
-      const res = await fetch('/api/users/patient/profile', {
+      const endpoint = user.role === 'patient' ? '/api/users/patient/profile' : '/api/users/doctor/profile';
+      const bodyPayload = user.role === 'patient' ? {
+        userId: user.id || user._id,
+        name: editName,
+        age: parseInt(editAge) || undefined,
+        gender: editGender,
+        bloodType: editBloodType,
+        emergencyContact: editEmergencyContact,
+        allergies: editAllergies,
+        phone: editPhone
+      } : {
+        userId: user.id || user._id,
+        name: editName,
+        specialization: editSpecialization,
+        hospital: editHospital,
+        yearsOfExperience: parseInt(editYearsOfExperience) || 0,
+        licenseNumber: editLicenseNumber,
+        phone: editPhone
+      };
+
+      const res = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id || user._id,
-          name: editName,
-          age: parseInt(editAge) || undefined,
-          gender: editGender,
-          bloodType: editBloodType,
-          emergencyContact: editEmergencyContact,
-          allergies: editAllergies,
-          phone: editPhone
-        })
+        body: JSON.stringify(bodyPayload)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to update profile.');
@@ -104,10 +127,10 @@ export default function Profile({ user, onUpdateUser }) {
               <Mail size={16} />
               <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{user.email}</span>
             </div>
-            {user.patientProfile?.phone && (
+            {(user.patientProfile?.phone || user.doctorProfile?.phone) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
                 <Phone size={16} />
-                <span>{user.patientProfile.phone}</span>
+                <span>{user.patientProfile?.phone || user.doctorProfile?.phone}</span>
               </div>
             )}
           </div>
@@ -129,6 +152,21 @@ export default function Profile({ user, onUpdateUser }) {
                   >
                     <Edit3 size={14} /> Edit Profile
                   </button>
+                )}
+                {user.role === 'doctor' && (
+                  user.doctorProfile?.hasEditedProfile ? (
+                    <span style={{ fontSize: '0.85rem', color: 'var(--color-error)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(239, 68, 68, 0.05)', padding: '6px 12px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.15)' }}>
+                      <Lock size={14} /> Profile Locked (One-Time Update Completed)
+                    </span>
+                  ) : (
+                    <button
+                      className="btn btn-secondary"
+                      style={{ padding: '8px 16px', fontSize: '0.85rem', display: 'flex', gap: '6px' }}
+                      onClick={() => setIsEditing(true)}
+                    >
+                      <Edit3 size={14} /> Edit Profile
+                    </button>
+                  )
                 )}
               </div>
 
@@ -202,6 +240,10 @@ export default function Profile({ user, onUpdateUser }) {
                     <span style={{ color: 'var(--text-secondary)' }}>Years of Experience</span>
                     <span style={{ fontWeight: 600 }}>{user.doctorProfile?.yearsOfExperience || '0'} years</span>
                   </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Phone Number</span>
+                    <span style={{ fontWeight: 600 }}>{user.doctorProfile?.phone || 'Not provided'}</span>
+                  </div>
                 </div>
               )}
 
@@ -260,93 +302,161 @@ export default function Profile({ user, onUpdateUser }) {
                   />
                 </div>
 
-                <div className="grid-2" style={{ gap: '12px', marginBottom: '12px' }}>
-                  <div className="form-group">
-                    <label htmlFor="edit-age">Age</label>
-                    <input
-                      type="number"
-                      id="edit-age"
-                      className="form-control"
-                      required
-                      value={editAge}
-                      onChange={(e) => setEditAge(e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="edit-gender">Gender</label>
-                    <select
-                      id="edit-gender"
-                      className="form-control"
-                      required
-                      value={editGender}
-                      onChange={(e) => setEditGender(e.target.value)}
-                    >
-                      <option value="">-- Select Gender --</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Prefer not to say">Prefer not to say</option>
-                    </select>
-                  </div>
-                </div>
+                {user.role === 'patient' ? (
+                  <>
+                    <div className="grid-2" style={{ gap: '12px', marginBottom: '12px' }}>
+                      <div className="form-group">
+                        <label htmlFor="edit-age">Age</label>
+                        <input
+                          type="number"
+                          id="edit-age"
+                          className="form-control"
+                          required
+                          value={editAge}
+                          onChange={(e) => setEditAge(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="edit-gender">Gender</label>
+                        <select
+                          id="edit-gender"
+                          className="form-control"
+                          required
+                          value={editGender}
+                          onChange={(e) => setEditGender(e.target.value)}
+                        >
+                          <option value="">-- Select Gender --</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Prefer not to say">Prefer not to say</option>
+                        </select>
+                      </div>
+                    </div>
 
-                <div className="grid-2" style={{ gap: '12px', marginBottom: '12px' }}>
-                  <div className="form-group">
-                    <label htmlFor="edit-bloodType">Blood Group</label>
-                    <select
-                      id="edit-bloodType"
-                      className="form-control"
-                      required
-                      value={editBloodType}
-                      onChange={(e) => setEditBloodType(e.target.value)}
-                    >
-                      <option value="">-- Select Blood Group --</option>
-                      <option value="A+">A+</option>
-                      <option value="A-">A-</option>
-                      <option value="B+">B+</option>
-                      <option value="B-">B-</option>
-                      <option value="AB+">AB+</option>
-                      <option value="AB-">AB-</option>
-                      <option value="O+">O+</option>
-                      <option value="O-">O-</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="edit-phone">Phone Number</label>
-                    <input
-                      type="text"
-                      id="edit-phone"
-                      className="form-control"
-                      required
-                      placeholder="+254. 700 000000"
-                      value={editPhone}
-                      onChange={(e) => setEditPhone(e.target.value)}
-                    />
-                  </div>
-                </div>
+                    <div className="grid-2" style={{ gap: '12px', marginBottom: '12px' }}>
+                      <div className="form-group">
+                        <label htmlFor="edit-bloodType">Blood Group</label>
+                        <select
+                          id="edit-bloodType"
+                          className="form-control"
+                          required
+                          value={editBloodType}
+                          onChange={(e) => setEditBloodType(e.target.value)}
+                        >
+                          <option value="">-- Select Blood Group --</option>
+                          <option value="A+">A+</option>
+                          <option value="A-">A-</option>
+                          <option value="B+">B+</option>
+                          <option value="B-">B-</option>
+                          <option value="AB+">AB+</option>
+                          <option value="AB-">AB-</option>
+                          <option value="O+">O+</option>
+                          <option value="O-">O-</option>
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="edit-phone">Phone Number</label>
+                        <input
+                          type="text"
+                          id="edit-phone"
+                          className="form-control"
+                          required
+                          placeholder="+254 700 000000"
+                          value={editPhone}
+                          onChange={(e) => setEditPhone(e.target.value)}
+                        />
+                      </div>
+                    </div>
 
-                <div className="form-group" style={{ marginBottom: '12px' }}>
-                  <label htmlFor="edit-emergency">Emergency Contact</label>
-                  <input
-                    type="text"
-                    id="edit-emergency"
-                    className="form-control"
-                    required
-                    value={editEmergencyContact}
-                    onChange={(e) => setEditEmergencyContact(e.target.value)}
-                  />
-                </div>
+                    <div className="form-group" style={{ marginBottom: '12px' }}>
+                      <label htmlFor="edit-emergency">Emergency Contact</label>
+                      <input
+                        type="text"
+                        id="edit-emergency"
+                        className="form-control"
+                        required
+                        value={editEmergencyContact}
+                        onChange={(e) => setEditEmergencyContact(e.target.value)}
+                      />
+                    </div>
 
-                <div className="form-group" style={{ marginBottom: '20px' }}>
-                  <label htmlFor="edit-allergies">Known Allergies (comma-separated)</label>
-                  <input
-                    type="text"
-                    id="edit-allergies"
-                    className="form-control"
-                    placeholder="e.g. Penicillin, Peanuts (or leave empty)"
-                    value={editAllergies}
-                    onChange={(e) => setEditAllergies(e.target.value)}
-                  />
-                </div>
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label htmlFor="edit-allergies">Known Allergies (comma-separated)</label>
+                      <input
+                        type="text"
+                        id="edit-allergies"
+                        className="form-control"
+                        placeholder="e.g. Penicillin, Peanuts (or leave empty)"
+                        value={editAllergies}
+                        onChange={(e) => setEditAllergies(e.target.value)}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="grid-2" style={{ gap: '12px', marginBottom: '12px' }}>
+                      <div className="form-group">
+                        <label htmlFor="edit-specialization">Specialization</label>
+                        <input
+                          type="text"
+                          id="edit-specialization"
+                          className="form-control"
+                          required
+                          value={editSpecialization}
+                          onChange={(e) => setEditSpecialization(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="edit-licenseNumber">License Number</label>
+                        <input
+                          type="text"
+                          id="edit-licenseNumber"
+                          className="form-control"
+                          required
+                          value={editLicenseNumber}
+                          onChange={(e) => setEditLicenseNumber(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid-2" style={{ gap: '12px', marginBottom: '12px' }}>
+                      <div className="form-group">
+                        <label htmlFor="edit-hospital">Affiliated Hospital</label>
+                        <input
+                          type="text"
+                          id="edit-hospital"
+                          className="form-control"
+                          required
+                          value={editHospital}
+                          onChange={(e) => setEditHospital(e.target.value)}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="edit-yearsOfExperience">Years of Experience</label>
+                        <input
+                          type="number"
+                          id="edit-yearsOfExperience"
+                          className="form-control"
+                          required
+                          value={editYearsOfExperience}
+                          onChange={(e) => setEditYearsOfExperience(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '20px' }}>
+                      <label htmlFor="edit-phone">Contact Phone Number</label>
+                      <input
+                        type="text"
+                        id="edit-phone"
+                        className="form-control"
+                        required
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                      />
+                    </div>
+                  </>
+                )}
 
                 <div style={{ display: 'flex', gap: '12px' }}>
                   <button

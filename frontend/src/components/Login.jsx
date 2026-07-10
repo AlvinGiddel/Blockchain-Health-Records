@@ -27,6 +27,7 @@ export default function Login({ onLoginSuccess }) {
   const [hospital, setHospital] = useState('');
   const [yearsOfExperience, setYearsOfExperience] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
+  const [phone, setPhone] = useState('');
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
@@ -107,7 +108,8 @@ export default function Login({ onLoginSuccess }) {
           licenseNumber,
           hospital,
           yearsOfExperience: parseInt(yearsOfExperience) || 0,
-          profilePhoto
+          profilePhoto,
+          phone
         };
       }
     }
@@ -144,6 +146,7 @@ export default function Login({ onLoginSuccess }) {
         setHospital('');
         setYearsOfExperience('');
         setProfilePhoto('');
+        setPhone('');
       }
     } catch (err) {
       setError(err.message);
@@ -530,6 +533,18 @@ export default function Login({ onLoginSuccess }) {
                         min="0"
                         value={yearsOfExperience}
                         onChange={(e) => setYearsOfExperience(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label htmlFor="docPhone">Contact Phone Number</label>
+                      <input
+                        type="tel"
+                        id="docPhone"
+                        className="form-control"
+                        placeholder="e.g. +254 700 111222"
+                        required
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
                       />
                     </div>
                     <div className="form-group">

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User, Activity, AlertTriangle, ShieldCheck, Phone, Clipboard, CheckCircle, Clock, Calendar, Check, X, BookOpen, FileText, Copy, Lock, Database, Globe } from 'lucide-react';
+import { User, Activity, AlertTriangle, ShieldCheck, Phone, Clipboard, CheckCircle, Clock, Calendar, Check, X, BookOpen, FileText, Copy, Lock, Database, Globe, Search } from 'lucide-react';
 export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavigate }) {
   const [patients, setPatients] = useState([]);
   const [blocksCount, setBlocksCount] = useState(0);
@@ -47,6 +47,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
   // Patient Appointment Availability States
   const [apptValidationWarning, setApptValidationWarning] = useState('');
+  const [apptSearchQuery, setApptSearchQuery] = useState('');
 
   // Patient records for timeline
   const [patientRecords, setPatientRecords] = useState([]);
@@ -448,13 +449,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                   >
                     <FileText size={16} color="var(--color-primary)" /> View My Health Folder
                   </button>
-                  <button
-                    className="btn btn-secondary"
-                    style={{ fontSize: '0.85rem', padding: '14px', display: 'flex', gap: '8px', justifyContent: 'center', background: 'rgba(6, 182, 212, 0.05)' }}
-                    onClick={() => onNavigate && onNavigate('blockchain')}
-                  >
-                    <Globe size={16} color="var(--color-accent)" /> Ledger Explorer
-                  </button>
+
                   <button
                     className="btn btn-secondary"
                     style={{ fontSize: '0.85rem', padding: '14px', display: 'flex', gap: '8px', justifyContent: 'center', background: 'rgba(16, 185, 129, 0.05)' }}
@@ -836,91 +831,146 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
           {/* Doctor Appointments Card */}
           <div className="glass-card" style={{ marginBottom: '32px' }}>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
-              <Calendar size={22} color="var(--color-primary)" /> Clinic Appointments Manager
-            </h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-              Review patient appointment requests, accept/decline visits, and launch cryptographic consultations for confirmed appointments.
-            </p>
-
-            {appointments.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', border: '1px dashed var(--glass-border)', borderRadius: '8px' }}>
-                No appointments booked with you yet.
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
+                  <Calendar size={22} color="var(--color-primary)" /> Clinic Appointments Manager
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
+                  Review patient appointment requests, accept/decline visits, and launch cryptographic consultations for confirmed appointments.
+                </p>
               </div>
-            ) : (
-              <div className="table-container">
-                <table className="custom-table" style={{ fontSize: '0.85rem' }}>
-                  <thead>
-                    <tr>
-                      <th>Patient Name</th>
-                      <th>Date</th>
-                      <th>Time</th>
-                      <th>Reason for Visit</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {appointments.map(appt => (
-                      <tr key={appt._id || appt.id}>
-                        <td style={{ fontWeight: 600 }}>{appt.patientName}</td>
-                        <td>{appt.date}</td>
-                        <td>{appt.time}</td>
-                        <td>{appt.reason}</td>
-                        <td>
-                          <span className={`badge ${appt.status === 'Confirmed' ? 'badge-success' :
-                              appt.status === 'Pending' ? 'badge-warning' :
-                                appt.status === 'Completed' ? 'badge-primary' : 'badge-error'
-                            }`}>
-                            {appt.status}
-                          </span>
-                        </td>
-                        <td>
-                          {appt.status === 'Pending' && (
-                            <div style={{ display: 'flex', gap: '8px' }}>
+              
+              {/* Inline Search Bar */}
+              <div style={{ display: 'flex', gap: '8px', width: '100%', maxWidth: '380px' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <Search size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--text-muted)' }} />
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search patient, reason, date..."
+                    value={apptSearchQuery}
+                    onChange={(e) => setApptSearchQuery(e.target.value)}
+                    style={{ paddingLeft: '36px', width: '100%', height: '38px', fontSize: '0.85rem' }}
+                  />
+                  {apptSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setApptSearchQuery('')}
+                      style={{ position: 'absolute', right: '10px', top: '10px', border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                <button
+                  className="btn btn-primary"
+                  style={{ padding: '0 16px', height: '38px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Search size={14} /> Search
+                </button>
+              </div>
+            </div>
+
+            {(() => {
+              const filteredAppointments = appointments.filter(appt => 
+                (appt.patientName && appt.patientName.toLowerCase().includes(apptSearchQuery.toLowerCase())) ||
+                (appt.reason && appt.reason.toLowerCase().includes(apptSearchQuery.toLowerCase())) ||
+                (appt.date && appt.date.toLowerCase().includes(apptSearchQuery.toLowerCase())) ||
+                (appt.status && appt.status.toLowerCase().includes(apptSearchQuery.toLowerCase()))
+              );
+
+              if (appointments.length === 0) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', border: '1px dashed var(--glass-border)', borderRadius: '8px' }}>
+                    No appointments booked with you yet.
+                  </div>
+                );
+              }
+
+              if (filteredAppointments.length === 0) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', border: '1px dashed var(--glass-border)', borderRadius: '8px' }}>
+                    No appointments match your search criteria.
+                  </div>
+                );
+              }
+
+              return (
+                <div className="table-container">
+                  <table className="custom-table" style={{ fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr>
+                        <th>Patient Name</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Reason for Visit</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAppointments.map(appt => (
+                        <tr key={appt._id || appt.id}>
+                          <td style={{ fontWeight: 600 }}>{appt.patientName}</td>
+                          <td>{appt.date}</td>
+                          <td>{appt.time}</td>
+                          <td>{appt.reason}</td>
+                          <td>
+                            <span className={`badge ${appt.status === 'Confirmed' ? 'badge-success' :
+                                appt.status === 'Pending' ? 'badge-warning' :
+                                  appt.status === 'Completed' ? 'badge-primary' : 'badge-error'
+                              }`}>
+                              {appt.status}
+                            </span>
+                          </td>
+                          <td>
+                            {appt.status === 'Pending' && (
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  className="btn btn-primary"
+                                  style={{ padding: '4px 10px', fontSize: '0.75rem', background: '#10b981', borderColor: '#10b981' }}
+                                  onClick={() => handleUpdateApptStatus(appt._id || appt.id, 'Confirmed')}
+                                >
+                                  <Check size={12} style={{ marginRight: '4px' }} /> Accept
+                                </button>
+                                <button
+                                  className="btn btn-danger"
+                                  style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+                                  onClick={() => handleUpdateApptStatus(appt._id || appt.id, 'Declined')}
+                                >
+                                  <X size={12} style={{ marginRight: '4px' }} /> Decline
+                                </button>
+                              </div>
+                            )}
+                            {appt.status === 'Confirmed' && (
                               <button
                                 className="btn btn-primary"
-                                style={{ padding: '4px 10px', fontSize: '0.75rem', background: '#10b981', borderColor: '#10b981' }}
-                                onClick={() => handleUpdateApptStatus(appt._id || appt.id, 'Confirmed')}
+                                style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                onClick={() => {
+                                  setConsultationError('');
+                                  setConsultationSuccess('');
+                                  setCompletedTxHash('');
+                                  setActiveConsultationAppt(appt);
+                                }}
                               >
-                                <Check size={12} style={{ marginRight: '4px' }} /> Accept
+                                <FileText size={12} /> Start Consultation
                               </button>
-                              <button
-                                className="btn btn-danger"
-                                style={{ padding: '4px 10px', fontSize: '0.75rem' }}
-                                onClick={() => handleUpdateApptStatus(appt._id || appt.id, 'Declined')}
-                              >
-                                <X size={12} style={{ marginRight: '4px' }} /> Decline
-                              </button>
-                            </div>
-                          )}
-                          {appt.status === 'Confirmed' && (
-                            <button
-                              className="btn btn-primary"
-                              style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                              onClick={() => {
-                                setConsultationError('');
-                                setConsultationSuccess('');
-                                setCompletedTxHash('');
-                                setActiveConsultationAppt(appt);
-                              }}
-                            >
-                              <FileText size={12} /> Start Consultation
-                            </button>
-                          )}
-                          {appt.status === 'Completed' && (
-                            <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>Consultation Finished</span>
-                          )}
-                          {appt.status === 'Declined' && (
-                            <span style={{ color: 'var(--color-error)', fontSize: '0.8rem', fontStyle: 'italic' }}>Request Declined</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                            )}
+                            {appt.status === 'Completed' && (
+                              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontStyle: 'italic' }}>Consultation Finished</span>
+                            )}
+                            {appt.status === 'Declined' && (
+                              <span style={{ color: 'var(--color-error)', fontSize: '0.8rem', fontStyle: 'italic' }}>Request Declined</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Patient Registry Section */}

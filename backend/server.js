@@ -171,12 +171,12 @@ app.post('/api/auth/register', async (req, res) => {
         const user = insertedUsers[0];
 
         if (role === 'doctor' && !isApprovedVal) {
-            // Log doctor registration request event in audit trail
-            await db.query(
+            // Log doctor registration request event in audit trail (in background)
+            db.query(
                 `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
                  VALUES ($1, $2, $3, $4, $5, $6)`,
                 ['doctor_request', user.id, user.name, user.id, 'System Admin', `New doctor registration request submitted by Dr. ${user.name} (${user.email}). Pending approval.`]
-            );
+            ).catch(err => console.error('Failed to log doctor request audit:', err));
 
             return res.status(202).json({
                 message: 'Doctor registration submitted! Please wait for approval from a system administrator.',
@@ -310,12 +310,12 @@ app.post('/api/admin/doctors/approve/:id', async (req, res) => {
         }
         const updatedDoctor = updatedDoctors[0];
 
-        // Log doctor approval in audit trail
-        await db.query(
+        // Log doctor approval in audit trail (in background)
+        db.query(
             `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6)`,
             ['doctor_approve', updatedDoctor.id, updatedDoctor.name, updatedDoctor.id, 'System Admin', `Doctor registration request for Dr. ${updatedDoctor.name} (${updatedDoctor.email}) approved.`]
-        );
+        ).catch(err => console.error('Failed to log doctor approval audit:', err));
 
         // Send Email notification for approval (asynchronously in background)
         sendDoctorApprovalEmail(updatedDoctor.email, updatedDoctor.name).catch(mailError => {
@@ -342,12 +342,12 @@ app.post('/api/admin/doctors/reject/:id', async (req, res) => {
         }
         const updatedDoctor = updatedDoctors[0];
 
-        // Log doctor rejection in audit trail
-        await db.query(
+        // Log doctor rejection in audit trail (in background)
+        db.query(
             `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6)`,
             ['doctor_reject', updatedDoctor.id, updatedDoctor.name, updatedDoctor.id, 'System Admin', `Doctor registration request for Dr. ${updatedDoctor.name} (${updatedDoctor.email}) rejected.`]
-        );
+        ).catch(err => console.error('Failed to log doctor rejection audit:', err));
 
         // Send Email notification for rejection (asynchronously in background)
         sendDoctorRejectionEmail(updatedDoctor.email, updatedDoctor.name).catch(mailError => {
@@ -386,12 +386,12 @@ app.post('/api/admin/approve/:id', async (req, res) => {
         }
         const updatedAdmin = updatedAdmins[0];
 
-        // Log admin approval in audit trail
-        await db.query(
+        // Log admin approval in audit trail (in background)
+        db.query(
             `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6)`,
             ['admin_approve', updatedAdmin.id, updatedAdmin.name, updatedAdmin.id, 'System Admin', `Admin registration request for ${updatedAdmin.name} (${updatedAdmin.email}) approved.`]
-        );
+        ).catch(err => console.error('Failed to log admin approval audit:', err));
 
         console.log(`Admin ${updatedAdmin.name} (${updatedAdmin.email}) approved by administrator.`);
         res.json({ success: true, message: `Administrator ${updatedAdmin.name} successfully approved.` });
@@ -413,12 +413,12 @@ app.post('/api/admin/reject/:id', async (req, res) => {
         }
         const updatedAdmin = updatedAdmins[0];
 
-        // Log admin rejection in audit trail
-        await db.query(
+        // Log admin rejection in audit trail (in background)
+        db.query(
             `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6)`,
             ['admin_reject', updatedAdmin.id, updatedAdmin.name, updatedAdmin.id, 'System Admin', `Admin registration request for ${updatedAdmin.name} (${updatedAdmin.email}) rejected.`]
-        );
+        ).catch(err => console.error('Failed to log admin rejection audit:', err));
 
         console.log(`Admin ${updatedAdmin.name} (${updatedAdmin.email}) rejected by administrator.`);
         res.json({ success: true, message: `Administrator ${updatedAdmin.name} successfully rejected.` });
@@ -453,12 +453,12 @@ app.post('/api/auth/change-password', async (req, res) => {
         const hashedPassword = await bcrypt.hash(newPassword, salt);
         await db.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, userId]);
 
-        // Log the password change in the audit trail
-        await db.query(
+        // Log the password change in the audit trail (in background)
+        db.query(
             `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6)`,
             ['password_change', user.id, user.name, user.id, 'System Admin', `User ${user.name} (${user.role}) changed their account password.`]
-        );
+        ).catch(err => console.error('Failed to log password change audit:', err));
 
         res.json({ success: true, message: 'Password updated successfully!' });
     } catch (err) {
@@ -497,12 +497,12 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         // Send email
         const mailResult = await sendResetEmail(user.email, user.name, resetUrl);
 
-        // Log to Audit trail
-        await db.query(
+        // Log to Audit trail (in background)
+        db.query(
             `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6)`,
             ['password_reset_request', user.id, user.name, user.id, 'System Admin', `Password reset requested for ${user.name} (${user.email}).`]
-        );
+        ).catch(err => console.error('Failed to log password reset request audit:', err));
 
         res.json({
             success: true,
@@ -546,12 +546,12 @@ app.post('/api/auth/reset-password/:token', async (req, res) => {
             [hashedPassword, user.id]
         );
 
-        // Log completion to audit trail
-        await db.query(
+        // Log completion to audit trail (in background)
+        db.query(
             `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6)`,
             ['password_reset_complete', user.id, user.name, user.id, 'System Admin', `Password reset successfully completed for ${user.name} (${user.role}).`]
-        );
+        ).catch(err => console.error('Failed to log password reset complete audit:', err));
 
         res.json({ success: true, message: 'Your password has been successfully reset! You can now log in.' });
     } catch (err) {
@@ -601,12 +601,12 @@ app.put('/api/users/patient/profile', async (req, res) => {
         );
         const updatedUser = updatedUsers[0];
 
-        // Create Audit Log Entry
-        await db.query(
+        // Create Audit Log Entry (in background)
+        db.query(
             `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6)`,
             ['profile_update', updatedUser.id, updatedUser.name, updatedUser.id, 'Patient Self', `Patient ${updatedUser.name} updated their personal profile & health vitals.`]
-        );
+        ).catch(err => console.error('Failed to log profile update audit:', err));
 
         res.json({
             success: true,
@@ -625,6 +625,68 @@ app.put('/api/users/patient/profile', async (req, res) => {
     } catch (err) {
         console.error('Update patient profile error:', err);
         res.status(500).json({ error: err.message || 'Failed to update patient profile.' });
+    }
+});
+
+// Update doctor profile details
+app.put('/api/users/doctor/profile', async (req, res) => {
+    try {
+        const { userId, name, specialization, licenseNumber, hospital, yearsOfExperience, phone, profilePhoto } = req.body;
+        const { rows: users } = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
+        if (users.length === 0 || users[0].role !== 'doctor') {
+            return res.status(404).json({ error: 'Doctor not found.' });
+        }
+        const user = users[0];
+
+        let profile = user.doctor_profile || {};
+        
+        // Prevent editing if already done once
+        if (profile.hasEditedProfile) {
+            return res.status(403).json({ error: 'Clinical profile can only be edited once. Updates are locked.' });
+        }
+
+        if (specialization !== undefined) profile.specialization = specialization;
+        if (licenseNumber !== undefined) profile.licenseNumber = licenseNumber;
+        if (hospital !== undefined) profile.hospital = hospital;
+        if (yearsOfExperience !== undefined) profile.yearsOfExperience = yearsOfExperience;
+        if (phone !== undefined) profile.phone = phone;
+        if (profilePhoto !== undefined) profile.profilePhoto = profilePhoto;
+
+        // Set restriction flag
+        profile.hasEditedProfile = true;
+
+        const updatedName = name || user.name;
+
+        const { rows: updatedUsers } = await db.query(
+            'UPDATE users SET name = $1, doctor_profile = $2 WHERE id = $3 RETURNING *',
+            [updatedName, JSON.stringify(profile), userId]
+        );
+        const updatedUser = updatedUsers[0];
+
+        // Create Audit Log Entry (in background)
+        db.query(
+            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            ['profile_update', updatedUser.id, 'Doctor Self', updatedUser.id, updatedUser.name, `Dr. ${updatedUser.name} updated their clinical profile details.`]
+        ).catch(err => console.error('Failed to log doctor profile update audit:', err));
+
+        res.json({
+            success: true,
+            message: 'Profile updated successfully!',
+            user: {
+                id: updatedUser.id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                role: updatedUser.role,
+                publicKey: updatedUser.public_key,
+                patientProfile: updatedUser.patient_profile,
+                doctorProfile: updatedUser.doctor_profile,
+                isApproved: updatedUser.is_approved
+            }
+        });
+    } catch (err) {
+        console.error('Update doctor profile error:', err);
+        res.status(500).json({ error: err.message || 'Failed to update doctor profile.' });
     }
 });
 
@@ -652,8 +714,8 @@ app.put('/api/users/doctor/availability', async (req, res) => {
         );
         const updatedDoctor = updatedDoctors[0];
         
-        // Log the change in the audit trail
-        await db.query(
+        // Log the change in the audit trail (in background)
+        db.query(
             `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6)`,
             [
@@ -664,7 +726,7 @@ app.put('/api/users/doctor/availability', async (req, res) => {
                 updatedDoctor.name, 
                 `Dr. ${updatedDoctor.name} updated availability: Days: ${profile.availability.workingDays.join(', ')}, Hours: ${profile.availability.workingHoursStart} - ${profile.availability.workingHoursEnd}, Status: ${profile.availability.status}.`
             ]
-        );
+        ).catch(err => console.error('Failed to log availability update audit:', err));
         
         res.json({
             success: true,
@@ -690,8 +752,12 @@ app.put('/api/users/doctor/availability', async (req, res) => {
 app.post('/api/appointments', async (req, res) => {
     try {
         const { doctorId, date, time, reason, patientId } = req.body;
-        const { rows: patients } = await db.query('SELECT * FROM users WHERE id = $1', [patientId]);
-        const { rows: doctors } = await db.query('SELECT * FROM users WHERE id = $1', [doctorId]);
+        const [patientsRes, doctorsRes] = await Promise.all([
+            db.query('SELECT * FROM users WHERE id = $1', [patientId]),
+            db.query('SELECT * FROM users WHERE id = $1', [doctorId])
+        ]);
+        const patients = patientsRes.rows;
+        const doctors = doctorsRes.rows;
         if (patients.length === 0 || doctors.length === 0) {
             return res.status(404).json({ error: 'Patient or Doctor not found.' });
         }
@@ -747,12 +813,12 @@ app.post('/api/appointments', async (req, res) => {
         );
         const appointment = appointments[0];
 
-        // Audit Log Entry
-        await db.query(
+        // Audit Log Entry (in background)
+        db.query(
             `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6)`,
             ['appointment_request', patientId, patient.name, doctorId, doctor.name, `Patient ${patient.name} requested an appointment with Dr. ${doctor.name} on ${date} at ${time}.`]
-        );
+        ).catch(err => console.error('Failed to log appointment request audit:', err));
 
         const responseAppointment = {
             id: appointment.id,
@@ -810,13 +876,13 @@ app.post('/api/appointments/:id/status', async (req, res) => {
         }
         const appointment = appointments[0];
 
-        // Audit Log Entry
+        // Audit Log Entry (in background)
         const eventType = status === 'Confirmed' ? 'appointment_confirm' : (status === 'Declined' ? 'appointment_decline' : 'appointment_complete');
-        await db.query(
+        db.query(
             `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6)`,
             [eventType, appointment.patient_id, appointment.patient_name, appointment.doctor_id, appointment.doctor_name, `Appointment status updated to ${status} for ${appointment.patient_name} with Dr. ${appointment.doctor_name}.`]
-        );
+        ).catch(err => console.error('Failed to log appointment status update audit:', err));
 
         const responseAppointment = {
             id: appointment.id,
@@ -847,13 +913,15 @@ app.post('/api/consultations', async (req, res) => {
         }
         const appointment = appointments[0];
         
-        const { rows: doctors } = await db.query('SELECT * FROM users WHERE id = $1', [appointment.doctor_id]);
-        const { rows: patients } = await db.query('SELECT * FROM users WHERE id = $1', [appointment.patient_id]);
-        if (doctors.length === 0 || patients.length === 0) {
+        const [doctorsRes, patientsRes] = await Promise.all([
+            db.query('SELECT * FROM users WHERE id = $1', [appointment.doctor_id]),
+            db.query('SELECT * FROM users WHERE id = $1', [appointment.patient_id])
+        ]);
+        if (doctorsRes.rows.length === 0 || patientsRes.rows.length === 0) {
             return res.status(404).json({ error: 'Doctor or Patient not found.' });
         }
-        const doctor = doctors[0];
-        const patient = patients[0];
+        const doctor = doctorsRes.rows[0];
+        const patient = patientsRes.rows[0];
 
         const prescriptionsArray = prescriptions ? prescriptions.split(',').map(p => p.trim()).filter(p => p !== '') : [];
 
@@ -881,15 +949,15 @@ app.post('/api/consultations', async (req, res) => {
         );
         const newRecord = newRecords[0];
 
-        // Create Audit Log Entry
-        await db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            ['consultation_complete', appointment.patient_id, patient.name, appointment.doctor_id, doctor.name, `Dr. ${doctor.name} completed consultation for ${patient.name}.`]
-        );
-
-        // Update appointment status to Completed
-        await db.query("UPDATE appointments SET status = 'Completed' WHERE id = $1", [appointmentId]);
+        // Perform appointment status update and audit log in parallel
+        await Promise.all([
+            db.query("UPDATE appointments SET status = 'Completed' WHERE id = $1", [appointmentId]),
+            db.query(
+                `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                ['consultation_complete', appointment.patient_id, patient.name, appointment.doctor_id, doctor.name, `Dr. ${doctor.name} completed consultation for ${patient.name}.`]
+            )
+        ]);
 
         // Construct blockchain pending record payload
         const pendingRecord = {
@@ -912,21 +980,30 @@ app.post('/api/consultations', async (req, res) => {
 
         healthBlockchain.addRecord(pendingRecord);
 
-        // Mine block immediately
-        console.log('[Auto-Miner] Packaging consultation and mining block...');
-        const newBlock = healthBlockchain.minePendingRecords();
+        // Mine block and update DB in background
+        (async () => {
+            try {
+                console.log('[Auto-Miner] Packaging consultation and mining block in background...');
+                const newBlock = healthBlockchain.minePendingRecords();
 
-        // Save block in DB
-        await db.query(
-            'INSERT INTO blocks (index, timestamp, records, previous_hash, nonce, hash) VALUES ($1, $2, $3, $4, $5, $6)',
-            [newBlock.index, newBlock.timestamp, JSON.stringify(newBlock.records), newBlock.previousHash, newBlock.nonce, newBlock.hash]
-        );
+                // Save block in DB
+                await db.query(
+                    'INSERT INTO blocks (index, timestamp, records, previous_hash, nonce, hash) VALUES ($1, $2, $3, $4, $5, $6)',
+                    [newBlock.index, newBlock.timestamp, JSON.stringify(newBlock.records), newBlock.previousHash, newBlock.nonce, newBlock.hash]
+                );
 
-        const recordIds = newBlock.records.map(r => r.recordId).filter(Boolean);
-        if (recordIds.length > 0) {
-            await db.query('UPDATE records SET is_mined = true, block_index = $1 WHERE id = ANY($2::uuid[])', [newBlock.index, recordIds]);
-            await db.query('UPDATE audit_logs SET is_mined = true, block_index = $1 WHERE patient_id = ANY($2::uuid[])', [newBlock.index, recordIds]);
-        }
+                const recordIds = newBlock.records.map(r => r.recordId).filter(Boolean);
+                if (recordIds.length > 0) {
+                    await Promise.all([
+                        db.query('UPDATE records SET is_mined = true, block_index = $1 WHERE id = ANY($2::uuid[])', [newBlock.index, recordIds]),
+                        db.query('UPDATE audit_logs SET is_mined = true, block_index = $1 WHERE patient_id = ANY($2::uuid[])', [newBlock.index, recordIds])
+                    ]);
+                }
+                console.log(`[Auto-Miner] Background mining and database update finished successfully for block #${newBlock.index}.`);
+            } catch (err) {
+                console.error('[Auto-Miner] Background mining failed:', err);
+            }
+        })();
 
         // Return updated record
         const responseRecord = {
@@ -945,12 +1022,12 @@ app.post('/api/consultations', async (req, res) => {
             transactionHash: newRecord.transaction_hash,
             signature: newRecord.signature,
             doctorPublicKey: newRecord.doctor_public_key,
-            isMined: true,
-            blockIndex: newBlock.index,
+            isMined: false,
+            blockIndex: -1,
             timestamp: newRecord.timestamp
         };
 
-        res.status(201).json({ success: true, message: 'Consultation completed, signed, and mined!', record: responseRecord });
+        res.status(201).json({ success: true, message: 'Consultation completed, signed, and broadcast to Ledger Pool!', record: responseRecord });
     } catch (err) {
         console.error('Consultation completion error:', err);
         res.status(500).json({ error: err.message });
@@ -989,16 +1066,18 @@ app.post('/api/records', async (req, res) => {
     try {
         const { patientId, diagnosis, treatment, prescriptions, ipfsHash, doctorId } = req.body;
         
-        const { rows: doctors } = await db.query('SELECT * FROM users WHERE id = $1', [doctorId]);
-        const { rows: patients } = await db.query('SELECT * FROM users WHERE id = $1', [patientId]);
-        if (doctors.length === 0 || doctors[0].role !== 'doctor') {
+        const [doctorsRes, patientsRes] = await Promise.all([
+            db.query('SELECT * FROM users WHERE id = $1', [doctorId]),
+            db.query('SELECT * FROM users WHERE id = $1', [patientId])
+        ]);
+        if (doctorsRes.rows.length === 0 || doctorsRes.rows[0].role !== 'doctor') {
             return res.status(403).json({ error: 'Only doctors can create medical records.' });
         }
-        if (patients.length === 0) {
+        if (patientsRes.rows.length === 0) {
             return res.status(404).json({ error: 'Patient not found.' });
         }
-        const doctor = doctors[0];
-        const patient = patients[0];
+        const doctor = doctorsRes.rows[0];
+        const patient = patientsRes.rows[0];
 
         // Treating relationship check: Doctor must be treating the patient
         const { rows: isAuthRows } = await db.query(
@@ -1038,12 +1117,12 @@ app.post('/api/records', async (req, res) => {
         );
         const newRecord = newRecords[0];
 
-        // Create Audit Log Entry
-        await db.query(
+        // Create Audit Log Entry (in background)
+        db.query(
             `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6)`,
             ['record_create', patientId, patient.name, doctorId, doctor.name, `Dr. ${doctor.name} added a new diagnosis/treatment record.`]
-        );
+        ).catch(err => console.error('Failed to log record creation audit:', err));
         
         // Add to blockchain's pending record memory list
         const pendingRecord = {
@@ -1065,22 +1144,31 @@ app.post('/api/records', async (req, res) => {
         
         healthBlockchain.addRecord(pendingRecord);
         
-        // Auto-mine the record immediately to seal it into the blockchain ledger
-        console.log('[Auto-Miner] Packaging record and mining block...');
-        const newBlock = healthBlockchain.minePendingRecords();
-        
-        // Save the block in database
-        await db.query(
-            'INSERT INTO blocks (index, timestamp, records, previous_hash, nonce, hash) VALUES ($1, $2, $3, $4, $5, $6)',
-            [newBlock.index, newBlock.timestamp, JSON.stringify(newBlock.records), newBlock.previousHash, newBlock.nonce, newBlock.hash]
-        );
-        
-        // Update all records that were in this block
-        const recordIds = newBlock.records.map(r => r.recordId).filter(Boolean);
-        if (recordIds.length > 0) {
-            await db.query('UPDATE records SET is_mined = true, block_index = $1 WHERE id = ANY($2::uuid[])', [newBlock.index, recordIds]);
-            await db.query('UPDATE audit_logs SET is_mined = true, block_index = $1 WHERE patient_id = ANY($2::uuid[])', [newBlock.index, recordIds]);
-        }
+        // Mine block and update DB in background
+        (async () => {
+            try {
+                console.log('[Auto-Miner] Packaging record and mining block in background...');
+                const newBlock = healthBlockchain.minePendingRecords();
+                
+                // Save the block in database
+                await db.query(
+                    'INSERT INTO blocks (index, timestamp, records, previous_hash, nonce, hash) VALUES ($1, $2, $3, $4, $5, $6)',
+                    [newBlock.index, newBlock.timestamp, JSON.stringify(newBlock.records), newBlock.previousHash, newBlock.nonce, newBlock.hash]
+                );
+                
+                // Update all records that were in this block
+                const recordIds = newBlock.records.map(r => r.recordId).filter(Boolean);
+                if (recordIds.length > 0) {
+                    await Promise.all([
+                        db.query('UPDATE records SET is_mined = true, block_index = $1 WHERE id = ANY($2::uuid[])', [newBlock.index, recordIds]),
+                        db.query('UPDATE audit_logs SET is_mined = true, block_index = $1 WHERE patient_id = ANY($2::uuid[])', [newBlock.index, recordIds])
+                    ]);
+                }
+                console.log(`[Auto-Miner] Background mining and database update finished successfully for block #${newBlock.index}.`);
+            } catch (err) {
+                console.error('[Auto-Miner] Background mining failed:', err);
+            }
+        })();
 
         const responseRecord = {
             id: newRecord.id,
@@ -1093,12 +1181,12 @@ app.post('/api/records', async (req, res) => {
             ipfsHash: newRecord.ipfs_hash,
             signature: newRecord.signature,
             doctorPublicKey: newRecord.doctor_public_key,
-            isMined: true,
-            blockIndex: newBlock.index,
+            isMined: false,
+            blockIndex: -1,
             timestamp: newRecord.timestamp
         };
         
-        res.status(201).json({ message: 'Record created, signed, and secured on the blockchain ledger!', record: responseRecord });
+        res.status(201).json({ message: 'Record created, signed, and broadcast to Ledger Pool!', record: responseRecord });
     } catch (error) {
         console.error('Record creation error:', error);
         res.status(500).json({ error: error.message || 'Failed to create record.' });
@@ -1134,17 +1222,25 @@ app.get('/api/records/patient/:id', async (req, res) => {
             return res.status(403).json({ error: 'Access Denied: Invalid requester role.' });
         }
 
-        // Create Audit Log Entry for record access
+        // Create Audit Log Entry for record access (in background)
         if (requesterRole === 'doctor') {
-            const { rows: patients } = await db.query('SELECT name FROM users WHERE id = $1', [patientId]);
-            const { rows: doctors } = await db.query('SELECT name FROM users WHERE id = $1', [requesterId]);
-            if (patients.length > 0 && doctors.length > 0) {
-                await db.query(
-                    `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-                     VALUES ($1, $2, $3, $4, $5, $6)`,
-                    ['record_access', patientId, patients[0].name, requesterId, doctors[0].name, `Dr. ${doctors[0].name} viewed electronic medical records folder.`]
-                );
-            }
+            (async () => {
+                try {
+                    const [patientsRes, doctorsRes] = await Promise.all([
+                        db.query('SELECT name FROM users WHERE id = $1', [patientId]),
+                        db.query('SELECT name FROM users WHERE id = $1', [requesterId])
+                    ]);
+                    if (patientsRes.rows.length > 0 && doctorsRes.rows.length > 0) {
+                        await db.query(
+                            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+                             VALUES ($1, $2, $3, $4, $5, $6)`,
+                            ['record_access', patientId, patientsRes.rows[0].name, requesterId, doctorsRes.rows[0].name, `Dr. ${doctorsRes.rows[0].name} viewed electronic medical records folder.`]
+                        );
+                    }
+                } catch (err) {
+                    console.error('Failed to log record access audit:', err);
+                }
+            })();
         }
 
         const { rows: records } = await db.query(

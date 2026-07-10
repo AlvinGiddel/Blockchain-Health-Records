@@ -203,9 +203,11 @@ export default function BlockchainExplorer({ user }) {
                 <span style={{ fontSize: '0.85rem', opacity: 0.9 }}>The database has been tampered with. Cryptographic hashes of Block records do not match the chain state!</span>
               </div>
             </div>
-            <button className="btn btn-secondary" onClick={handleRestoreDatabase} disabled={recovering} style={{ background: '#fff', color: '#000', border: 'none', padding: '8px 16px', fontSize: '0.85rem', fontWeight: 600 }}>
-              {recovering ? 'Repairing Ledger...' : 'Recover from Ledger'}
-            </button>
+            {user.role !== 'patient' && (
+              <button className="btn btn-secondary" onClick={handleRestoreDatabase} disabled={recovering} style={{ background: '#fff', color: '#000', border: 'none', padding: '8px 16px', fontSize: '0.85rem', fontWeight: 600 }}>
+                {recovering ? 'Repairing Ledger...' : 'Recover from Ledger'}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -360,15 +362,17 @@ export default function BlockchainExplorer({ user }) {
                   ))}
                 </div>
 
-                <button
-                  className={`btn btn-primary ${mining ? 'mining-pulse' : ''}`}
-                  style={{ width: '100%', gap: '8px' }}
-                  onClick={handleMineBlock}
-                  disabled={mining}
-                >
-                  <Cpu size={16} className={mining ? 'rotate-slow' : ''} />
-                  {mining ? 'Solving Proof-of-Work...' : `Mine Block (${pendingRecords.length} Records)`}
-                </button>
+                {user.role !== 'patient' && (
+                  <button
+                    className={`btn btn-primary ${mining ? 'mining-pulse' : ''}`}
+                    style={{ width: '100%', gap: '8px' }}
+                    onClick={handleMineBlock}
+                    disabled={mining}
+                  >
+                    <Cpu size={16} className={mining ? 'rotate-slow' : ''} />
+                    {mining ? 'Solving Proof-of-Work...' : `Mine Block (${pendingRecords.length} Records)`}
+                  </button>
+                )}
               </div>
             )}
           </div>

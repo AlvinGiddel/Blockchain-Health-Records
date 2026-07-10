@@ -208,6 +208,9 @@ export default function App() {
           />
         );
       case 'blockchain':
+        if (user.role === 'patient') {
+          return <Dashboard user={user} onSelectPatient={handleSelectPatient} onUpdateUser={handleUpdateUser} onNavigate={setActiveTab} />;
+        }
         return <BlockchainExplorer user={user} />;
       case 'profile':
         return <Profile user={user} onUpdateUser={handleUpdateUser} />;
@@ -301,14 +304,16 @@ export default function App() {
             </button>
           )}
           
-          <button
-            className={`sidebar-link ${activeTab === 'blockchain' ? 'active' : ''}`}
-            onClick={() => handleNavClick('blockchain')}
-            title={sidebarCollapsed ? 'Ledger Explorer' : ''}
-          >
-            <Globe size={20} />
-            <span>Ledger Explorer</span>
-          </button>
+          {user.role !== 'patient' && (
+            <button
+              className={`sidebar-link ${activeTab === 'blockchain' ? 'active' : ''}`}
+              onClick={() => handleNavClick('blockchain')}
+              title={sidebarCollapsed ? 'Ledger Explorer' : ''}
+            >
+              <Globe size={20} />
+              <span>Ledger Explorer</span>
+            </button>
+          )}
 
           <button
             className={`sidebar-link ${activeTab === 'profile' ? 'active' : ''}`}
