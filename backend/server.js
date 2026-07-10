@@ -17,6 +17,14 @@ const JWT_SECRET = 'blockchain_health_secret_key_12345';
 app.use(cors());
 app.use(express.json());
 
+// Unique identifier for the current server run session (re-generated on every server start)
+const serverInstanceId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
+
+// Health check endpoint to retrieve the server status and instance ID
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', serverInstanceId });
+});
+
 // AES Field-Level Encryption details for diagnosis & treatment
 const ENCRYPTION_KEY = Buffer.from('f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a09', 'hex'); // 32 bytes
 const IV_LENGTH = 16;

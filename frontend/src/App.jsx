@@ -147,6 +147,51 @@ export default function App() {
     }
   }, [activeTab]);
 
+  // Heartbeat to check if backend server is running and matches the current session's server instance ID
+  useEffect(() => {
+    if (!user) return;
+
+    let isMounted = true;
+
+    const checkServerStatus = async () => {
+      try {
+        const res = await fetch('/api/health');
+        if (!res.ok) {
+          throw new Error('Server returned error status');
+        }
+        const data = await res.json();
+        if (!isMounted) return;
+
+        const storedInstanceId = sessionStorage.getItem('serverInstanceId');
+        if (!storedInstanceId) {
+          sessionStorage.setItem('serverInstanceId', data.serverInstanceId);
+        } else if (storedInstanceId !== data.serverInstanceId) {
+          console.log('Server restarted. Logging out.');
+          sessionStorage.removeItem('serverInstanceId');
+          handleLogout();
+          alert('The server has restarted. Please log in again.');
+        }
+      } catch (err) {
+        console.error('Server is stopped or unreachable:', err);
+        if (isMounted) {
+          sessionStorage.removeItem('serverInstanceId');
+          handleLogout();
+          alert('The application server is stopped. You have been logged out.');
+        }
+      }
+    };
+
+    // Run check immediately on mount / user state change
+    checkServerStatus();
+
+    const interval = setInterval(checkServerStatus, 3000); // Check every 3 seconds
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [user]);
+
   const handleBackClick = () => {
     if (navHistory.length > 1) {
       const historyCopy = [...navHistory];
@@ -166,6 +211,7 @@ export default function App() {
     setToken(data.token);
     sessionStorage.setItem('user', JSON.stringify(data.user));
     sessionStorage.setItem('token', data.token);
+    sessionStorage.removeItem('serverInstanceId'); // Let next heartbeat fetch it fresh
     setActiveTab('dashboard');
   };
 
@@ -175,6 +221,7 @@ export default function App() {
     setToken('');
     sessionStorage.removeItem('user');
     sessionStorage.removeItem('token');
+    sessionStorage.removeItem('serverInstanceId');
     setActiveTab('dashboard');
   };
 
