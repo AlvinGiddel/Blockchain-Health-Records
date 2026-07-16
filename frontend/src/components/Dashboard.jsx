@@ -43,6 +43,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
   const [availEnd, setAvailEnd] = useState(user.doctorProfile?.availability?.workingHoursEnd || '17:00');
   const [availError, setAvailError] = useState('');
   const [availSuccess, setAvailSuccess] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [availSaving, setAvailSaving] = useState(false);
 
   // Patient Appointment Availability States
@@ -975,78 +976,133 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
           {/* Patient Registry Section */}
           <div className="glass-card">
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Clipboard size={22} color="var(--color-primary)" /> Patient Registration Registry
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+              <h3 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Clipboard size={22} color="var(--color-primary)" /> Patient Registration Registry
+              </h3>
+              {!loading && patients.length > 0 && (
+                <div style={{ position: 'relative', width: '280px' }}>
+                  <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                  <input
+                    type="text"
+                    placeholder="Search name, email, blood group..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px 8px 36px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--glass-border)',
+                      background: 'rgba(0, 0, 0, 0.2)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                      transition: 'all 0.2s'
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = 'var(--color-primary)';
+                      e.target.style.boxShadow = '0 0 0 2px var(--glass-glow)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = 'var(--glass-border)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                </div>
+              )}
+            </div>
 
             {loading ? (
               <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>Loading registry data...</div>
             ) : patients.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>No registered patients in the database.</div>
             ) : (
-              <div className="table-container">
-                <table className="custom-table">
-                  <thead>
-                    <tr>
-                      <th>Patient Name</th>
-                      <th>Email</th>
-                      <th>Age/Gender</th>
-                      <th>Blood Group</th>
-                      <th>Treating Relationship</th>
-                      <th>Emergency Contact</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {patients.map(p => {
-                      const doctorIdStr = user.id || user._id;
-                      const patientIdStr = p.id || p._id;
-                      const isAuthorized = appointments.some(appt => {
-                        const apptPatientIdStr = typeof appt.patientId === 'object' ? appt.patientId?._id?.toString() : appt.patientId?.toString();
-                        return apptPatientIdStr === patientIdStr?.toString() && ['Confirmed', 'Completed'].includes(appt.status);
-                      });
-                      return (
-                        <tr key={patientIdStr}>
-                          <td style={{ fontWeight: 600 }}>{p.name}</td>
-                          <td>{p.email}</td>
-                          <td>{p.patientProfile?.age || '22'} yrs / {p.patientProfile?.gender || 'Male'}</td>
-                          <td>
-                            <span className="badge badge-success">{p.patientProfile?.bloodType || 'O+'}</span>
-                          </td>
-                          <td>
-                            {isAuthorized ? (
-                              <span className="badge badge-success">Active Relationship</span>
-                            ) : (
-                              <span className="badge badge-warning">No confirmed appointments</span>
-                            )}
-                          </td>
-                          <td style={{ color: 'var(--color-accent)', fontWeight: 500 }}>{p.patientProfile?.emergencyContact || '+25471234567'}</td>
-                          <td>
-                            {isAuthorized ? (
-                              <button
-                                className="btn btn-secondary"
-                                style={{ padding: '6px 12px', fontSize: '0.85rem' }}
-                                onClick={() => onSelectPatient(p)}
-                              >
-                                Open Records
-                              </button>
-                            ) : (
-                              <button
-                                className="btn btn-secondary"
-                                style={{ padding: '6px 12px', fontSize: '0.85rem', opacity: 0.5, cursor: 'not-allowed' }}
-                                disabled
-                                title="Access Restricted: Confirmed appointment required."
-                              >
-                                Locked
-                              </button>
-                            )}
-                          </td>
+              (() => {
+                const filteredPatients = patients.filter(p => {
+                  const query = searchQuery.toLowerCase().trim();
+                  if (!query) return true;
+                  return (
+                    p.name?.toLowerCase().includes(query) ||
+                    p.email?.toLowerCase().includes(query) ||
+                    (p.patientProfile?.gender && p.patientProfile.gender.toLowerCase().includes(query)) ||
+                    (p.patientProfile?.bloodType && p.patientProfile.bloodType.toLowerCase().includes(query))
+                  );
+                });
+
+                if (filteredPatients.length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
+                      No patients match your search query.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="table-container">
+                    <table className="custom-table">
+                      <thead>
+                        <tr>
+                          <th>Patient Name</th>
+                          <th>Email</th>
+                          <th>Age/Gender</th>
+                          <th>Blood Group</th>
+                          <th>Treating Relationship</th>
+                          <th>Emergency Contact</th>
+                          <th>Action</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
+                      <tbody>
+                        {filteredPatients.map(p => {
+                          const doctorIdStr = user.id || user._id;
+                          const patientIdStr = p.id || p._id;
+                          const isAuthorized = appointments.some(appt => {
+                            const apptPatientIdStr = typeof appt.patientId === 'object' ? appt.patientId?._id?.toString() : appt.patientId?.toString();
+                            return apptPatientIdStr === patientIdStr?.toString() && ['Confirmed', 'Completed'].includes(appt.status);
+                          });
+                          return (
+                            <tr key={patientIdStr}>
+                              <td style={{ fontWeight: 600 }}>{p.name}</td>
+                              <td>{p.email}</td>
+                              <td>{p.patientProfile?.age || '22'} yrs / {p.patientProfile?.gender || 'Male'}</td>
+                              <td>
+                                <span className="badge badge-success">{p.patientProfile?.bloodType || 'O+'}</span>
+                              </td>
+                              <td>
+                                {isAuthorized ? (
+                                  <span className="badge badge-success">Active Relationship</span>
+                                ) : (
+                                  <span className="badge badge-warning">No confirmed appointments</span>
+                                )}
+                              </td>
+                              <td style={{ color: 'var(--color-accent)', fontWeight: 500 }}>{p.patientProfile?.emergencyContact || '+25471234567'}</td>
+                              <td>
+                                {isAuthorized ? (
+                                  <button
+                                    className="btn btn-secondary"
+                                    style={{ padding: '6px 12px', fontSize: '0.85rem' }}
+                                    onClick={() => onSelectPatient(p)}
+                                  >
+                                    Open Records
+                                  </button>
+                                ) : (
+                                  <button
+                                    className="btn btn-secondary"
+                                    style={{ padding: '6px 12px', fontSize: '0.85rem', opacity: 0.5, cursor: 'not-allowed' }}
+                                    disabled
+                                    title="Access Restricted: Confirmed appointment required."
+                                  >
+                                    Locked
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()
             )}
           </div>
         </div>
