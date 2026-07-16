@@ -13,6 +13,9 @@ export default function Login({ onLoginSuccess }) {
   const [developerLink, setDeveloperLink] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [timeoutMessage, setTimeoutMessage] = useState(() => {
+    return sessionStorage.getItem('sessionTimedOut') === 'true' ? 'your login session timed out please login again' : '';
+  });
 
   // Patient profile fields
   const [age, setAge] = useState('');
@@ -78,6 +81,8 @@ export default function Login({ onLoginSuccess }) {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
+    setTimeoutMessage('');
+    sessionStorage.removeItem('sessionTimedOut');
     setLoading(true);
 
     if (isRegister && role === 'admin') {
@@ -243,6 +248,8 @@ export default function Login({ onLoginSuccess }) {
                 setIsForgotPassword(false);
                 setError('');
                 setSuccessMessage('');
+                setTimeoutMessage('');
+                sessionStorage.removeItem('sessionTimedOut');
                 setDeveloperLink('');
                 setPreviewUrl('');
               }}
@@ -269,6 +276,13 @@ export default function Login({ onLoginSuccess }) {
             {isRegister ? 'Register as Patient or Healthcare Provider' : 'Enter your credentials to access health records'}
           </p>
         </div>
+
+        {timeoutMessage && (
+          <div className="badge-warning" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', borderRadius: '8px', marginBottom: '20px', width: '100%', fontSize: '0.9rem', backgroundColor: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#f59e0b' }}>
+            <AlertCircle size={18} />
+            <span>{timeoutMessage}</span>
+          </div>
+        )}
 
         {successMessage && (
           <div className="badge-success" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', borderRadius: '8px', marginBottom: '20px', width: '100%', fontSize: '0.9rem', backgroundColor: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981' }}>
@@ -400,6 +414,8 @@ export default function Login({ onLoginSuccess }) {
                         setIsForgotPassword(true);
                         setError('');
                         setSuccessMessage('');
+                        setTimeoutMessage('');
+                        sessionStorage.removeItem('sessionTimedOut');
                         setDeveloperLink('');
                         setPreviewUrl('');
                       }}
@@ -601,6 +617,8 @@ export default function Login({ onLoginSuccess }) {
               setIsRegister(!isRegister);
               setError('');
               setSuccessMessage('');
+              setTimeoutMessage('');
+              sessionStorage.removeItem('sessionTimedOut');
             }}
           >
             {isRegister ? 'Login Here' : 'Register Here'}

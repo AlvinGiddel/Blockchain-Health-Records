@@ -212,18 +212,67 @@ export default function App() {
     sessionStorage.setItem('user', JSON.stringify(data.user));
     sessionStorage.setItem('token', data.token);
     sessionStorage.removeItem('serverInstanceId'); // Let next heartbeat fetch it fresh
+    sessionStorage.removeItem('sessionTimedOut'); // Clear timeout flag
     setActiveTab('dashboard');
   };
 
   // Handle logout
-  const handleLogout = () => {
+  const handleLogout = (options) => {
     setUser(null);
     setToken('');
     sessionStorage.removeItem('user');
     sessionStorage.removeItem('token');
     sessionStorage.removeItem('serverInstanceId');
+    if (options && options.isTimeout === true) {
+      sessionStorage.setItem('sessionTimedOut', 'true');
+    } else {
+      sessionStorage.removeItem('sessionTimedOut');
+    }
     setActiveTab('dashboard');
   };
+
+  // Inactivity timeout logic to auto log out after inactivity
+  useEffect(() => {
+    if (!user) return;
+
+    // Check for custom timeout (e.g. for testing/demo) or default to 15 minutes
+    const savedTimeout = localStorage.getItem('inactivityTimeout');
+    const INACTIVITY_TIMEOUT = savedTimeout ? parseInt(savedTimeout, 10) : 15 * 60 * 1000;
+    let timeoutId;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        console.log('Session timed out due to inactivity.');
+        handleLogout({ isTimeout: true });
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    // Events to track user activity
+    const activityEvents = [
+      'mousedown',
+      'mousemove',
+      'keypress',
+      'scroll',
+      'touchstart',
+      'click'
+    ];
+
+    // Initialize timer
+    resetTimer();
+
+    // Bind event listeners
+    activityEvents.forEach(event => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [user]);
 
   // Helper when doctor selects a patient from dashboard registry
   const handleSelectPatient = (patient) => {
