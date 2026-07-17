@@ -792,6 +792,24 @@ app.post('/api/appointments', async (req, res) => {
         const year = parseInt(parts[0], 10);
         const month = parseInt(parts[1], 10) - 1;
         const day = parseInt(parts[2], 10);
+
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth();
+        const currentDay = today.getDate();
+
+        if (year < currentYear) {
+            return res.status(400).json({ error: 'You cannot book an appointment in a past year.' });
+        }
+        if (year === currentYear) {
+            if (month < currentMonth) {
+                return res.status(400).json({ error: 'You cannot book an appointment for a month that has already passed.' });
+            }
+            if (month === currentMonth && day < currentDay) {
+                return res.status(400).json({ error: 'You cannot book an appointment for a date that has already passed.' });
+            }
+        }
+
         const dateObj = new Date(Date.UTC(year, month, day));
         const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayOfWeek = weekdays[dateObj.getUTCDay()];

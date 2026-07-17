@@ -174,6 +174,27 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
       const year = parseInt(parts[0], 10);
       const month = parseInt(parts[1], 10) - 1;
       const day = parseInt(parts[2], 10);
+
+      const today = new Date();
+      const currentYear = today.getFullYear();
+      const currentMonth = today.getMonth();
+      const currentDay = today.getDate();
+
+      if (year < currentYear) {
+        setApptValidationWarning("You cannot book an appointment in a past year.");
+        return;
+      }
+      if (year === currentYear) {
+        if (month < currentMonth) {
+          setApptValidationWarning("You cannot book an appointment for a month that has already passed.");
+          return;
+        }
+        if (month === currentMonth && day < currentDay) {
+          setApptValidationWarning("You cannot book an appointment for a date that has already passed.");
+          return;
+        }
+      }
+
       const dateObj = new Date(Date.UTC(year, month, day));
       const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       const dayOfWeek = weekdays[dateObj.getUTCDay()];
