@@ -1,0 +1,15 @@
+{
+  "short_name": "HealthRecords",
+  "name": "Blockchain Health Records",
+  "icons": [
+    {
+      "src": "/app-icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "240x240"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#10192C",
+  "theme_color": "#10192C",
+  "display": "standalone"
+}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, LayoutDashboard, FileText, Globe, LogOut, UserCheck, Sun, Moon, Menu, X, ArrowLeft } from 'lucide-react';
+import logoSvg from './assets/logo.svg';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
 import MedicalRecords from './components/MedicalRecords';
@@ -326,7 +327,7 @@ export default function App() {
       <div className="app-container">
         <header className="navbar">
           <div className="nav-brand">
-            <Shield size={24} color="var(--color-primary)" />
+            <img src={logoSvg} alt="Logo" style={{ width: '24px', height: '24px' }} />
             <span>BLOCKCHAIN HEALTH RECORDS</span>
           </div>
         </header>
@@ -351,7 +352,7 @@ export default function App() {
       <div className="app-container login-page">
         <header className="navbar">
           <div className="nav-brand">
-            <Shield size={24} color="var(--color-primary)" />
+            <img src={logoSvg} alt="Logo" style={{ width: '24px', height: '24px' }} />
             <span>BLOCKCHAIN HEALTH RECORDS</span>
           </div>
         </header>
@@ -374,7 +375,7 @@ export default function App() {
             {mobileSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
           <div className="brand-logo-text" onClick={() => handleNavClick('dashboard')} style={{ cursor: 'pointer' }}>
-            <Shield size={24} color="var(--color-primary)" />
+            <img src={logoSvg} alt="Logo" style={{ width: '24px', height: '24px' }} />
             <span>BLOCKCHAIN HEALTH RECORDS</span>
           </div>
         </div>

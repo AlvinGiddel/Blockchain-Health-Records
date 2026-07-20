@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, Lock, Mail, User, Activity, AlertCircle, Heart, Stethoscope, ArrowLeft, KeyRound, Eye, EyeOff } from 'lucide-react';
+import logoSvg from '../assets/logo.svg';
 export default function Login({ onLoginSuccess }) {
   const [isRegister, setIsRegister] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -267,7 +268,7 @@ export default function Login({ onLoginSuccess }) {
       <div className="glass-card" style={{ width: '100%', maxWidth: isRegister ? '650px' : '450px' }}>
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <div style={{ background: 'var(--glass-glow)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <Shield size={32} color="var(--color-primary)" className="rotate-slow" />
+            <img src={logoSvg} alt="Logo" style={{ width: '32px', height: '32px' }} className="rotate-slow" />
           </div>
           <h2 style={{ fontSize: '1.75rem', marginBottom: '6px' }}>
             {isRegister ? 'Create Account' : 'Secure Login'}
@@ -585,7 +586,7 @@ export default function Login({ onLoginSuccess }) {
 
                 {role === 'admin' && (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', padding: '20px 10px' }}>
-                    <Shield size={48} color="var(--color-primary)" style={{ marginBottom: '16px' }} className="rotate-slow" />
+                    <img src={logoSvg} alt="Logo" style={{ width: '48px', height: '48px', marginBottom: '16px' }} className="rotate-slow" />
                     <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '8px' }}>Security Admin Node</h4>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
                       Administrator accounts are initialized with full network monitoring capability, ledger verification logs, and database repair validation modules.
