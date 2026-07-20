@@ -383,7 +383,6 @@ export default function App() {
           <button
             className={`sidebar-link ${activeTab === 'dashboard' ? 'active' : ''}`}
             onClick={() => handleNavClick('dashboard')}
-            title={sidebarCollapsed ? (user.role === 'admin' ? 'Admin Panel' : 'Dashboard') : ''}
           >
             <LayoutDashboard size={20} />
             <span>{user.role === 'admin' ? 'Admin Panel' : 'Dashboard'}</span>
@@ -393,7 +392,6 @@ export default function App() {
             <button
               className={`sidebar-link ${activeTab === 'records' ? 'active' : ''}`}
               onClick={() => handleNavClick('records')}
-              title={sidebarCollapsed ? (user.role === 'patient' ? 'My Health Folder' : 'Patient Dossiers') : ''}
             >
               <FileText size={20} />
               <span>{user.role === 'patient' ? 'My Health Folder' : 'Patient Dossiers'}</span>
@@ -404,7 +402,6 @@ export default function App() {
             <button
               className={`sidebar-link ${activeTab === 'blockchain' ? 'active' : ''}`}
               onClick={() => handleNavClick('blockchain')}
-              title={sidebarCollapsed ? 'Ledger Explorer' : ''}
             >
               <Globe size={20} />
               <span>Ledger Explorer</span>
@@ -414,7 +411,6 @@ export default function App() {
           <button
             className={`sidebar-link ${activeTab === 'profile' ? 'active' : ''}`}
             onClick={() => handleNavClick('profile')}
-            title={sidebarCollapsed ? 'My Profile' : ''}
           >
             <UserCheck size={20} />
             <span>My Profile</span>
@@ -479,12 +475,12 @@ export default function App() {
       {/* Main Content Wrapper */}
       <div 
         className={`main-wrapper ${sidebarCollapsed ? 'collapsed' : ''}`}
-        style={!sidebarCollapsed ? { marginLeft: `${sidebarWidth}px`, width: `calc(100% - ${sidebarWidth}px)` } : {}}
+        style={!sidebarCollapsed ? { marginLeft: `${sidebarWidth}px`, width: `calc(100% - ${sidebarWidth}px)` } : { marginLeft: 0, width: '100%' }}
       >
         {/* Top Minimal Header */}
         <header className="top-header" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button className="hamburger-btn" onClick={toggleSidebar} aria-label="Toggle Sidebar">
-            {mobileSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+          <button className="hamburger-btn" onClick={toggleSidebar} aria-label="Toggle Sidebar" title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}>
+            <Menu size={20} />
           </button>
           {activeTab !== 'dashboard' && (
             <button 
@@ -505,7 +501,7 @@ export default function App() {
         </main>
 
         {/* Footer info */}
-        <footer style={{ borderTop: '1px solid var(--glass-border)', padding: '20px 40px', background: 'rgba(0,0,0,0.1)', color: 'var(--text-muted)', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <footer className="app-footer">
           <span>Secure Electronic Health Records &bull; Blockchain Ledger Systems &bull; 2026</span>
           <span>Distributed Ledger Network &bull; Healthcare Security Node</span>
         </footer>
