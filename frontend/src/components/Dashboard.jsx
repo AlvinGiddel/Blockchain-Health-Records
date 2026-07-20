@@ -23,6 +23,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
   const [appointmentReason, setAppointmentReason] = useState('');
   const [apptError, setApptError] = useState('');
   const [apptSuccess, setApptSuccess] = useState('');
+  const [submittingAppt, setSubmittingAppt] = useState(false);
 
   // Consultation Modal / Form States (Doctor)
   const [activeConsultationAppt, setActiveConsultationAppt] = useState(null);
@@ -35,6 +36,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
   const [consultationError, setConsultationError] = useState('');
   const [consultationSuccess, setConsultationSuccess] = useState('');
   const [completedTxHash, setCompletedTxHash] = useState('');
+  const [submittingConsultation, setSubmittingConsultation] = useState(false);
 
   // Doctor Availability States
   const [availStatus, setAvailStatus] = useState(user.doctorProfile?.availability?.status || 'available');
@@ -269,6 +271,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
     }
 
     try {
+      setSubmittingAppt(true);
       const res = await fetch('/api/appointments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -291,6 +294,8 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
       fetchAppointments();
     } catch (err) {
       setApptError(err.message);
+    } finally {
+      setSubmittingAppt(false);
     }
   };
 
@@ -325,6 +330,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
     setCompletedTxHash('');
 
     try {
+      setSubmittingConsultation(true);
       const res = await fetch('/api/consultations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -352,6 +358,8 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
       fetchAppointments();
     } catch (err) {
       setConsultationError(err.message);
+    } finally {
+      setSubmittingConsultation(false);
     }
   };
 
@@ -614,10 +622,10 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    style={{ width: '100%', opacity: (apptValidationWarning || !selectedDoctorId) ? 0.6 : 1 }}
-                    disabled={!!apptValidationWarning || !selectedDoctorId}
+                    style={{ width: '100%', opacity: (apptValidationWarning || !selectedDoctorId || submittingAppt) ? 0.6 : 1 }}
+                    disabled={!!apptValidationWarning || !selectedDoctorId || submittingAppt}
                   >
-                    Submit Appointment Request
+                    {submittingAppt ? 'Submitting Request...' : 'Submit Appointment Request'}
                   </button>
                 </form>
               </div>
@@ -1264,9 +1272,10 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, opacity: submittingConsultation ? 0.6 : 1 }}
+                    disabled={submittingConsultation}
                   >
-                    Complete Consultation
+                    {submittingConsultation ? 'Completing Consultation...' : 'Complete Consultation'}
                   </button>
                 </div>
               </form>

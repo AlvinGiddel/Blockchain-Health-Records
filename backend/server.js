@@ -772,6 +772,16 @@ app.post('/api/appointments', async (req, res) => {
         const patient = patients[0];
         const doctor = doctors[0];
         
+        // Prevent duplicate appointment bookings
+        const { rows: existingAppt } = await db.query(
+            `SELECT id FROM appointments 
+             WHERE patient_id = $1 AND doctor_id = $2 AND date = $3 AND time = $4 AND status IN ('Pending', 'Confirmed')`,
+            [patientId, doctorId, date, time]
+        );
+        if (existingAppt.length > 0) {
+            return res.status(400).json({ error: 'An appointment request at this date and time already exists.' });
+        }
+        
         // Doctor Availability Validation
         const availability = doctor.doctor_profile?.availability || {
             status: 'available',
