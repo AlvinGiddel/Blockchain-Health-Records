@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Database, ShieldAlert, ShieldCheck, UserCheck, Flame, RefreshCw, Layers, Users, Zap, Terminal, Check, X, Clock, Stethoscope, User } from 'lucide-react';
+import { Database, ShieldAlert, ShieldCheck, UserCheck, Flame, RefreshCw, Layers, Users, Zap, Terminal, Check, X, Clock, Stethoscope, User, Search } from 'lucide-react';
 
 export default function AdminPanel({ user }) {
   // Helper to format 24h time string to 12h AM/PM format
@@ -14,10 +14,9 @@ export default function AdminPanel({ user }) {
     return `${hours}:${minutes} ${ampm}`;
   };
 
-  // Helper to format days concisely (e.g. Mon-Fri or listing them)
   const formatDaysConcise = (days) => {
-    if (!days || days.length === 0) return 'None';
-    const shortDays = days.map(d => d.substring(0, 3));
+    if (!days || !Array.isArray(days) || days.length === 0) return 'Mon-Fri';
+    const shortDays = days.map(d => (typeof d === 'string' ? d.substring(0, 3) : ''));
     
     // Check if it matches Monday to Friday
     const monToFri = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -67,6 +66,29 @@ export default function AdminPanel({ user }) {
   const [tamperSuccess, setTamperSuccess] = useState('');
   const [tamperError, setTamperError] = useState('');
   const [mining, setMining] = useState(false);
+
+  // Search state for Node Directory & Registry Control
+  const [nodeSearchQuery, setNodeSearchQuery] = useState('');
+
+  // Filtered Doctors & Patients based on search query
+  const filteredDoctors = dbDoctors.filter(doc => {
+    if (!nodeSearchQuery.trim()) return true;
+    const q = nodeSearchQuery.toLowerCase().trim();
+    const name = (doc.name || '').toLowerCase();
+    const email = (doc.email || '').toLowerCase();
+    const spec = (doc.doctorProfile?.specialization || '').toLowerCase();
+    const hospital = (doc.doctorProfile?.hospital || '').toLowerCase();
+    const license = (doc.doctorProfile?.licenseNumber || '').toLowerCase();
+    return name.includes(q) || email.includes(q) || spec.includes(q) || hospital.includes(q) || license.includes(q);
+  });
+
+  const filteredPatients = dbPatients.filter(pat => {
+    if (!nodeSearchQuery.trim()) return true;
+    const q = nodeSearchQuery.toLowerCase().trim();
+    const name = (pat.name || '').toLowerCase();
+    const email = (pat.email || '').toLowerCase();
+    return name.includes(q) || email.includes(q);
+  });
 
   // Simulated node logs
   const [logs, setLogs] = useState([
@@ -181,25 +203,28 @@ export default function AdminPanel({ user }) {
       let recordsList = [];
       let docsUnique = new Map();
       
-      blocks.forEach(b => {
-        if (b.index === 0) return;
-        b.records.forEach(r => {
-          if (r.txType !== 'consent') {
-            recordsList.push({
-              id: r.recordId,
-              patientName: r.patientName,
-              doctorName: r.doctorName,
-              diagnosis: r.diagnosis || '',
-              blockIndex: b.index
+      if (Array.isArray(blocks)) {
+        blocks.forEach(b => {
+          if (b.index === 0) return;
+          const recs = Array.isArray(b.records) ? b.records : (typeof b.records === 'string' ? JSON.parse(b.records || '[]') : []);
+          recs.forEach(r => {
+            if (r.txType !== 'consent') {
+              recordsList.push({
+                id: r.recordId,
+                patientName: r.patientName,
+                doctorName: r.doctorName,
+                diagnosis: r.diagnosis || '',
+                blockIndex: b.index
+              });
+            }
+            docsUnique.set(r.doctorId, {
+              id: r.doctorId,
+              name: r.doctorName,
+              publicKey: r.doctorPublicKey
             });
-          }
-          docsUnique.set(r.doctorId, {
-            id: r.doctorId,
-            name: r.doctorName,
-            publicKey: r.doctorPublicKey
           });
         });
-      });
+      }
       
       setMinedRecords(recordsList);
       setDoctors(Array.from(docsUnique.values()));
@@ -789,20 +814,54 @@ export default function AdminPanel({ user }) {
 
           {/* Node Operator & Patient Management */}
           <div className="glass-card">
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
-              <Users size={22} /> Network Node Directory & Registry Control
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
+                <Users size={22} /> Network Node Directory & Registry Control
+              </h3>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1', maxWidth: '380px' }}>
+                <div style={{ position: 'relative', flex: '1' }}>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search node operators & patients..."
+                    value={nodeSearchQuery}
+                    onChange={(e) => setNodeSearchQuery(e.target.value)}
+                    style={{ paddingLeft: '32px', paddingRight: nodeSearchQuery ? '28px' : '10px', fontSize: '0.8rem', height: '36px' }}
+                  />
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  {nodeSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setNodeSearchQuery('')}
+                      style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                      title="Clear Search"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ height: '36px', padding: '0 14px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+                  onClick={() => {}}
+                >
+                  <Search size={14} /> Search
+                </button>
+              </div>
+            </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {/* Doctors List */}
               <div>
                 <h4 style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <UserCheck size={14} color="var(--color-success)" /> Clinical Node Operators ({dbDoctors.length})
+                  <UserCheck size={14} color="var(--color-success)" /> Clinical Node Operators ({filteredDoctors.length}{nodeSearchQuery ? ` / ${dbDoctors.length}` : ''})
                 </h4>
                 
-                {dbDoctors.length === 0 ? (
+                {filteredDoctors.length === 0 ? (
                   <div style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center', border: '1px dashed var(--glass-border)', borderRadius: '6px' }}>
-                    No registered doctors.
+                    {nodeSearchQuery ? 'No clinical node operators match your search query.' : 'No registered doctors.'}
                   </div>
                 ) : (
                   <div className="table-container" style={{ maxHeight: '180px', overflowY: 'auto' }}>
@@ -821,7 +880,7 @@ export default function AdminPanel({ user }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {dbDoctors.map(doc => (
+                        {filteredDoctors.map(doc => (
                           <tr key={doc.id || doc._id}>
                             <td>
                               {doc.doctorProfile?.profilePhoto ? (
@@ -871,12 +930,12 @@ export default function AdminPanel({ user }) {
               {/* Patients List */}
               <div>
                 <h4 style={{ fontSize: '0.9rem', color: 'var(--text-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Users size={14} color="var(--color-accent)" /> Registered Patients ({dbPatients.length})
+                  <Users size={14} color="var(--color-accent)" /> Registered Patients ({filteredPatients.length}{nodeSearchQuery ? ` / ${dbPatients.length}` : ''})
                 </h4>
                 
-                {dbPatients.length === 0 ? (
+                {filteredPatients.length === 0 ? (
                   <div style={{ padding: '12px', color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center', border: '1px dashed var(--glass-border)', borderRadius: '6px' }}>
-                    No registered patients.
+                    {nodeSearchQuery ? 'No registered patients match your search query.' : 'No registered patients.'}
                   </div>
                 ) : (
                   <div className="table-container" style={{ maxHeight: '180px', overflowY: 'auto' }}>
@@ -889,7 +948,7 @@ export default function AdminPanel({ user }) {
                         </tr>
                       </thead>
                       <tbody>
-                        {dbPatients.map(pat => (
+                        {filteredPatients.map(pat => (
                           <tr key={pat.id || pat._id}>
                             <td style={{ fontWeight: 600 }}>{pat.name}</td>
                             <td>{pat.email}</td>

@@ -44,32 +44,17 @@ export default function BlockchainExplorer({ user }) {
       // Fetch blocks
       const blocksRes = await fetch('/api/blockchain/blocks');
       const blocksData = blocksRes.ok ? await blocksRes.json() : [];
-      setBlocks(blocksData);
+      setBlocks(Array.isArray(blocksData) ? blocksData : []);
 
-      // Extract pending records by looking at what isn't mined yet
-      // We can also fetch them by checking the chain's validation or records API
-      const recordsRes = await fetch('/api/blockchain/blocks'); // Fallback or sync
-      
-      // Let's call the validation endpoint
+      // Fetch chain validation status
       const validateRes = await fetch('/api/blockchain/validate');
       const validateData = validateRes.ok ? await validateRes.json() : { isValid: true };
       setIsValid(validateData.isValid);
 
-      // Fetch pending records from server state (we can fetch records and filter isMined: false)
-      const allRecordsRes = await fetch('/api/users/patients'); // Dummy or fetch patients to get their records
-      // Let's get pending records by requesting them from the database
-      // Since they are stored on-chain, let's parse records
-      const pendingRes = await fetch('/api/blockchain/blocks'); // simplified
-      
-      // Let's get actual pending records. We will make a quick check of records in DB
-      let tempPending = [];
-      const patientsList = await (await fetch('/api/users/patients')).json();
-      for (let p of patientsList) {
-        const pRecords = await (await fetch(`/api/records/patient/${p.id || p._id}`)).json();
-        const unmined = pRecords.filter(r => !r.isMined);
-        tempPending = [...tempPending, ...unmined];
-      }
-      setPendingRecords(tempPending);
+      // Fetch pending records directly from blockchain mempool
+      const pendingRes = await fetch('/api/blockchain/mempool');
+      const pendingData = pendingRes.ok ? await pendingRes.json() : [];
+      setPendingRecords(Array.isArray(pendingData) ? pendingData : []);
 
     } catch (error) {
       console.error('Error fetching explorer data:', error);

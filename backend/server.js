@@ -6,7 +6,8 @@ const crypto = require('crypto');
 const { sendResetEmail, sendDoctorApprovalEmail, sendDoctorRejectionEmail } = require('./mailer');
 const { Blockchain, generateKeyPair, signRecord } = require('./blockchain');
 
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const db = require('./db');
 
 const app = express();
@@ -57,6 +58,19 @@ function decrypt(text) {
         console.error('Decryption failed:', err);
         return text;
     }
+}
+
+function parseJsonIfNeeded(data) {
+    if (!data) return null;
+    if (typeof data === 'string') {
+        try {
+            const parsed = JSON.parse(data);
+            return typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
+        } catch (e) {
+            return null;
+        }
+    }
+    return data;
 }
 
 // Initialize Blockchain Engine
@@ -207,8 +221,8 @@ app.post('/api/auth/register', async (req, res) => {
                 email: user.email,
                 role: user.role,
                 publicKey: user.public_key,
-                patientProfile: user.patient_profile,
-                doctorProfile: user.doctor_profile,
+                patientProfile: parseJsonIfNeeded(user.patient_profile),
+                doctorProfile: parseJsonIfNeeded(user.doctor_profile),
                 isApproved: user.is_approved
             }
         });
@@ -258,8 +272,8 @@ app.post('/api/auth/login', async (req, res) => {
                 email: user.email,
                 role: user.role,
                 publicKey: user.public_key,
-                patientProfile: user.patient_profile,
-                doctorProfile: user.doctor_profile,
+                patientProfile: parseJsonIfNeeded(user.patient_profile),
+                doctorProfile: parseJsonIfNeeded(user.doctor_profile),
                 isApproved: user.is_approved
             }
         });
@@ -275,7 +289,11 @@ app.get('/api/users/patients', async (req, res) => {
         const { rows: patients } = await db.query(
             'SELECT id, name, email, role, public_key as "publicKey", patient_profile as "patientProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'patient\''
         );
-        res.json(patients);
+        const formatted = patients.map(p => ({
+            ...p,
+            patientProfile: parseJsonIfNeeded(p.patientProfile)
+        }));
+        res.json(formatted);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -287,7 +305,11 @@ app.get('/api/users/doctors', async (req, res) => {
         const { rows: doctors } = await db.query(
             'SELECT id, name, email, role, public_key as "publicKey", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = true'
         );
-        res.json(doctors);
+        const formatted = doctors.map(d => ({
+            ...d,
+            doctorProfile: parseJsonIfNeeded(d.doctorProfile)
+        }));
+        res.json(formatted);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -299,7 +321,11 @@ app.get('/api/admin/doctors/pending', async (req, res) => {
         const { rows: pendingDoctors } = await db.query(
             'SELECT id, name, email, role, public_key as "publicKey", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = false AND is_rejected = false'
         );
-        res.json(pendingDoctors);
+        const formatted = pendingDoctors.map(d => ({
+            ...d,
+            doctorProfile: parseJsonIfNeeded(d.doctorProfile)
+        }));
+        res.json(formatted);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -1416,7 +1442,20 @@ app.post('/api/blockchain/mine', async (req, res) => {
 app.get('/api/blockchain/blocks', async (req, res) => {
     try {
         const { rows: blocks } = await db.query('SELECT id, index, timestamp, records, previous_hash as "previousHash", nonce, hash FROM blocks ORDER BY index ASC');
-        res.json(blocks);
+        const formattedBlocks = blocks.map(b => {
+            let records = b.records;
+            if (typeof records === 'string') {
+                try { records = JSON.parse(records); } catch (e) {}
+            }
+            if (typeof records === 'string') {
+                try { records = JSON.parse(records); } catch (e) {}
+            }
+            return {
+                ...b,
+                records: Array.isArray(records) ? records : []
+            };
+        });
+        res.json(formattedBlocks);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

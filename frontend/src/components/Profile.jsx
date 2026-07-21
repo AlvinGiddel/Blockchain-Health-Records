@@ -11,7 +11,8 @@ export default function Profile({ user, onUpdateUser }) {
   const [editBloodType, setEditBloodType] = useState(user.patientProfile?.bloodType || '');
   const [editEmergencyContact, setEditEmergencyContact] = useState(user.patientProfile?.emergencyContact || '');
   const [editPhone, setEditPhone] = useState(user.patientProfile?.phone || user.doctorProfile?.phone || '');
-  const [editAllergies, setEditAllergies] = useState(user.patientProfile?.allergies?.join(', ') || '');
+  const formatAllergiesStr = (alg) => Array.isArray(alg) ? alg.join(', ') : (typeof alg === 'string' ? alg : '');
+  const [editAllergies, setEditAllergies] = useState(formatAllergiesStr(user.patientProfile?.allergies));
 
   // Doctor fields
   const [editSpecialization, setEditSpecialization] = useState(user.doctorProfile?.specialization || '');
@@ -33,7 +34,7 @@ export default function Profile({ user, onUpdateUser }) {
       setEditBloodType(user.patientProfile?.bloodType || '');
       setEditEmergencyContact(user.patientProfile?.emergencyContact || '');
       setEditPhone(user.patientProfile?.phone || '');
-      setEditAllergies(user.patientProfile?.allergies?.join(', ') || '');
+      setEditAllergies(formatAllergiesStr(user.patientProfile?.allergies));
     } else if (user.role === 'doctor') {
       setEditPhone(user.doctorProfile?.phone || '');
       setEditSpecialization(user.doctorProfile?.specialization || '');
