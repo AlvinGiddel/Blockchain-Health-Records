@@ -9,7 +9,6 @@ export default function Profile({ user, onUpdateUser }) {
   const [editAge, setEditAge] = useState(user.patientProfile?.age || '');
   const [editGender, setEditGender] = useState(user.patientProfile?.gender || '');
   const [editBloodType, setEditBloodType] = useState(user.patientProfile?.bloodType || '');
-  const [editEmergencyContact, setEditEmergencyContact] = useState(user.patientProfile?.emergencyContact || '');
   const [editPhone, setEditPhone] = useState(user.patientProfile?.phone || user.doctorProfile?.phone || '');
   const formatAllergiesStr = (alg) => Array.isArray(alg) ? alg.join(', ') : (typeof alg === 'string' ? alg : '');
   const [editAllergies, setEditAllergies] = useState(formatAllergiesStr(user.patientProfile?.allergies));
@@ -32,7 +31,6 @@ export default function Profile({ user, onUpdateUser }) {
       setEditAge(user.patientProfile?.age || '');
       setEditGender(user.patientProfile?.gender || '');
       setEditBloodType(user.patientProfile?.bloodType || '');
-      setEditEmergencyContact(user.patientProfile?.emergencyContact || '');
       setEditPhone(user.patientProfile?.phone || '');
       setEditAllergies(formatAllergiesStr(user.patientProfile?.allergies));
     } else if (user.role === 'doctor') {
@@ -58,7 +56,6 @@ export default function Profile({ user, onUpdateUser }) {
         age: parseInt(editAge) || undefined,
         gender: editGender,
         bloodType: editBloodType,
-        emergencyContact: editEmergencyContact,
         allergies: editAllergies,
         phone: editPhone
       } : {
@@ -195,12 +192,8 @@ export default function Profile({ user, onUpdateUser }) {
                         <span className="badge badge-success" style={{ fontSize: '0.8rem' }}>{user.patientProfile?.bloodType || 'O+'}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '8px' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Phone Number</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>Contact Phone Number</span>
                         <span style={{ fontWeight: 600 }}>{user.patientProfile?.phone || 'Not provided'}</span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '8px' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Emergency Contact</span>
-                        <span style={{ fontWeight: 600, color: 'var(--color-accent)' }}>{user.patientProfile?.emergencyContact || 'Not provided'}</span>
                       </div>
                     </div>
                   </div>
@@ -367,18 +360,6 @@ export default function Profile({ user, onUpdateUser }) {
                           onChange={(e) => setEditPhone(e.target.value)}
                         />
                       </div>
-                    </div>
-
-                    <div className="form-group" style={{ marginBottom: '12px' }}>
-                      <label htmlFor="edit-emergency">Emergency Contact</label>
-                      <input
-                        type="text"
-                        id="edit-emergency"
-                        className="form-control"
-                        required
-                        value={editEmergencyContact}
-                        onChange={(e) => setEditEmergencyContact(e.target.value)}
-                      />
                     </div>
 
                     <div className="form-group" style={{ marginBottom: '20px' }}>

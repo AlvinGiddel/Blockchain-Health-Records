@@ -23,7 +23,6 @@ export default function Login({ onLoginSuccess }) {
   const [gender, setGender] = useState('');
   const [bloodType, setBloodType] = useState('');
   const [allergies, setAllergies] = useState('');
-  const [emergencyContact, setEmergencyContact] = useState('');
 
   // Doctor profile fields
   const [specialization, setSpecialization] = useState('');
@@ -32,6 +31,27 @@ export default function Login({ onLoginSuccess }) {
   const [yearsOfExperience, setYearsOfExperience] = useState('');
   const [profilePhoto, setProfilePhoto] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+
+  const checkPhoneAvailability = async (phoneVal) => {
+    const digitsOnly = (phoneVal || '').replace(/[^0-9]/g, '');
+    if (!digitsOnly || digitsOnly.length < 5) {
+      setPhoneError('');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/auth/check-phone?phone=${encodeURIComponent(phoneVal)}`);
+      const data = await res.json();
+      if (data.exists) {
+        setPhoneError('This phone number is already registered to another account. Duplicate phone numbers are not allowed.');
+      } else {
+        setPhoneError('');
+      }
+    } catch (err) {
+      console.error('Phone verification failed:', err);
+    }
+  };
 
   const handlePhotoChange = (e) => {
     const file = e.target.files[0];
@@ -92,6 +112,12 @@ export default function Login({ onLoginSuccess }) {
       return;
     }
 
+    if (isRegister && phoneError) {
+      setError(phoneError);
+      setLoading(false);
+      return;
+    }
+
     const url = isRegister ? '/api/auth/register' : '/api/auth/login';
 
     // Construct request body
@@ -106,7 +132,7 @@ export default function Login({ onLoginSuccess }) {
           gender,
           bloodType,
           allergies: allergies.split(',').map(a => a.trim()).filter(a => a !== ''),
-          emergencyContact
+          phone
         };
       } else if (role === 'doctor') {
         body.profile = {
@@ -484,16 +510,26 @@ export default function Login({ onLoginSuccess }) {
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="emergencyContact">Emergency Contact</label>
+                      <label htmlFor="patientPhone">Contact Phone Number</label>
                       <input
-                        type="text"
-                        id="emergencyContact"
+                        type="tel"
+                        id="patientPhone"
                         className="form-control"
                         placeholder="e.g. +254 700 111222"
                         required
-                        value={emergencyContact}
-                        onChange={(e) => setEmergencyContact(e.target.value)}
+                        value={phone}
+                        style={phoneError ? { borderColor: '#ef4444', boxShadow: '0 0 8px rgba(239, 68, 68, 0.3)' } : {}}
+                        onChange={(e) => {
+                          setPhone(e.target.value);
+                          checkPhoneAvailability(e.target.value);
+                        }}
+                        onBlur={(e) => checkPhoneAvailability(e.target.value)}
                       />
+                      {phoneError && (
+                        <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <AlertCircle size={14} /> {phoneError}
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
@@ -561,8 +597,18 @@ export default function Login({ onLoginSuccess }) {
                         placeholder="e.g. +254 700 111222"
                         required
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
+                        style={phoneError ? { borderColor: '#ef4444', boxShadow: '0 0 8px rgba(239, 68, 68, 0.3)' } : {}}
+                        onChange={(e) => {
+                          setPhone(e.target.value);
+                          checkPhoneAvailability(e.target.value, false);
+                        }}
+                        onBlur={(e) => checkPhoneAvailability(e.target.value, false)}
                       />
+                      {phoneError && (
+                        <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <AlertCircle size={14} /> {phoneError}
+                        </div>
+                      )}
                     </div>
                     <div className="form-group">
                       <label htmlFor="profilePhoto">Profile Photo (Optional)</label>

@@ -4,8 +4,6 @@ $ErrorActionPreference = "Stop"
 $toolsDir = Join-Path $PSScriptRoot ".tools"
 $nodeDir = Join-Path $toolsDir "node"
 
-$nodeExe = Join-Path $nodeDir "node.exe"
-
 # 1. Add portable tools to PATH
 $env:PATH = "$nodeDir;" + $env:PATH
 
@@ -25,7 +23,7 @@ if (-not (Test-Path "$PSScriptRoot\frontend\node_modules")) {
 
 # 5. Start Express API Backend Server in a separate window to view API logs
 Write-Host "Starting Express Backend API..." -ForegroundColor Green
-Start-Process -FilePath "cmd.exe" -ArgumentList "/k title Blockchain Health Backend API && `"$nodeExe`" server.js" -WorkingDirectory "$PSScriptRoot\backend"
+Start-Process -FilePath "cmd.exe" -ArgumentList "/k title Blockchain Health Backend API && npx nodemon server.js" -WorkingDirectory "$PSScriptRoot\backend"
 
 # Wait 2 seconds for Express to boot
 Start-Sleep -Seconds 2

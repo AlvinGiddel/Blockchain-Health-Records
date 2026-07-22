@@ -151,6 +151,53 @@ initDb();
 
 // ==================== AUTHENTICATION ROUTES ====================
 
+// Helper to normalize phone numbers (retains numbers only)
+const normalizePhone = (phoneStr) => {
+    if (!phoneStr || typeof phoneStr !== 'string') return '';
+    return phoneStr.replace(/[^0-9]/g, '');
+};
+
+// Helper to safely parse stored profile JSON
+const parseProfile = (p) => {
+    if (!p) return {};
+    if (typeof p === 'string') {
+        try { return JSON.parse(p); } catch (e) { return {}; }
+    }
+    return p;
+};
+
+// Check Phone Availability (Real-time client validation)
+app.get('/api/auth/check-phone', async (req, res) => {
+    try {
+        const { phone } = req.query;
+        if (!phone) {
+            return res.json({ exists: false });
+        }
+        const normPhone = normalizePhone(String(phone));
+        if (!normPhone || normPhone.length < 5) {
+            return res.json({ exists: false });
+        }
+
+        const { rows: allUsers } = await db.query('SELECT patient_profile, doctor_profile FROM users');
+        const exists = allUsers.some(u => {
+            const pProf = parseProfile(u.patient_profile);
+            const dProf = parseProfile(u.doctor_profile);
+            const exPhones = [pProf.phone, dProf.phone]
+                .map(p => normalizePhone(String(p || '')))
+                .filter(Boolean);
+            return exPhones.includes(normPhone);
+        });
+
+        res.json({
+            exists,
+            message: exists ? 'This phone number is already registered to an existing user account. Duplicate phone numbers are not allowed.' : ''
+        });
+    } catch (err) {
+        console.error('Check phone error:', err);
+        res.status(500).json({ error: 'Failed to verify phone number.' });
+    }
+});
+
 // Register
 app.post('/api/auth/register', async (req, res) => {
     try {
@@ -160,10 +207,88 @@ app.post('/api/auth/register', async (req, res) => {
             return res.status(400).json({ error: 'Registration as Administrator is not allowed.' });
         }
         
-        // Check if user exists
-        const { rows: existingUsers } = await db.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
-        if (existingUsers.length > 0) {
-            return res.status(400).json({ error: 'Email already registered.' });
+        // 1. Check if email already exists
+        const cleanEmail = email.toLowerCase().trim();
+        const { rows: existingEmailUsers } = await db.query('SELECT * FROM users WHERE LOWER(email) = $1', [cleanEmail]);
+        if (existingEmailUsers.length > 0) {
+            return res.status(400).json({ error: 'Registration rejected: Email address is already registered.' });
+        }
+
+        // Fetch existing users to verify unique phone numbers and patient details
+        const { rows: allUsers } = await db.query('SELECT id, name, email, role, patient_profile, doctor_profile FROM users');
+
+        // Extract contact phone number supplied in incoming request
+        const rawPhone = profile?.phone || '';
+        const normPhone = normalizePhone(String(rawPhone));
+
+        // 2. Check if Phone Number is already registered
+        if (normPhone && normPhone.length >= 5) {
+            const isPhoneTaken = allUsers.some(u => {
+                const pProf = parseProfile(u.patient_profile);
+                const dProf = parseProfile(u.doctor_profile);
+                const exPhones = [pProf.phone, dProf.phone]
+                    .map(p => normalizePhone(String(p || '')))
+                    .filter(Boolean);
+                return exPhones.includes(normPhone);
+            });
+
+            if (isPhoneTaken) {
+                return res.status(400).json({ error: 'Registration rejected: A user with this phone number is already registered in the system. Duplicate phone numbers are not allowed.' });
+            }
+        }
+
+        // 3. Check Duplicate Patient Details (for Patient registration)
+        if (role === 'patient') {
+            const incomingName = name.toLowerCase().trim();
+            const incomingAge = profile ? parseInt(profile.age) : null;
+            const incomingGender = profile ? (profile.gender || '').toLowerCase().trim() : '';
+            const incomingBlood = profile ? (profile.bloodType || '').toLowerCase().trim() : '';
+
+            const isDuplicatePatient = allUsers.some(u => {
+                if (u.role !== 'patient') return false;
+                const exName = (u.name || '').toLowerCase().trim();
+                const pProf = parseProfile(u.patient_profile);
+                const exAge = pProf.age ? parseInt(pProf.age) : null;
+                const exGender = (pProf.gender || '').toLowerCase().trim();
+                const exBlood = (pProf.bloodType || '').toLowerCase().trim();
+                const exPhone = normalizePhone(String(pProf.phone || ''));
+
+                // Match condition A: Same Name & Same Phone
+                if (incomingName === exName && normPhone && exPhone && normPhone === exPhone) {
+                    return true;
+                }
+
+                // Match condition B: Same Name & Same Age
+                if (incomingName === exName && incomingAge && exAge && incomingAge === exAge) {
+                    return true;
+                }
+
+                // Match condition C: Same Name & Same Gender & Same Blood Group
+                if (incomingName === exName && incomingGender && exGender && incomingGender === exGender && incomingBlood && exBlood && incomingBlood === exBlood) {
+                    return true;
+                }
+
+                return false;
+            });
+
+            if (isDuplicatePatient) {
+                return res.status(400).json({ error: 'Registration rejected: A patient record with identical details (name and demographic profile) is already registered in the system.' });
+            }
+        }
+
+        // 4. Check Doctor License Number Duplicate
+        if (role === 'doctor' && profile?.licenseNumber) {
+            const incomingLicense = profile.licenseNumber.toLowerCase().trim();
+            const isLicenseTaken = allUsers.some(u => {
+                if (u.role !== 'doctor') return false;
+                const dProf = parseProfile(u.doctor_profile);
+                const exLicense = (dProf.licenseNumber || '').toLowerCase().trim();
+                return exLicense && exLicense === incomingLicense;
+            });
+
+            if (isLicenseTaken) {
+                return res.status(400).json({ error: 'Registration rejected: A doctor with this medical license number is already registered.' });
+            }
         }
         
         // Generate cryptographic keys for this user
@@ -608,7 +733,7 @@ app.get('/api/blockchain/mempool', async (req, res) => {
 // Update patient profile / vitals
 app.put('/api/users/patient/profile', async (req, res) => {
     try {
-        const { userId, name, age, gender, bloodType, allergies, emergencyContact, phone } = req.body;
+        const { userId, name, age, gender, bloodType, allergies, phone } = req.body;
         const { rows: users } = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
         if (users.length === 0 || users[0].role !== 'patient') {
             return res.status(404).json({ error: 'Patient not found.' });
@@ -624,8 +749,22 @@ app.put('/api/users/patient/profile', async (req, res) => {
                 ? allergies 
                 : allergies.split(',').map(s => s.trim()).filter(Boolean);
         }
-        if (emergencyContact !== undefined) profile.emergencyContact = emergencyContact;
         if (phone !== undefined) profile.phone = phone;
+
+        // Check if updated phone number belongs to another user
+        const checkPhone = normalizePhone(String(phone || ''));
+        if (checkPhone && checkPhone.length >= 5) {
+            const { rows: allOtherUsers } = await db.query('SELECT id, patient_profile, doctor_profile FROM users WHERE id != $1', [userId]);
+            const isPhoneTaken = allOtherUsers.some(u => {
+                const pProf = parseProfile(u.patient_profile);
+                const dProf = parseProfile(u.doctor_profile);
+                const exPhones = [pProf.phone, dProf.phone].map(p => normalizePhone(String(p || ''))).filter(Boolean);
+                return exPhones.includes(checkPhone);
+            });
+            if (isPhoneTaken) {
+                return res.status(400).json({ error: 'Update failed: This phone number is already registered to another account.' });
+            }
+        }
 
         const updatedName = name || user.name;
 
@@ -685,6 +824,23 @@ app.put('/api/users/doctor/profile', async (req, res) => {
         if (yearsOfExperience !== undefined) profile.yearsOfExperience = yearsOfExperience;
         if (phone !== undefined) profile.phone = phone;
         if (profilePhoto !== undefined) profile.profilePhoto = profilePhoto;
+
+        // Check if updated phone number belongs to another user
+        if (phone !== undefined) {
+            const checkPhone = normalizePhone(String(phone || ''));
+            if (checkPhone && checkPhone.length >= 5) {
+                const { rows: allOtherUsers } = await db.query('SELECT id, patient_profile, doctor_profile FROM users WHERE id != $1', [userId]);
+                const isPhoneTaken = allOtherUsers.some(u => {
+                    const pProf = parseProfile(u.patient_profile);
+                    const dProf = parseProfile(u.doctor_profile);
+                    const exPhones = [pProf.phone, dProf.phone].map(p => normalizePhone(String(p || ''))).filter(Boolean);
+                    return exPhones.includes(checkPhone);
+                });
+                if (isPhoneTaken) {
+                    return res.status(400).json({ error: 'Update failed: This phone number is already registered to another account.' });
+                }
+            }
+        }
 
         // Set restriction flag
         profile.hasEditedProfile = true;
@@ -1670,6 +1826,26 @@ app.delete('/api/users/:id', async (req, res) => {
         console.error('Delete user error:', err);
         res.status(500).json({ error: err.message || 'Failed to delete user.' });
     }
+});
+
+// Global 404 handler for unmatched API routes
+app.use((req, res) => {
+    res.status(404).json({ error: `API endpoint ${req.originalUrl} not found.` });
+});
+
+// Global Express error handling middleware
+app.use((err, req, res, next) => {
+    console.error('[SYS ERROR] Unhandled API Express error:', err);
+    res.status(500).json({ error: 'Internal server error occurred.', message: err.message });
+});
+
+// Global process exception handlers to prevent Node server crashes
+process.on('uncaughtException', (err) => {
+    console.error('[CRITICAL] Uncaught Exception:', err.stack || err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[CRITICAL] Unhandled Promise Rejection:', reason);
 });
 
 // Start Server

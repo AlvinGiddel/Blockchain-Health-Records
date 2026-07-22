@@ -1103,7 +1103,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                                   <span className="badge badge-warning">No confirmed appointments</span>
                                 )}
                               </td>
-                              <td style={{ color: 'var(--color-accent)', fontWeight: 500 }}>{p.patientProfile?.emergencyContact || '+25471234567'}</td>
+                              <td style={{ color: 'var(--color-accent)', fontWeight: 500 }}>{p.patientProfile?.phone || 'N/A'}</td>
                               <td>
                                 {isAuthorized ? (
                                   <button

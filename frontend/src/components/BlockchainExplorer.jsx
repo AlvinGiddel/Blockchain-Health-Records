@@ -6,6 +6,7 @@ export default function BlockchainExplorer({ user }) {
   const [pendingRecords, setPendingRecords] = useState([]);
   const [isValid, setIsValid] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [mining, setMining] = useState(false);
 
   // Tampering states
@@ -60,6 +61,18 @@ export default function BlockchainExplorer({ user }) {
       console.error('Error fetching explorer data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    const minDelay = new Promise(resolve => setTimeout(resolve, 600));
+    try {
+      await Promise.all([fetchBlockchainData(), minDelay]);
+    } catch (err) {
+      console.error('Error refreshing ledger:', err);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -150,8 +163,14 @@ export default function BlockchainExplorer({ user }) {
             Live inspection of the decentralized cryptographic medical ledger and chain validations
           </p>
         </div>
-        <button className="btn btn-secondary" onClick={fetchBlockchainData} disabled={loading} style={{ display: 'flex', gap: '8px' }}>
-          <RefreshCw size={16} className={loading ? 'rotate-slow' : ''} /> Refresh Ledger
+        <button
+          className="btn btn-secondary"
+          onClick={handleManualRefresh}
+          disabled={loading || refreshing}
+          style={{ display: 'flex', gap: '8px', alignItems: 'center' }}
+        >
+          <RefreshCw size={16} className={refreshing || loading ? 'rotate-spin' : ''} />
+          {refreshing ? 'Refreshing...' : 'Refresh Ledger'}
         </button>
       </div>
 

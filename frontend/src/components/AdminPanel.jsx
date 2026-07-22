@@ -45,6 +45,7 @@ export default function AdminPanel({ user }) {
   const [minedRecords, setMinedRecords] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const [dbPatients, setDbPatients] = useState([]);
   const [dbDoctors, setDbDoctors] = useState([]);
@@ -99,10 +100,10 @@ export default function AdminPanel({ user }) {
   ]);
 
   useEffect(() => {
-    fetchAdminData();
+    fetchAdminData(false);
     // Poll backend state and node updates every 10 seconds
     const interval = setInterval(() => {
-      fetchAdminData();
+      fetchAdminData(true);
       
       // Also simulate periodic network pings for log flavor
       const pingMsgs = [
@@ -127,9 +128,9 @@ export default function AdminPanel({ user }) {
     }
   }, [toast]);
 
-  const fetchAdminData = async () => {
+  const fetchAdminData = async (isBackground = false) => {
     try {
-      setLoading(true);
+      if (!isBackground) setLoading(true);
       // Fetch stats
       const resStats = await fetch('/api/admin/stats');
       const statsData = resStats.ok ? await resStats.json() : null;
@@ -245,7 +246,24 @@ export default function AdminPanel({ user }) {
     } catch (err) {
       console.error('Error fetching admin stats:', err);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
+    }
+  };
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    const minDelay = new Promise(resolve => setTimeout(resolve, 600));
+    try {
+      await Promise.all([fetchAdminData(false), minDelay]);
+      setToast({
+        message: 'Admin console data and metrics refreshed successfully.',
+        type: 'success'
+      });
+      setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] [ADMIN] Console metrics manually refreshed.`]);
+    } catch (err) {
+      console.error('Error refreshing console:', err);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -531,8 +549,14 @@ export default function AdminPanel({ user }) {
           <h1 style={{ fontSize: '2.00rem', fontWeight: 800 }}>Admin Command Center</h1>
           <p style={{ color: 'var(--text-secondary)' }}>System metrics, P2P network diagnostics, and ledger security monitoring</p>
         </div>
-        <button className="btn btn-secondary" onClick={fetchAdminData} disabled={loading} style={{ display: 'flex', gap: '8px' }}>
-          <RefreshCw size={16} className={loading ? 'rotate-slow' : ''} /> Refresh Console
+        <button
+          className="btn btn-secondary"
+          onClick={handleManualRefresh}
+          disabled={loading || refreshing}
+          style={{ display: 'flex', gap: '8px', alignItems: 'center' }}
+        >
+          <RefreshCw size={16} className={refreshing || loading ? 'rotate-spin' : ''} />
+          {refreshing ? 'Refreshing...' : 'Refresh Console'}
         </button>
       </div>
 
