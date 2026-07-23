@@ -414,20 +414,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
               <QrCode size={16} /> Health Passport & QR
             </button>
           )}
-          {user.role === 'doctor' && (
-            <button
-              className="btn btn-danger"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontSize: '0.85rem' }}
-              onClick={() => {
-                if (patients.length > 0) {
-                  setSelectedBreakGlassPatient(patients[0]);
-                  setShowBreakGlassModal(true);
-                }
-              }}
-            >
-              <ShieldAlert size={16} /> Emergency Break-Glass Access
-            </button>
-          )}
+          {/* Top banner break-glass button removed; break-glass trigger is preserved per-patient in Patient Registry */}
           <button
             className="btn btn-secondary"
             style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontSize: '0.85rem' }}

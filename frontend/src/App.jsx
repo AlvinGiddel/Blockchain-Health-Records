@@ -361,7 +361,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app-layout ${isResizing ? 'resizing' : ''}`}>
+    <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed-layout' : ''} ${isResizing ? 'resizing' : ''}`}>
       {/* Collapsible Sidebar */}
       <aside 
         className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileSidebarOpen ? 'open' : ''}`}

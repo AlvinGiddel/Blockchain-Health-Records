@@ -775,6 +775,20 @@ select, option {
   border-color: var(--color-primary);
 }
 
+/* Hide top header hamburger button when sidebar is expanded on desktop */
+@media (min-width: 769px) {
+  .app-layout:not(.sidebar-collapsed-layout) .top-header .hamburger-btn {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .sidebar.open ~ .main-wrapper .top-header .hamburger-btn {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
 .header-title {
   font-size: 1.25rem;
   font-weight: 700;
