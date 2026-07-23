@@ -242,47 +242,50 @@ export default function BlockchainExplorer({ user }) {
               }
 
               return (
-                <div key={block.index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div key={block.index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', minWidth: 0, maxWidth: '100%' }}>
                   
                   {/* The Block Card */}
                   <div
                     className="glass-card"
                     style={{
                       width: '100%',
+                      maxWidth: '100%',
+                      boxSizing: 'border-box',
+                      overflow: 'hidden',
                       border: isBlockBroken ? '2px solid var(--color-error)' : '1px solid var(--glass-border)',
                       boxShadow: isBlockBroken ? '0 0 20px var(--color-error-glow)' : 'none',
                       background: isBlockBroken ? 'rgba(239, 68, 68, 0.05)' : 'var(--glass-bg)',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Database size={18} color={isBlockBroken ? 'var(--color-error)' : 'var(--color-primary)'} />
-                        <h4 style={{ margin: 0, fontSize: '1.1rem' }}>Block #{block.index}</h4>
-                        {block.index === 0 && <span className="badge badge-success" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>Genesis</span>}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px', marginBottom: '16px', width: '100%', minWidth: 0, gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, overflow: 'hidden' }}>
+                        <Database size={18} color={isBlockBroken ? 'var(--color-error)' : 'var(--color-primary)'} style={{ flexShrink: 0 }} />
+                        <h4 style={{ margin: 0, fontSize: '1.1rem', whiteSpace: 'nowrap' }}>Block #{block.index}</h4>
+                        {block.index === 0 && <span className="badge badge-success" style={{ fontSize: '0.7rem', padding: '2px 8px', flexShrink: 0 }}>Genesis</span>}
                       </div>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Nonce: {block.nonce}</span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>Nonce: {block.nonce}</span>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Timestamp</span>
-                        <span>{new Date(block.timestamp).toLocaleString()}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem', marginBottom: '16px', width: '100%', minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', width: '100%', minWidth: 0 }}>
+                        <span style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>Timestamp</span>
+                        <span style={{ wordBreak: 'break-all', overflowWrap: 'anywhere', textAlign: 'right', minWidth: 0 }}>{new Date(block.timestamp).toLocaleString()}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Previous Hash</span>
-                        <span style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{block.previousHash.substring(0, 16)}...</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', width: '100%', minWidth: 0 }}>
+                        <span style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>Previous Hash</span>
+                        <span style={{ fontFamily: 'monospace', color: 'var(--text-muted)', wordBreak: 'break-all', overflowWrap: 'anywhere', textAlign: 'right', minWidth: 0 }}>{block.previousHash.substring(0, 16)}...</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Block Hash</span>
-                        <span style={{ fontFamily: 'monospace', color: isBlockBroken ? 'var(--color-error)' : 'var(--color-success)', fontWeight: 600 }}>{block.hash.substring(0, 16)}...</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', width: '100%', minWidth: 0 }}>
+                        <span style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>Block Hash</span>
+                        <span style={{ fontFamily: 'monospace', color: isBlockBroken ? 'var(--color-error)' : 'var(--color-success)', fontWeight: 600, wordBreak: 'break-all', overflowWrap: 'anywhere', textAlign: 'right', minWidth: 0 }}>{block.hash.substring(0, 16)}...</span>
                       </div>
                     </div>
 
                     {/* Mined Records in Block */}
-                    <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '12px' }}>
+                    <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '12px', width: '100%', minWidth: 0, boxSizing: 'border-box', overflow: 'hidden' }}>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>Mined Transactions Ledger ({block.records.length})</span>
                       {block.records.map((rec, rIdx) => (
-                        <div key={rIdx} style={{ fontSize: '0.85rem', borderBottom: rIdx < block.records.length - 1 ? '1px solid var(--glass-border)' : 'none', paddingBottom: rIdx < block.records.length - 1 ? '8px' : '0', paddingTop: rIdx > 0 ? '8px' : '0' }}>
+                        <div key={rIdx} style={{ fontSize: '0.85rem', borderBottom: rIdx < block.records.length - 1 ? '1px solid var(--glass-border)' : 'none', paddingBottom: rIdx < block.records.length - 1 ? '8px' : '0', paddingTop: rIdx > 0 ? '8px' : '0', minWidth: 0, wordBreak: 'break-word' }}>
                           {block.index === 0 ? (
                             <p style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>{rec.message}</p>
                           ) : rec.txType === 'consent' ? (

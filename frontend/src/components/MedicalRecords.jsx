@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Plus, Link2, FileText, AlertCircle, Check, Award, Lock, HelpCircle, Search } from 'lucide-react';
+import { ShieldCheck, Plus, Link2, FileText, AlertCircle, Check, Award, Lock, HelpCircle, Search, ShieldAlert } from 'lucide-react';
+import RecordVerificationPortal from './RecordVerificationPortal';
 
 export default function MedicalRecords({ user, selectedPatient, onBackToRegistry }) {
   const [records, setRecords] = useState([]);
@@ -7,6 +8,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
   const [patientsList, setPatientsList] = useState([]);
   const [activePatient, setActivePatient] = useState(selectedPatient || null);
   const [accessDenied, setAccessDenied] = useState(false);
+  const [verifyRecordId, setVerifyRecordId] = useState(null);
 
   // New Record Form Fields
   const [diagnosis, setDiagnosis] = useState('');
@@ -23,14 +25,56 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
   const [patientSearchQuery, setPatientSearchQuery] = useState('');
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
 
-  // Sync search query when activePatient changes (e.g. from Dashboard registry selection)
+  // Break-Glass Emergency Timer States
+  const [breakGlassInfo, setBreakGlassInfo] = useState(null);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
+
+  // Check active Break-Glass override for doctor & patient
   useEffect(() => {
-    if (activePatient) {
-      setPatientSearchQuery(activePatient.name);
+    if (user.role === 'doctor' && activePatient) {
+      const uId = user.id || user._id;
+      const pId = activePatient.id || activePatient._id;
+      fetch(`/api/auth/break-glass/status?doctorId=${uId}&patientId=${pId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.hasBreakGlass) {
+            setBreakGlassInfo(data);
+            setRemainingSeconds(data.remainingSeconds || 3600);
+          } else {
+            setBreakGlassInfo(null);
+            setRemainingSeconds(0);
+          }
+        })
+        .catch(err => console.error('Break-glass status check error:', err));
     } else {
-      setPatientSearchQuery('');
+      setBreakGlassInfo(null);
+      setRemainingSeconds(0);
     }
-  }, [activePatient]);
+  }, [user, activePatient]);
+
+  // Live countdown ticker
+  useEffect(() => {
+    if (remainingSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setRemainingSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setBreakGlassInfo(null);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [remainingSeconds]);
+
+  // Sync search query and active patient when prop changes
+  useEffect(() => {
+    if (selectedPatient) {
+      setActivePatient(selectedPatient);
+      setPatientSearchQuery(selectedPatient.name);
+    }
+  }, [selectedPatient]);
 
   // Click outside handler for search results dropdown
   useEffect(() => {
@@ -244,6 +288,54 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
         })()}
       </div>
 
+      {/* Emergency Break-Glass Active Countdown Banner */}
+      {breakGlassInfo && remainingSeconds > 0 && (
+        <div style={{
+          background: 'rgba(239, 68, 68, 0.12)',
+          border: '1px solid rgba(239, 68, 68, 0.4)',
+          borderRadius: '12px',
+          padding: '16px 20px',
+          marginBottom: '24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '12px',
+          boxShadow: '0 0 20px rgba(239, 68, 68, 0.15)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ background: 'rgba(239, 68, 68, 0.2)', padding: '10px', borderRadius: '10px' }}>
+              <ShieldAlert size={24} color="var(--color-error)" />
+            </div>
+            <div>
+              <h4 style={{ margin: 0, fontSize: '1rem', color: 'var(--color-error)', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                EMERGENCY BREAK-GLASS OVERRIDE ACTIVE
+                <span className="badge badge-error" style={{ fontSize: '0.7rem' }}>1-Hour Emergency Session</span>
+              </h4>
+              <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                Clinical Justification: <em>"{breakGlassInfo.activeRecord?.details || 'Emergency Room Trauma Override'}"</em>
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{
+              background: 'rgba(0,0,0,0.3)',
+              border: '1px solid rgba(239,68,68,0.3)',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              textAlign: 'right'
+            }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
+                ⏱️ Session Expires In
+              </div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--color-error)', fontFamily: 'monospace' }}>
+                {Math.floor(remainingSeconds / 60)}m {String(remainingSeconds % 60).padStart(2, '0')}s
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={user.role === 'doctor' && activePatient ? 'grid-medical-records' : 'grid-medical-records single-col'}>
         
         {/* Doctor writing panel */}
@@ -375,12 +467,18 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                           transition: 'all 0.2s ease'
                         }}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
                           <div>
                             <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)' }}>Diagnosed by Dr. {rec.doctorName}</h4>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{new Date(rec.timestamp).toLocaleString()}</p>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>{new Date(rec.timestamp).toLocaleString()}</p>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: 600 }}>Record ID:</span>
+                              <code style={{ background: 'rgba(0,0,0,0.25)', padding: '2px 6px', borderRadius: '4px', color: 'var(--color-primary)', wordBreak: 'break-all' }}>
+                                {rec.id || rec._id}
+                              </code>
+                            </div>
                           </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                             <span className="badge badge-success" style={{ gap: '4px' }}>
                               <ShieldCheck size={12} /> Signed
                             </span>
@@ -389,6 +487,13 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                             ) : (
                               <span className="badge badge-warning">Ledger Pool</span>
                             )}
+                            <button
+                              className="btn btn-secondary"
+                              style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              onClick={() => setVerifyRecordId(rec.id || rec._id)}
+                            >
+                              <ShieldCheck size={12} color="var(--color-primary)" /> Verify Seal
+                            </button>
                           </div>
                         </div>
 
@@ -477,12 +582,18 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                           transition: 'all 0.2s ease'
                         }}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
                           <div>
                             <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)' }}>Consultation with Dr. {rec.doctorName}</h4>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{new Date(rec.timestamp).toLocaleString()}</p>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>{new Date(rec.timestamp).toLocaleString()}</p>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: 600 }}>Record ID:</span>
+                              <code style={{ background: 'rgba(0,0,0,0.25)', padding: '2px 6px', borderRadius: '4px', color: 'var(--color-primary)', wordBreak: 'break-all' }}>
+                                {rec.id || rec._id}
+                              </code>
+                            </div>
                           </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                             <span className="badge badge-success" style={{ gap: '4px' }}>
                               <ShieldCheck size={12} /> Signed
                             </span>
@@ -491,6 +602,13 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                             ) : (
                               <span className="badge badge-warning">Ledger Pool</span>
                             )}
+                            <button
+                              className="btn btn-secondary"
+                              style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              onClick={() => setVerifyRecordId(rec.id || rec._id)}
+                            >
+                              <ShieldCheck size={12} color="var(--color-primary)" /> Verify Seal
+                            </button>
                           </div>
                         </div>
 
@@ -624,6 +742,10 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
             </div>
           </div>
         </div>
+      )}
+
+      {verifyRecordId && (
+        <RecordVerificationPortal recordId={verifyRecordId} onClose={() => setVerifyRecordId(null)} />
       )}
 
     </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, Lock, AlertCircle } from 'lucide-react';
+import { safeFetch } from '../utils/api';
 
 export default function ResetPassword({ token, onResetSuccess }) {
   const [password, setPassword] = useState('');
@@ -25,16 +26,11 @@ export default function ResetPassword({ token, onResetSuccess }) {
 
     setLoading(true);
     try {
-      const response = await fetch(`/api/auth/reset-password/${token}`, {
+      const data = await safeFetch(`/api/auth/reset-password/${token}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password })
       });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Password reset failed.');
-      }
 
       setSuccess(data.message || 'Password successfully updated!');
       // Wait 3 seconds then return to login

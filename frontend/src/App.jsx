@@ -9,6 +9,7 @@ import AdminPanel from './components/AdminPanel';
 import ResetPassword from './components/ResetPassword';
 import Profile from './components/Profile';
 import Settings from './components/Settings';
+import { safeFetch } from './utils/api';
 
 
 export default function App() {
@@ -156,11 +157,7 @@ export default function App() {
 
     const checkServerStatus = async () => {
       try {
-        const res = await fetch('/api/health');
-        if (!res.ok) {
-          throw new Error('Server returned error status');
-        }
-        const data = await res.json();
+        const data = await safeFetch('/api/health');
         if (!isMounted) return;
 
         const storedInstanceId = sessionStorage.getItem('serverInstanceId');

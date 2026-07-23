@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, Activity, Heart, ShieldCheck, AlertTriangle, Edit3, Save, X, Stethoscope, Briefcase, FileText, Lock } from 'lucide-react';
+import { safeFetch } from '../utils/api';
 
 export default function Profile({ user, onUpdateUser }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -68,13 +69,11 @@ export default function Profile({ user, onUpdateUser }) {
         phone: editPhone
       };
 
-      const res = await fetch(endpoint, {
+      const data = await safeFetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bodyPayload)
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to update profile.');
       
       setSuccessMsg('Profile updated successfully!');
       if (onUpdateUser) {

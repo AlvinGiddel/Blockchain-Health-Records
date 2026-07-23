@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Database, ShieldAlert, ShieldCheck, UserCheck, Flame, RefreshCw, Layers, Users, Zap, Terminal, Check, X, Clock, Stethoscope, User, Search } from 'lucide-react';
+import { Database, ShieldAlert, ShieldCheck, UserCheck, Flame, RefreshCw, Layers, Users, Zap, Terminal, Check, X, Clock, Stethoscope, User, Search, BarChart3 } from 'lucide-react';
+import PublicHealthAnalytics from './PublicHealthAnalytics';
 
 export default function AdminPanel({ user }) {
   // Helper to format 24h time string to 12h AM/PM format
@@ -599,6 +600,11 @@ export default function AdminPanel({ user }) {
         )}
       </div>
 
+      {/* Public Health Analytics Section */}
+      <div style={{ marginBottom: '32px' }}>
+        <PublicHealthAnalytics />
+      </div>
+
       {/* Pending Admin Approvals */}
       {pendingAdmins.length > 0 && (
         <div className="glass-card" style={{ border: '1px solid rgba(245, 158, 11, 0.3)', marginBottom: '32px', boxShadow: '0 0 15px rgba(245, 158, 11, 0.1)' }}>
@@ -773,7 +779,7 @@ export default function AdminPanel({ user }) {
         {/* Left Column: Security Lab & Doctor registry */}
         <div>
           {/* Security Lab */}
-          <div className="glass-card" style={{ border: '1px solid rgba(239, 68, 68, 0.2)', marginBottom: '32px' }}>
+          <div className="glass-card" style={{ border: '1px solid rgba(239, 68, 68, 0.2)', marginBottom: '32px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
             <h3 style={{ fontSize: '1.25rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-error)' }}>
               <Flame size={22} /> Database Security Attack Simulator
             </h3>
@@ -799,14 +805,15 @@ export default function AdminPanel({ user }) {
                 No mined block transactions available to tamper. Mine blocks under Ledger Explorer first.
               </div>
             ) : (
-              <form onSubmit={handleTamperDatabase} className="grid-2" style={{ gap: '16px' }}>
-                <div className="form-group">
+              <form onSubmit={handleTamperDatabase} style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', minWidth: 0 }}>
+                <div className="form-group" style={{ width: '100%', minWidth: 0 }}>
                   <label>Select Ledger Transaction Record</label>
                   <select
                     className="form-control"
                     value={tamperRecordId}
                     onChange={(e) => setTamperRecordId(e.target.value)}
                     required
+                    style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', textOverflow: 'ellipsis' }}
                   >
                     <option value="">-- Choose Record --</option>
                     {minedRecords.map(mr => (
@@ -817,7 +824,7 @@ export default function AdminPanel({ user }) {
                   </select>
                 </div>
 
-                <div className="form-group">
+                <div className="form-group" style={{ width: '100%', minWidth: 0 }}>
                   <label>Inject Corrupted Diagnosis</label>
                   <input
                     type="text"
@@ -826,10 +833,11 @@ export default function AdminPanel({ user }) {
                     required
                     value={tamperDiagnosis}
                     onChange={(e) => setTamperDiagnosis(e.target.value)}
+                    style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                   />
                 </div>
 
-                <button type="submit" className="btn btn-danger span-2-desktop" style={{ gap: '8px' }}>
+                <button type="submit" className="btn btn-danger" style={{ width: '100%', gap: '8px', marginTop: '4px' }}>
                   <Flame size={16} /> Execute Database Intrusion
                 </button>
               </form>

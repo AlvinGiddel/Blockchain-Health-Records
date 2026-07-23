@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, KeyRound, Check, AlertTriangle } from 'lucide-react';
+import { safeFetch } from '../utils/api';
 
 export default function Settings({ user }) {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -26,7 +27,7 @@ export default function Settings({ user }) {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/change-password', {
+      const data = await safeFetch('/api/auth/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -36,17 +37,12 @@ export default function Settings({ user }) {
         })
       });
       
-      const data = await res.json();
-      if (res.ok) {
-        setSuccess(data.message || 'Password changed successfully!');
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-      } else {
-        setError(data.error || 'Failed to change password.');
-      }
+      setSuccess(data.message || 'Password changed successfully!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
     } catch (err) {
-      setError('Network error. Failed to change password.');
+      setError(err.message || 'Failed to change password.');
     } finally {
       setLoading(false);
     }

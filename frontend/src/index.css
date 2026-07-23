@@ -912,6 +912,14 @@ select, option {
   gap: 32px;
 }
 
+.grid-dashboard-main > *,
+.grid-explorer-main > *,
+.grid-admin-main > *,
+.grid-medical-records > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .grid-admin-main {
   display: grid;
   grid-template-columns: 1.8fr 1.2fr;
@@ -968,16 +976,32 @@ select, option {
   .grid-explorer-main,
   .grid-admin-main,
   .grid-medical-records,
-  .grid-medical-records.single-col {
+  .grid-medical-records.single-col,
+  .grid-2,
+  .grid-3 {
     grid-template-columns: 1fr !important;
   }
   
   .span-2-desktop {
     grid-column: span 1 !important;
   }
+
+  .main-content {
+    padding: 24px 20px !important;
+  }
 }
 
 @media (max-width: 768px) {
+  /* Performance optimization: reduce expensive backdrop blur on mobile GPUs */
+  .glass-card,
+  .navbar,
+  .top-header,
+  .sidebar,
+  .sidebar-backdrop {
+    backdrop-filter: blur(6px) !important;
+    -webkit-backdrop-filter: blur(6px) !important;
+  }
+
   .grid-login-fields.register {
     grid-template-columns: 1fr !important;
   }
@@ -1003,12 +1027,61 @@ select, option {
     width: 100% !important;
     justify-content: center !important;
   }
+
+  .main-content {
+    padding: 16px 12px !important;
+  }
+
+  .glass-card {
+    padding: 18px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Universal Touch Target Enhancements */
+  button,
+  .btn,
+  .nav-btn,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+
+  .btn,
+  .form-control {
+    min-height: 44px;
+  }
 }
 
 @media (max-width: 576px) {
   .grid-quick-actions {
     grid-template-columns: 1fr !important;
   }
+
+  .glass-card {
+    padding: 14px !important;
+  }
+
+  /* Modal responsiveness for mobile viewports */
+  .modal-dialog {
+    max-height: 90vh !important;
+    max-height: 90dvh !important;
+    padding: 16px !important;
+    margin: 8px !important;
+  }
+}
+
+/* Global Word Break & Ellipsis Utilities */
+.hash-code,
+.text-break-all {
+  word-break: break-all !important;
+  overflow-wrap: anywhere !important;
+}
+
+.text-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .medical-history-card {
@@ -1024,3 +1097,4 @@ select, option {
     grid-column: span 1 !important;
   }
 }
+

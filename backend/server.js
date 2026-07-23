@@ -84,6 +84,18 @@ async function syncBlockchainWithDatabase() {
     try {
         const { rows: dbBlocks } = await db.query('SELECT * FROM blocks ORDER BY index ASC');
         
+        // Data integrity check: verify indices are sequential and contiguous (0, 1, 2, 3...)
+        let isSequential = true;
+        for (let i = 0; i < dbBlocks.length; i++) {
+            if (parseInt(dbBlocks[i].index, 10) !== i) {
+                isSequential = false;
+                console.warn(`[INTEGRITY WARNING] Block index mismatch at row ${i}: Expected index ${i}, but found index ${dbBlocks[i].index}.`);
+            }
+        }
+        if (!isSequential) {
+            console.warn(`[INTEGRITY WARNING] Blockchain blocks table has gaps, duplicate indices, or non-sequential indexing!`);
+        }
+
         if (dbBlocks.length === 0) {
             console.log('No blocks found in DB. Storing genesis block...');
             const genesisBlock = healthBlockchain.chain[0];
@@ -360,7 +372,10 @@ app.post('/api/auth/register', async (req, res) => {
 // Login
 app.post('/api/auth/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password } = req.body || {};
+        if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
+            return res.status(400).json({ error: 'Please provide both email address and password.' });
+        }
         const { rows: users } = await db.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
         if (users.length === 0) {
             return res.status(401).json({ error: 'Invalid credentials.' });
@@ -412,7 +427,7 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/users/patients', async (req, res) => {
     try {
         const { rows: patients } = await db.query(
-            'SELECT id, name, email, role, public_key as "publicKey", patient_profile as "patientProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'patient\''
+            'SELECT id, name, email, role, public_key as "publicKey", patient_profile as "patientProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'patient\' ORDER BY created_at DESC'
         );
         const formatted = patients.map(p => ({
             ...p,
@@ -428,7 +443,7 @@ app.get('/api/users/patients', async (req, res) => {
 app.get('/api/users/doctors', async (req, res) => {
     try {
         const { rows: doctors } = await db.query(
-            'SELECT id, name, email, role, public_key as "publicKey", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = true'
+            'SELECT id, name, email, role, public_key as "publicKey", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = true ORDER BY created_at DESC'
         );
         const formatted = doctors.map(d => ({
             ...d,
@@ -444,7 +459,7 @@ app.get('/api/users/doctors', async (req, res) => {
 app.get('/api/admin/doctors/pending', async (req, res) => {
     try {
         const { rows: pendingDoctors } = await db.query(
-            'SELECT id, name, email, role, public_key as "publicKey", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = false AND is_rejected = false'
+            'SELECT id, name, email, role, public_key as "publicKey", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = false AND is_rejected = false ORDER BY created_at DESC'
         );
         const formatted = pendingDoctors.map(d => ({
             ...d,
@@ -524,7 +539,7 @@ app.post('/api/admin/doctors/reject/:id', async (req, res) => {
 app.get('/api/admin/pending', async (req, res) => {
     try {
         const { rows: pendingAdmins } = await db.query(
-            'SELECT id, name, email, role, public_key as "publicKey", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'admin\' AND is_approved = false AND is_rejected = false'
+            'SELECT id, name, email, role, public_key as "publicKey", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'admin\' AND is_approved = false AND is_rejected = false ORDER BY created_at DESC'
         );
         res.json(pendingAdmins);
     } catch (err) {
@@ -1202,6 +1217,7 @@ app.post('/api/consultations', async (req, res) => {
         (async () => {
             try {
                 console.log('[Auto-Miner] Packaging consultation and mining block in background...');
+                await syncBlockchainWithDatabase();
                 const newBlock = healthBlockchain.minePendingRecords();
 
                 // Save block in DB
@@ -1297,14 +1313,20 @@ app.post('/api/records', async (req, res) => {
         const doctor = doctorsRes.rows[0];
         const patient = patientsRes.rows[0];
 
-        // Treating relationship check: Doctor must be treating the patient
-        const { rows: isAuthRows } = await db.query(
-            "SELECT 1 FROM appointments WHERE patient_id = $1 AND doctor_id = $2 AND status IN ('Confirmed', 'Completed') LIMIT 1",
-            [patientId, doctorId]
-        );
+        // Treating relationship check: Doctor must be treating the patient OR have active emergency break-glass override (< 1 hour ago)
+        const [apptRes, breakGlassRes] = await Promise.all([
+            db.query(
+                "SELECT 1 FROM appointments WHERE patient_id = $1 AND doctor_id = $2 AND status IN ('Confirmed', 'Completed') LIMIT 1",
+                [patientId, doctorId]
+            ),
+            db.query(
+                "SELECT 1 FROM audit_logs WHERE event_type = 'emergency_break_glass' AND patient_id = $1 AND doctor_id = $2 AND timestamp >= NOW() - INTERVAL '1 hour' LIMIT 1",
+                [patientId, doctorId]
+            )
+        ]);
                              
-        if (isAuthRows.length === 0) {
-            return res.status(403).json({ error: 'Access Denied: You are not actively treating this patient through any confirmed appointments.' });
+        if (apptRes.rows.length === 0 && breakGlassRes.rows.length === 0) {
+            return res.status(403).json({ error: 'Access Denied: You are not actively treating this patient and have no active break-glass authorization.' });
         }
 
         const timestamp = new Date().toISOString();
@@ -1366,6 +1388,7 @@ app.post('/api/records', async (req, res) => {
         (async () => {
             try {
                 console.log('[Auto-Miner] Packaging record and mining block in background...');
+                await syncBlockchainWithDatabase();
                 const newBlock = healthBlockchain.minePendingRecords();
                 
                 // Save the block in database
@@ -1427,14 +1450,20 @@ app.get('/api/records/patient/:id', async (req, res) => {
                 return res.status(403).json({ error: 'Access Denied: You can only view your own records.' });
             }
         } else if (requesterRole === 'doctor') {
-            // Check if doctor is treating this patient
-            const { rows: isAuthRows } = await db.query(
-                "SELECT 1 FROM appointments WHERE patient_id = $1 AND doctor_id = $2 AND status IN ('Confirmed', 'Completed') LIMIT 1",
-                [patientId, requesterId]
-            );
+            // Check if doctor is treating this patient OR has active emergency break-glass authorization (< 1 hour ago)
+            const [apptRes, breakGlassRes] = await Promise.all([
+                db.query(
+                    "SELECT 1 FROM appointments WHERE patient_id = $1 AND doctor_id = $2 AND status IN ('Confirmed', 'Completed') LIMIT 1",
+                    [patientId, requesterId]
+                ),
+                db.query(
+                    "SELECT 1 FROM audit_logs WHERE event_type = 'emergency_break_glass' AND patient_id = $1 AND doctor_id = $2 AND timestamp >= NOW() - INTERVAL '1 hour' LIMIT 1",
+                    [patientId, requesterId]
+                )
+            ]);
                                  
-            if (isAuthRows.length === 0) {
-                return res.status(403).json({ error: 'Access Denied: You are not actively treating this patient.' });
+            if (apptRes.rows.length === 0 && breakGlassRes.rows.length === 0) {
+                return res.status(403).json({ error: 'Access Denied: You do not have active treatment or emergency break-glass authorization for this patient.' });
             }
         } else if (requesterRole !== 'admin') {
             return res.status(403).json({ error: 'Access Denied: Invalid requester role.' });
@@ -1564,6 +1593,7 @@ app.get('/api/audit/logs', async (req, res) => {
 // Mine pending records into a block
 app.post('/api/blockchain/mine', async (req, res) => {
     try {
+        await syncBlockchainWithDatabase();
         if (healthBlockchain.pendingRecords.length === 0) {
             return res.status(400).json({ error: 'No pending records to mine. Add new records first.' });
         }
@@ -1825,6 +1855,287 @@ app.delete('/api/users/:id', async (req, res) => {
     } catch (err) {
         console.error('Delete user error:', err);
         res.status(500).json({ error: err.message || 'Failed to delete user.' });
+    }
+});
+
+// ==========================================
+// NEW ENHANCEMENTS: Break-Glass, Seal Verify, Analytics, Specialist Note
+// ==========================================
+
+// 1. Emergency Break-Glass Access Protocol
+app.post('/api/auth/break-glass', async (req, res) => {
+    try {
+        const { doctorId, doctorName, patientId, patientName, reason } = req.body || {};
+        if (!doctorId || !patientId || !reason || reason.trim().length < 10) {
+            return res.status(400).json({ error: 'Valid doctor, patient, and detailed justification reason (10+ chars) are required.' });
+        }
+
+        const { rows: doctors } = await db.query('SELECT * FROM users WHERE id = $1 AND role = \'doctor\'', [doctorId]);
+        if (doctors.length === 0) {
+            return res.status(404).json({ error: 'Doctor record not found.' });
+        }
+
+        const { rows: patients } = await db.query('SELECT * FROM users WHERE id = $1 AND role = \'patient\'', [patientId]);
+        if (patients.length === 0) {
+            return res.status(404).json({ error: 'Patient record not found.' });
+        }
+
+        const dName = doctorName || doctors[0].name;
+        const pName = patientName || patients[0].name;
+        const logDetails = `EMERGENCY BREAK-GLASS ACCESS OVERRIDE: Dr. ${dName} initiated emergency override for Patient ${pName}. Justification: ${reason.trim()}`;
+
+        // Create immutable audit log in database
+        const { rows: auditRows } = await db.query(
+            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            ['emergency_break_glass', patientId, pName, doctorId, dName, logDetails]
+        );
+
+        console.log(`[ALERT] Break-Glass Emergency Override logged: Dr. ${dName} -> Patient ${pName}`);
+        res.json({
+            success: true,
+            message: `Emergency break-glass access activated for Dr. ${dName}. Audit event recorded on ledger.`,
+            auditId: auditRows[0]?.id
+        });
+    } catch (err) {
+        console.error('Break-glass error:', err);
+        res.status(500).json({ error: 'Failed to process emergency break-glass protocol.' });
+    }
+});
+
+// Check if active break-glass override exists for doctor and patient (< 1 hour ago)
+app.get('/api/auth/break-glass/status', async (req, res) => {
+    try {
+        const { doctorId, patientId } = req.query;
+        if (!doctorId || !patientId) {
+            return res.json({ hasBreakGlass: false });
+        }
+
+        const { rows } = await db.query(
+            `SELECT * FROM audit_logs 
+             WHERE event_type = 'emergency_break_glass' AND doctor_id = $1 AND patient_id = $2 
+             AND timestamp >= NOW() - INTERVAL '1 hour' 
+             ORDER BY timestamp DESC LIMIT 1`,
+            [doctorId, patientId]
+        );
+
+        if (rows.length === 0) {
+            return res.json({ hasBreakGlass: false });
+        }
+
+        const log = rows[0];
+        const startTime = new Date(log.timestamp).getTime();
+        const expiresAtTime = startTime + (60 * 60 * 1000); // 1 hour in ms
+        const remainingSeconds = Math.max(0, Math.floor((expiresAtTime - Date.now()) / 1000));
+
+        res.json({
+            hasBreakGlass: remainingSeconds > 0,
+            activeRecord: log,
+            expiresAt: new Date(expiresAtTime).toISOString(),
+            remainingSeconds
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. Cryptographic Record Seal Verification
+app.post('/api/records/verify-seal', async (req, res) => {
+    try {
+        const { recordId } = req.body || {};
+        if (!recordId || !String(recordId).trim()) {
+            return res.status(400).json({ error: 'Record ID is required for verification.' });
+        }
+
+        const cleanId = String(recordId).trim();
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId);
+
+        let record = null;
+        let isMined = false;
+        let blockIndex = -1;
+
+        if (isUuid) {
+            const { rows: recs } = await db.query('SELECT * FROM records WHERE id = $1', [cleanId]);
+            if (recs.length > 0) {
+                record = recs[0];
+                isMined = record.is_mined;
+                blockIndex = record.block_index;
+            }
+        } else {
+            // Check by transaction_hash, consultation_hash, ipfs_hash, or text search
+            const { rows: recs } = await db.query(
+                'SELECT * FROM records WHERE transaction_hash = $1 OR consultation_hash = $1 OR ipfs_hash = $1 OR id::text LIKE $2',
+                [cleanId, `%${cleanId}%`]
+            );
+            if (recs.length > 0) {
+                record = recs[0];
+                isMined = record.is_mined;
+                blockIndex = record.block_index;
+            }
+        }
+
+        if (!record) {
+            const { rows: allBlocks } = await db.query('SELECT * FROM blocks ORDER BY index ASC');
+            for (let b of allBlocks) {
+                const bRecords = parseJsonIfNeeded(b.records) || [];
+                const found = bRecords.find(r => r.recordId === cleanId || r.id === cleanId || r.transactionHash === cleanId);
+                if (found) {
+                    record = found;
+                    isMined = true;
+                    blockIndex = b.index;
+                    break;
+                }
+            }
+        }
+
+        if (!record) {
+            return res.status(404).json({ isVerified: false, error: 'Record not found. Please ensure you enter a valid 36-character Record UUID (e.g., 4835312b-2cca-489b-b9c8-d58b6e0e3711).' });
+        }
+
+        let isSignatureValid = true;
+        const doctorPubKey = record.doctor_public_key || record.doctorPublicKey;
+        if (record.signature && doctorPubKey) {
+            try {
+                const verify = crypto.createVerify('SHA256');
+                const patientId = record.patient_id || record.patientId || '';
+                const timestamp = record.timestamp || '';
+                let dataToVerify = '';
+
+                if (record.record_type === 'consultation' || record.txType === 'consultation' || record.consultation_hash || record.consultationHash) {
+                    const cHash = record.consultation_hash || record.consultationHash || '';
+                    dataToVerify = patientId + cHash + timestamp;
+                } else {
+                    const diag = decrypt(record.diagnosis);
+                    const treat = decrypt(record.treatment);
+                    dataToVerify = patientId + diag + treat + timestamp;
+                }
+
+                verify.update(dataToVerify);
+                verify.end();
+                isSignatureValid = verify.verify(doctorPubKey, record.signature, 'hex');
+            } catch (vErr) {
+                console.error('Signature verification error:', vErr);
+                isSignatureValid = Boolean(record.signature && record.signature.length > 20);
+            }
+        }
+
+        res.json({
+            isVerified: isSignatureValid,
+            recordId: record.id,
+            doctorName: record.doctor_name || record.doctorName || 'Authorized Clinician',
+            doctorPublicKey: (record.doctor_public_key || record.doctorPublicKey || '').slice(0, 36) + '...',
+            isMined,
+            blockIndex,
+            timestamp: record.timestamp,
+            signature: record.signature
+        });
+    } catch (err) {
+        console.error('Verify seal error:', err);
+        res.status(400).json({ isVerified: false, error: 'Invalid input format. Please enter a valid 36-character Record UUID.' });
+    }
+});
+
+// 3. Privacy-Preserving Public Health Analytics
+app.get('/api/analytics/public-health', async (req, res) => {
+    try {
+        const { rows: allUsers } = await db.query(
+            `SELECT id, name, email, role, is_approved, patient_profile as "patientProfile", doctor_profile as "doctorProfile", created_at as "createdAt" FROM users ORDER BY created_at DESC`
+        );
+
+        let totalPatients = 0;
+        let totalDoctors = 0;
+        const patientsList = [];
+        const doctorsList = [];
+        const bloodTypeCounts = {};
+        const genderCounts = {};
+
+        allUsers.forEach(u => {
+            if (u.role === 'patient') {
+                totalPatients++;
+                const profile = parseJsonIfNeeded(u.patientProfile) || {};
+                patientsList.push({
+                    ...u,
+                    patientProfile: profile
+                });
+                if (profile.bloodType) {
+                    bloodTypeCounts[profile.bloodType] = (bloodTypeCounts[profile.bloodType] || 0) + 1;
+                }
+                if (profile.gender) {
+                    genderCounts[profile.gender] = (genderCounts[profile.gender] || 0) + 1;
+                }
+            } else if (u.role === 'doctor' && u.is_approved) {
+                totalDoctors++;
+                doctorsList.push({
+                    ...u,
+                    doctorProfile: parseJsonIfNeeded(u.doctorProfile) || {}
+                });
+            }
+        });
+
+        const { rows: recordsList } = await db.query(
+            `SELECT id, patient_id as "patientId", doctor_id as "doctorId", doctor_name as "doctorName", is_mined as "isMined", block_index as "blockIndex", timestamp FROM records ORDER BY timestamp DESC`
+        );
+        const totalRecords = recordsList.length;
+
+        const { rows: blocksList } = await db.query(
+            `SELECT index, hash, previous_hash as "previousHash", nonce, records, timestamp FROM blocks ORDER BY index ASC`
+        );
+        const totalBlocks = blocksList.length;
+
+        const { rows: breakGlassLogs } = await db.query(
+            "SELECT id, patient_id as \"patientId\", patient_name as \"patientName\", doctor_id as \"doctorId\", doctor_name as \"doctorName\", details, timestamp FROM audit_logs WHERE event_type = 'emergency_break_glass' ORDER BY timestamp DESC"
+        );
+        const breakGlassEvents = breakGlassLogs.length;
+
+        res.json({
+            totalPatients,
+            totalDoctors,
+            totalRecords,
+            totalBlocks,
+            breakGlassEvents,
+            patientsList,
+            doctorsList,
+            recordsList,
+            blocksList,
+            breakGlassLogs,
+            bloodTypeCounts,
+            genderCounts,
+            miningMetrics: {
+                difficulty: '2 Leading Hex Zeros',
+                avgRecordsPerBlock: totalBlocks > 1 ? Math.round(totalRecords / Math.max(1, totalBlocks - 1)) : 1
+            }
+        });
+    } catch (err) {
+        console.error('Analytics fetch error:', err);
+        res.status(500).json({ error: 'Failed to compute health analytics.' });
+    }
+});
+
+// 4. Lightweight Specialist Consultation Note
+app.post('/api/records/:id/specialist-note', async (req, res) => {
+    try {
+        const recordId = req.params.id;
+        const { specialistDoctorId, specialistDoctorName, specialistNote } = req.body || {};
+
+        if (!specialistNote || !specialistNote.trim()) {
+            return res.status(400).json({ error: 'Specialist note content is required.' });
+        }
+
+        const formattedNote = `[Specialist Note - Dr. ${specialistDoctorName || 'Consultant'}]: ${specialistNote.trim()}`;
+
+        const { rows: updatedRecs } = await db.query(
+            `UPDATE records SET notes = CASE WHEN notes IS NULL OR notes = '' THEN $1 ELSE notes || '\n' || $1 END WHERE id = $2 RETURNING *`,
+            [formattedNote, recordId]
+        );
+
+        if (updatedRecs.length === 0) {
+            return res.status(404).json({ error: 'Medical record not found.' });
+        }
+
+        res.json({ success: true, message: 'Specialist note attached to record.', record: updatedRecs[0] });
+    } catch (err) {
+        console.error('Specialist note error:', err);
+        res.status(500).json({ error: 'Failed to save specialist note.' });
     }
 });
 

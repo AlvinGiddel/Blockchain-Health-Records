@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { User, Activity, AlertTriangle, ShieldCheck, Phone, Clipboard, CheckCircle, Clock, Calendar, Check, X, BookOpen, FileText, Copy, Lock, Database, Globe, Search } from 'lucide-react';
+import { User, Activity, AlertTriangle, ShieldCheck, Phone, Clipboard, CheckCircle, Clock, Calendar, Check, X, BookOpen, FileText, Copy, Lock, Database, Globe, Search, QrCode, ShieldAlert, KeyRound } from 'lucide-react';
+import BreakGlassModal from './BreakGlassModal';
+import QRHealthPassport from './QRHealthPassport';
+import RecordVerificationPortal from './RecordVerificationPortal';
+import { safeFetch } from '../utils/api';
+
 export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavigate }) {
   const [patients, setPatients] = useState([]);
   const [blocksCount, setBlocksCount] = useState(0);
@@ -7,6 +12,13 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
   const [loading, setLoading] = useState(false);
   const [doctors, setDoctors] = useState([]);
   const [appointments, setAppointments] = useState([]);
+
+  // Enhancement Modals State
+  const [showBreakGlassModal, setShowBreakGlassModal] = useState(false);
+  const [selectedBreakGlassPatient, setSelectedBreakGlassPatient] = useState(null);
+  const [showQRPassportModal, setShowQRPassportModal] = useState(false);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [selectedVerificationRecordId, setSelectedVerificationRecordId] = useState('');
 
   // Interactive Stats / Modal States
   const [allBlocks, setAllBlocks] = useState([]);
@@ -384,11 +396,49 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
   return (
     <div>
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '2.25rem', fontWeight: 800 }}>Welcome, {user.name}</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>
-          {user.role === 'doctor' ? 'Healthcare Provider Portal' : 'Secure Personal Health Records'}
-        </p>
+      <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <h1 style={{ fontSize: '2.25rem', fontWeight: 800 }}>Welcome, {user.name}</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>
+            {user.role === 'doctor' ? 'Healthcare Provider Portal' : 'Secure Personal Health Records'}
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          {user.role === 'patient' && (
+            <button
+              className="btn btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontSize: '0.85rem' }}
+              onClick={() => setShowQRPassportModal(true)}
+            >
+              <QrCode size={16} /> Health Passport & QR
+            </button>
+          )}
+          {user.role === 'doctor' && (
+            <button
+              className="btn btn-danger"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontSize: '0.85rem' }}
+              onClick={() => {
+                if (patients.length > 0) {
+                  setSelectedBreakGlassPatient(patients[0]);
+                  setShowBreakGlassModal(true);
+                }
+              }}
+            >
+              <ShieldAlert size={16} /> Emergency Break-Glass Access
+            </button>
+          )}
+          <button
+            className="btn btn-secondary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontSize: '0.85rem' }}
+            onClick={() => {
+              setSelectedVerificationRecordId('');
+              setShowVerificationModal(true);
+            }}
+          >
+            <ShieldCheck size={16} /> Verify Record Seal
+          </button>
+        </div>
       </div>
 
       {user.role === 'patient' ? (
@@ -1114,14 +1164,27 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                                     Open Records
                                   </button>
                                 ) : (
-                                  <button
-                                    className="btn btn-secondary"
-                                    style={{ padding: '6px 12px', fontSize: '0.85rem', opacity: 0.5, cursor: 'not-allowed' }}
-                                    disabled
-                                    title="Access Restricted: Confirmed appointment required."
-                                  >
-                                    Locked
-                                  </button>
+                                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                    <button
+                                      className="btn btn-secondary"
+                                      style={{ padding: '6px 12px', fontSize: '0.85rem', opacity: 0.5, cursor: 'not-allowed' }}
+                                      disabled
+                                      title="Access Restricted: Confirmed appointment required."
+                                    >
+                                      Locked
+                                    </button>
+                                    <button
+                                      className="btn btn-danger"
+                                      style={{ padding: '6px 10px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                                      onClick={() => {
+                                        setSelectedBreakGlassPatient(p);
+                                        setShowBreakGlassModal(true);
+                                      }}
+                                      title="Emergency Override: Access patient records in urgent medical situations without prior consent."
+                                    >
+                                      <ShieldAlert size={14} /> Break-Glass
+                                    </button>
+                                  </div>
                                 )}
                               </td>
                             </tr>
@@ -1494,9 +1557,6 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                   );
                 }
 
-                // Sort records: newest first (or by block index descending)
-                recordsList.reverse();
-
                 return recordsList.map((rec, index) => (
                   <div
                     key={index}
@@ -1768,6 +1828,33 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
             </button>
           </div>
         </div>
+      )}
+
+      {/* QR Passport Modal */}
+      {showQRPassportModal && (
+        <QRHealthPassport user={user} onClose={() => setShowQRPassportModal(false)} />
+      )}
+
+      {/* Record Verification Portal Modal */}
+      {showVerificationModal && (
+        <RecordVerificationPortal recordId={selectedVerificationRecordId} onClose={() => setShowVerificationModal(false)} />
+      )}
+
+      {/* Emergency Break-Glass Modal */}
+      {showBreakGlassModal && selectedBreakGlassPatient && (
+        <BreakGlassModal
+          patient={selectedBreakGlassPatient}
+          doctor={user}
+          onClose={() => {
+            setShowBreakGlassModal(false);
+            setSelectedBreakGlassPatient(null);
+          }}
+          onSuccess={() => {
+            if (onSelectPatient) {
+              onSelectPatient(selectedBreakGlassPatient);
+            }
+          }}
+        />
       )}
     </div>
   );

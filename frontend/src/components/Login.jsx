@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Shield, Lock, Mail, User, Activity, AlertCircle, Heart, Stethoscope, ArrowLeft, KeyRound, Eye, EyeOff } from 'lucide-react';
 import logoSvg from '../assets/logo.svg';
+import { safeFetch } from '../utils/api';
+
 export default function Login({ onLoginSuccess }) {
   const [isRegister, setIsRegister] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -41,8 +43,7 @@ export default function Login({ onLoginSuccess }) {
     }
 
     try {
-      const res = await fetch(`/api/auth/check-phone?phone=${encodeURIComponent(phoneVal)}`);
-      const data = await res.json();
+      const data = await safeFetch(`/api/auth/check-phone?phone=${encodeURIComponent(phoneVal)}`);
       if (data.exists) {
         setPhoneError('This phone number is already registered to another account. Duplicate phone numbers are not allowed.');
       } else {
@@ -73,16 +74,11 @@ export default function Login({ onLoginSuccess }) {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/forgot-password', {
+      const data = await safeFetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Password reset request failed.');
-      }
 
       setSuccessMessage(data.message);
       if (data.resetUrl) {
@@ -147,16 +143,11 @@ export default function Login({ onLoginSuccess }) {
     }
 
     try {
-      const response = await fetch(url, {
+      const data = await safeFetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Authentication failed. Please check your credentials.');
-      }
 
       if (data.token) {
         onLoginSuccess(data);
@@ -172,7 +163,6 @@ export default function Login({ onLoginSuccess }) {
         setGender('');
         setBloodType('');
         setAllergies('');
-        setEmergencyContact('');
         setSpecialization('');
         setLicenseNumber('');
         setHospital('');
