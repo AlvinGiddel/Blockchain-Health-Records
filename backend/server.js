@@ -42,6 +42,16 @@ app.use(express.json());
 // Unique identifier for the current server run session (re-generated on every server start)
 const serverInstanceId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
 
+// Root endpoint for deployment verification
+app.get('/', (req, res) => {
+    res.status(200).json({
+        status: 'ok',
+        message: 'Blockchain Health Records API is active for community health nurses',
+        serverInstanceId,
+        timestamp: new Date().toISOString()
+    });
+});
+
 // Health check endpoint to retrieve the server status and instance ID
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', serverInstanceId });
