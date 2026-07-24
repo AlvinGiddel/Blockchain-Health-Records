@@ -12,10 +12,31 @@ const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = 'blockchain_health_secret_key_12345';
+const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
 
 // Middleware
-app.use(cors());
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5173'
+].filter(Boolean);
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps, curl, or same-origin)
+        if (!origin) return callback(null, true);
+        const isAllowed = allowedOrigins.some(allowed => origin === allowed) ||
+            origin.endsWith('.vercel.app');
+        if (isAllowed) {
+            return callback(null, true);
+        }
+        return callback(new Error(`CORS policy restricts access from origin: ${origin}`), false);
+    },
+    credentials: true
+}));
 app.use(express.json());
 
 // Unique identifier for the current server run session (re-generated on every server start)
@@ -27,7 +48,8 @@ app.get('/api/health', (req, res) => {
 });
 
 // AES Field-Level Encryption details for diagnosis & treatment
-const ENCRYPTION_KEY = Buffer.from('f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a09', 'hex'); // 32 bytes
+const rawEncryptionKey = process.env.ENCRYPTION_KEY || 'f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a09';
+const ENCRYPTION_KEY = Buffer.from(rawEncryptionKey, 'hex'); // 32 bytes
 const IV_LENGTH = 16;
 
 function encrypt(text) {

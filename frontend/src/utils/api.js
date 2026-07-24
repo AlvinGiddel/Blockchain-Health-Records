@@ -34,9 +34,22 @@ export async function parseResponseJson(response) {
   return data;
 }
 
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
+export function getApiUrl(endpoint) {
+  if (!endpoint) return '';
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    return endpoint;
+  }
+  const base = API_BASE_URL.replace(/\/+$/, '');
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return base ? `${base}${path}` : path;
+}
+
 export async function safeFetch(url, options = {}) {
   try {
-    const response = await fetch(url, options);
+    const fullUrl = getApiUrl(url);
+    const response = await fetch(fullUrl, options);
     return await parseResponseJson(response);
   } catch (err) {
     if (err.name === 'TypeError' && err.message.toLowerCase().includes('fetch')) {

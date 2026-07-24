@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Database, ShieldAlert, Cpu, CheckCircle2, ChevronRight, AlertTriangle, RefreshCw, Flame, HelpCircle } from 'lucide-react';
+import { getApiUrl } from '../utils/api';
 
 export default function BlockchainExplorer({ user }) {
   const [blocks, setBlocks] = useState([]);
@@ -20,7 +21,7 @@ export default function BlockchainExplorer({ user }) {
   const handleRestoreDatabase = async () => {
     setRecovering(true);
     try {
-      const res = await fetch('/api/blockchain/recover', {
+      const res = await fetch(getApiUrl('/api/blockchain/recover'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -43,17 +44,17 @@ export default function BlockchainExplorer({ user }) {
       setLoading(true);
       
       // Fetch blocks
-      const blocksRes = await fetch('/api/blockchain/blocks');
+      const blocksRes = await fetch(getApiUrl('/api/blockchain/blocks'));
       const blocksData = blocksRes.ok ? await blocksRes.json() : [];
       setBlocks(Array.isArray(blocksData) ? blocksData : []);
 
       // Fetch chain validation status
-      const validateRes = await fetch('/api/blockchain/validate');
+      const validateRes = await fetch(getApiUrl('/api/blockchain/validate'));
       const validateData = validateRes.ok ? await validateRes.json() : { isValid: true };
       setIsValid(validateData.isValid);
 
       // Fetch pending records directly from blockchain mempool
-      const pendingRes = await fetch('/api/blockchain/mempool');
+      const pendingRes = await fetch(getApiUrl('/api/blockchain/mempool'));
       const pendingData = pendingRes.ok ? await pendingRes.json() : [];
       setPendingRecords(Array.isArray(pendingData) ? pendingData : []);
 
@@ -79,7 +80,7 @@ export default function BlockchainExplorer({ user }) {
   const handleMineBlock = async () => {
     setMining(true);
     try {
-      const res = await fetch('/api/blockchain/mine', {
+      const res = await fetch(getApiUrl('/api/blockchain/mine'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -111,7 +112,7 @@ export default function BlockchainExplorer({ user }) {
     }
 
     try {
-      const res = await fetch('/api/blockchain/tamper', {
+      const res = await fetch(getApiUrl('/api/blockchain/tamper'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

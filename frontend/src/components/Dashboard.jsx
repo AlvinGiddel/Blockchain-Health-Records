@@ -3,7 +3,7 @@ import { User, Activity, AlertTriangle, ShieldCheck, Phone, Clipboard, CheckCirc
 import BreakGlassModal from './BreakGlassModal';
 import QRHealthPassport from './QRHealthPassport';
 import RecordVerificationPortal from './RecordVerificationPortal';
-import { safeFetch } from '../utils/api';
+import { safeFetch, getApiUrl } from '../utils/api';
 
 export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavigate }) {
   const [patients, setPatients] = useState([]);
@@ -69,7 +69,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
   const fetchPatientRecords = async () => {
     try {
-      const res = await fetch(`/api/records/patient/${user.id || user._id}?requesterId=${user.id || user._id}&requesterRole=patient`);
+      const res = await fetch(getApiUrl(`/api/records/patient/${user.id || user._id}?requesterId=${user.id || user._id}&requesterRole=patient`));
       if (res.ok) {
         const data = await res.json();
         setPatientRecords(data);
@@ -129,7 +129,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
     }
 
     try {
-      const res = await fetch('/api/users/doctor/availability', {
+      const res = await fetch(getApiUrl('/api/users/doctor/availability'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -232,7 +232,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
   const fetchPatients = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/users/patients');
+      const res = await fetch(getApiUrl('/api/users/patients'));
       if (res.ok) {
         const data = await res.json();
         setPatients(data);
@@ -247,7 +247,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
   const fetchDoctors = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/users/doctors');
+      const res = await fetch(getApiUrl('/api/users/doctors'));
       if (res.ok) {
         const data = await res.json();
         setDoctors(data);
@@ -262,7 +262,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
   const fetchAppointments = async () => {
     try {
       const uId = user.id || user._id;
-      const res = await fetch(`/api/appointments?requesterId=${uId}&requesterRole=${user.role}`);
+      const res = await fetch(getApiUrl(`/api/appointments?requesterId=${uId}&requesterRole=${user.role}`));
       if (res.ok) {
         const data = await res.json();
         setAppointments(data);
@@ -284,7 +284,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
     try {
       setSubmittingAppt(true);
-      const res = await fetch('/api/appointments', {
+      const res = await fetch(getApiUrl('/api/appointments'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -318,7 +318,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
     ));
 
     try {
-      const res = await fetch(`/api/appointments/${apptId}/status`, {
+      const res = await fetch(getApiUrl(`/api/appointments/${apptId}/status`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
@@ -343,7 +343,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
     try {
       setSubmittingConsultation(true);
-      const res = await fetch('/api/consultations', {
+      const res = await fetch(getApiUrl('/api/consultations'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -377,7 +377,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
   const fetchStats = async () => {
     try {
-      const resBlocks = await fetch('/api/blockchain/blocks');
+      const resBlocks = await fetch(getApiUrl('/api/blockchain/blocks'));
       if (resBlocks.ok) {
         const blocks = await resBlocks.json();
         setAllBlocks(blocks);

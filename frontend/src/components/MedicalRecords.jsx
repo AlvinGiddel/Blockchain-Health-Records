@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ShieldCheck, Plus, Link2, FileText, AlertCircle, Check, Award, Lock, HelpCircle, Search, ShieldAlert } from 'lucide-react';
 import RecordVerificationPortal from './RecordVerificationPortal';
+import { getApiUrl } from '../utils/api';
 
 export default function MedicalRecords({ user, selectedPatient, onBackToRegistry }) {
   const [records, setRecords] = useState([]);
@@ -34,7 +35,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
     if (user.role === 'doctor' && activePatient) {
       const uId = user.id || user._id;
       const pId = activePatient.id || activePatient._id;
-      fetch(`/api/auth/break-glass/status?doctorId=${uId}&patientId=${pId}`)
+      fetch(getApiUrl(`/api/auth/break-glass/status?doctorId=${uId}&patientId=${pId}`))
         .then(res => res.json())
         .then(data => {
           if (data.hasBreakGlass) {
@@ -106,7 +107,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
 
   const fetchPatients = async () => {
     try {
-      const res = await fetch('/api/users/patients');
+      const res = await fetch(getApiUrl('/api/users/patients'));
       if (res.ok) {
         const data = await res.json();
         setPatientsList(data);
@@ -121,7 +122,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
       setLoading(true);
       setAccessDenied(false);
       const uId = user.id || user._id;
-      const res = await fetch(`/api/records/patient/${patientId}?requesterId=${uId}&requesterRole=${user.role}`);
+      const res = await fetch(getApiUrl(`/api/records/patient/${patientId}?requesterId=${uId}&requesterRole=${user.role}`));
       if (res.ok) {
         const data = await res.json();
         setRecords(data);
@@ -168,7 +169,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
     };
 
     try {
-      const res = await fetch('/api/records', {
+      const res = await fetch(getApiUrl('/api/records'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

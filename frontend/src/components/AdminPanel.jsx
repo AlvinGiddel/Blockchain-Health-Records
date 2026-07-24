@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Database, ShieldAlert, ShieldCheck, UserCheck, Flame, RefreshCw, Layers, Users, Zap, Terminal, Check, X, Clock, Stethoscope, User, Search, BarChart3 } from 'lucide-react';
 import PublicHealthAnalytics from './PublicHealthAnalytics';
+import { getApiUrl } from '../utils/api';
 
 export default function AdminPanel({ user }) {
   // Helper to format 24h time string to 12h AM/PM format
@@ -133,38 +134,38 @@ export default function AdminPanel({ user }) {
     try {
       if (!isBackground) setLoading(true);
       // Fetch stats
-      const resStats = await fetch('/api/admin/stats');
+      const resStats = await fetch(getApiUrl('/api/admin/stats'));
       const statsData = resStats.ok ? await resStats.json() : null;
       
-      const resBlocks = await fetch('/api/blockchain/blocks');
+      const resBlocks = await fetch(getApiUrl('/api/blockchain/blocks'));
       const blocks = resBlocks.ok ? await resBlocks.json() : [];
       setBlocks(blocks);
       
       // Get all doctors and patients
-      const resPatients = await fetch('/api/users/patients');
+      const resPatients = await fetch(getApiUrl('/api/users/patients'));
       const patientsData = resPatients.ok ? await resPatients.json() : [];
       setDbPatients(patientsData);
 
-      const resDoctors = await fetch('/api/users/doctors');
+      const resDoctors = await fetch(getApiUrl('/api/users/doctors'));
       const doctorsData = resDoctors.ok ? await resDoctors.json() : [];
       setDbDoctors(doctorsData);
       
       // Fetch system audit logs
-      const resAudit = await fetch('/api/audit/logs');
+      const resAudit = await fetch(getApiUrl('/api/audit/logs'));
       const auditData = resAudit.ok ? await resAudit.json() : [];
       setAuditLogs(auditData);
 
       // Fetch pending admin requests
-      const resPending = await fetch('/api/admin/pending');
+      const resPending = await fetch(getApiUrl('/api/admin/pending'));
       const pendingData = resPending.ok ? await resPending.json() : [];
 
       // Fetch pending doctor requests
-      const resPendingDocs = await fetch('/api/admin/doctors/pending');
+      const resPendingDocs = await fetch(getApiUrl('/api/admin/doctors/pending'));
       const pendingDocsData = resPendingDocs.ok ? await resPendingDocs.json() : [];
 
       // Fetch appointments
       const uId = user.id || user._id;
-      const resAppts = await fetch(`/api/appointments?requesterId=${uId}&requesterRole=admin`);
+      const resAppts = await fetch(getApiUrl(`/api/appointments?requesterId=${uId}&requesterRole=admin`));
       const apptsData = resAppts.ok ? await resAppts.json() : [];
       setAppointments(apptsData);
       
@@ -197,7 +198,7 @@ export default function AdminPanel({ user }) {
       setPendingDoctors(pendingDocsData);
 
       // Fetch signed mempool records
-      const resMempool = await fetch('/api/blockchain/mempool');
+      const resMempool = await fetch(getApiUrl('/api/blockchain/mempool'));
       const mempoolData = resMempool.ok ? await resMempool.json() : [];
       setMempoolRecords(mempoolData);
 
@@ -279,7 +280,7 @@ export default function AdminPanel({ user }) {
     }
 
     try {
-      const res = await fetch('/api/blockchain/tamper', {
+      const res = await fetch(getApiUrl('/api/blockchain/tamper'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -308,7 +309,7 @@ export default function AdminPanel({ user }) {
       // In backend we can implement a /api/blockchain/recover endpoint, 
       // or we can simulate it by repairing the records one by one via a recovery api.
       // Let's trigger the recovery API on backend. We will define the recover endpoint in server.js.
-      const res = await fetch('/api/blockchain/recover', {
+      const res = await fetch(getApiUrl('/api/blockchain/recover'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -332,7 +333,7 @@ export default function AdminPanel({ user }) {
     setMining(true);
     setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] [MINER] Starting Proof of Work mining sequence...`]);
     try {
-      const res = await fetch('/api/blockchain/mine', {
+      const res = await fetch(getApiUrl('/api/blockchain/mine'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -369,7 +370,7 @@ export default function AdminPanel({ user }) {
 
   const executeDeleteUser = async (userId, userName, userRole) => {
     try {
-      const res = await fetch(`/api/users/${userId}`, {
+      const res = await fetch(getApiUrl(`/api/users/${userId}`), {
         method: 'DELETE'
       });
       const data = await res.json();
@@ -404,7 +405,7 @@ export default function AdminPanel({ user }) {
     } else if (type === 'completed_consultations') {
       try {
         setLoading(true);
-        const res = await fetch('/api/admin/records?recordType=consultation');
+        const res = await fetch(getApiUrl('/api/admin/records?recordType=consultation'));
         const data = res.ok ? await res.json() : [];
         setViewModal({
           isOpen: true,
@@ -422,7 +423,7 @@ export default function AdminPanel({ user }) {
 
   const handleApproveAdmin = async (userId, userName) => {
     try {
-      const res = await fetch(`/api/admin/approve/${userId}`, {
+      const res = await fetch(getApiUrl(`/api/admin/approve/${userId}`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -442,7 +443,7 @@ export default function AdminPanel({ user }) {
 
   const handleRejectAdmin = async (userId, userName) => {
     try {
-      const res = await fetch(`/api/admin/reject/${userId}`, {
+      const res = await fetch(getApiUrl(`/api/admin/reject/${userId}`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -462,7 +463,7 @@ export default function AdminPanel({ user }) {
 
   const handleApproveDoctor = async (userId, userName) => {
     try {
-      const res = await fetch(`/api/admin/doctors/approve/${userId}`, {
+      const res = await fetch(getApiUrl(`/api/admin/doctors/approve/${userId}`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -486,7 +487,7 @@ export default function AdminPanel({ user }) {
 
   const handleRejectDoctor = async (userId, userName) => {
     try {
-      const res = await fetch(`/api/admin/doctors/reject/${userId}`, {
+      const res = await fetch(getApiUrl(`/api/admin/doctors/reject/${userId}`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
