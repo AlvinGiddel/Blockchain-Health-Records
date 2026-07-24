@@ -680,11 +680,17 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         );
 
         // Construct reset link (points to frontend)
-        const frontendOrigin = req.headers.origin || 'http://localhost:3000';
+        const rawOrigin = req.headers.origin || process.env.FRONTEND_URL || 'http://localhost:3000';
+        const frontendOrigin = rawOrigin.replace(/\/+$/, '');
         const resetUrl = `${frontendOrigin}/?resetToken=${token}`;
 
-        // Send email
-        const mailResult = await sendResetEmail(user.email, user.name, resetUrl);
+        // Send email with fallback safety
+        let mailResult = { previewUrl: null };
+        try {
+            mailResult = await sendResetEmail(user.email, user.name, resetUrl);
+        } catch (mailErr) {
+            console.error('[Forgot Password] Mailer error encountered:', mailErr.message);
+        }
 
         // Log to Audit trail (in background)
         db.query(

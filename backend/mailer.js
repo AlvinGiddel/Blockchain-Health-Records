@@ -4,15 +4,74 @@ let transporter = null;
 let testAccount = null;
 
 /**
- * Initializes the Nodemailer transporter using Ethereal dynamic test credentials.
- * Falls back to a mock transporter if dynamic generation fails (offline/network errors).
+ * Helper to execute a promise with a hard timeout limit.
+ */
+function withTimeout(promise, ms, timeoutMsg) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(timeoutMsg || `Operation timed out after ${ms}ms`)), ms)
+        )
+    ]);
+}
+
+/**
+ * Creates a mock transporter that logs mail content to standard output and returns immediately.
+ */
+function createMockTransporter() {
+    return {
+        sendMail: async (mailOptions) => {
+            console.log('\n--- MOCK CONSOLE MAILER DISPATCH ---');
+            console.log(`TO: ${mailOptions.to}`);
+            console.log(`SUBJECT: ${mailOptions.subject}`);
+            console.log(`BODY:\n${mailOptions.text}`);
+            console.log('-------------------------------------\n');
+            return {
+                messageId: `mock-${Date.now()}`,
+                mockFallback: true
+            };
+        }
+    };
+}
+
+/**
+ * Initializes the Nodemailer transporter using custom SMTP env vars, Ethereal dynamic test credentials,
+ * or falls back to a mock transporter if network/offline errors occur.
  */
 async function getTransporter() {
     if (transporter) return transporter;
 
+    // 1. Check for custom SMTP credentials in environment
+    const user = process.env.EMAIL_USER;
+    const pass = process.env.EMAIL_PASS;
+    const host = process.env.SMTP_HOST || (user && user.includes('@gmail') ? 'smtp.gmail.com' : null);
+
+    if (user && pass && host) {
+        try {
+            console.log(`[Mailer] Configuring custom SMTP transporter (${host}:${process.env.SMTP_PORT || 587})...`);
+            transporter = nodemailer.createTransport({
+                host: host,
+                port: parseInt(process.env.SMTP_PORT || '587', 10),
+                secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
+                auth: { user, pass },
+                connectionTimeout: 5000,
+                greetingTimeout: 5000,
+                socketTimeout: 5000
+            });
+            return transporter;
+        } catch (err) {
+            console.warn('[Mailer] Failed to configure custom SMTP transporter. Falling back...', err.message);
+        }
+    }
+
+    // 2. Attempt Ethereal sandbox with a 4-second timeout limit
     try {
-        console.log('Generating Ethereal Email test account for development mail delivery...');
-        testAccount = await nodemailer.createTestAccount();
+        console.log('[Mailer] Generating Ethereal Email test account (4s timeout guard)...');
+        testAccount = await withTimeout(
+            nodemailer.createTestAccount(),
+            4000,
+            'Ethereal test account generation timed out'
+        );
         
         transporter = nodemailer.createTransport({
             host: 'smtp.ethereal.email',
@@ -21,27 +80,17 @@ async function getTransporter() {
             auth: {
                 user: testAccount.user,
                 pass: testAccount.pass
-            }
+            },
+            connectionTimeout: 5000,
+            greetingTimeout: 5000,
+            socketTimeout: 5000
         });
         
-        console.log(`Ethereal SMTP configured successfully. Test account: ${testAccount.user}`);
+        console.log(`[Mailer] Ethereal SMTP configured successfully. Test account: ${testAccount.user}`);
         return transporter;
     } catch (error) {
-        console.warn('Unable to create Ethereal Email test account. Falling back to Mock Console Mailer.', error.message);
-        // Fallback mock transporter
-        transporter = {
-            sendMail: async (mailOptions) => {
-                console.log('\n--- MOCK CONSOLE MAILER DISPATCH ---');
-                console.log(`TO: ${mailOptions.to}`);
-                console.log(`SUBJECT: ${mailOptions.subject}`);
-                console.log(`BODY:\n${mailOptions.text}`);
-                console.log('-------------------------------------\n');
-                return {
-                    messageId: 'mock-id-12345',
-                    mockFallback: true
-                };
-            }
-        };
+        console.warn(`[Mailer] Unable to create Ethereal Email test account (${error.message}). Falling back to Mock Console Mailer.`);
+        transporter = createMockTransporter();
         return transporter;
     }
 }
@@ -189,7 +238,7 @@ async function sendResetEmail(email, name, resetUrl) {
     };
 
     try {
-        const info = await currentTransporter.sendMail(mailOptions);
+        const info = await withTimeout(currentTransporter.sendMail(mailOptions), 6000, 'SMTP reset mail delivery timed out after 6 seconds');
         console.log(`[Mailer] Reset password mail dispatched to ${email}. Message ID: ${info.messageId}`);
 
         // If Ethereal test account is active, log the URL to preview the email
@@ -324,7 +373,7 @@ async function sendDoctorApprovalEmail(email, name) {
     };
 
     try {
-        const info = await currentTransporter.sendMail(mailOptions);
+        const info = await withTimeout(currentTransporter.sendMail(mailOptions), 6000, 'SMTP doctor approval mail delivery timed out after 6 seconds');
         console.log(`[Mailer] Doctor approval mail dispatched to ${email}. Message ID: ${info.messageId}`);
         
         if (testAccount && !info.mockFallback) {
@@ -442,7 +491,7 @@ async function sendDoctorRejectionEmail(email, name) {
     };
 
     try {
-        const info = await currentTransporter.sendMail(mailOptions);
+        const info = await withTimeout(currentTransporter.sendMail(mailOptions), 6000, 'SMTP doctor rejection mail delivery timed out after 6 seconds');
         console.log(`[Mailer] Doctor rejection mail dispatched to ${email}. Message ID: ${info.messageId}`);
         
         if (testAccount && !info.mockFallback) {
