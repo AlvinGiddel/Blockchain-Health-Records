@@ -14,28 +14,11 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
 
-// Middleware
-const allowedOrigins = [
-    process.env.FRONTEND_URL,
-    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-    'http://localhost:3000',
-    'http://localhost:5173',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:5173'
-].filter(Boolean);
-
+// Middleware - CORS configured to allow any origin with GET, POST, PUT, DELETE, and OPTIONS methods
 app.use(cors({
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps, curl, or same-origin)
-        if (!origin) return callback(null, true);
-        const isAllowed = allowedOrigins.some(allowed => origin === allowed) ||
-            origin.endsWith('.vercel.app');
-        if (isAllowed) {
-            return callback(null, true);
-        }
-        return callback(new Error(`CORS policy restricts access from origin: ${origin}`), false);
-    },
-    credentials: true
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
