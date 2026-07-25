@@ -41,9 +41,27 @@ class Block {
  * Helper function to generate ISO timestamp in Kenyan Time (East Africa Time - EAT, UTC+3)
  */
 function getKenyanTimestamp(date = new Date()) {
-    const eatOffsetMs = 3 * 60 * 60 * 1000;
-    const eatDate = new Date(date.getTime() + eatOffsetMs);
-    return eatDate.toISOString().replace('Z', '+03:00');
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Africa/Nairobi',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+    const parts = formatter.formatToParts(date);
+    const getPart = (type) => parts.find(p => p.type === type)?.value;
+    const year = getPart('year');
+    const month = getPart('month');
+    const day = getPart('day');
+    let hour = getPart('hour');
+    if (hour === '24') hour = '00';
+    const minute = getPart('minute');
+    const second = getPart('second');
+    const ms = String(date.getMilliseconds()).padStart(3, '0');
+    return `${year}-${month}-${day}T${hour}:${minute}:${second}.${ms}+03:00`;
 }
 
 /**
