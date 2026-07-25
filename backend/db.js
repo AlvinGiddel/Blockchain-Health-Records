@@ -2,6 +2,9 @@ const path = require('path');
 const { Pool } = require('pg');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
+// Set default process timezone to East Africa Time (EAT - Kenya)
+process.env.TZ = 'Africa/Nairobi';
+
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
@@ -19,6 +22,13 @@ const pool = new Pool({
     ssl: (connectionString && (connectionString.includes('localhost') || connectionString.includes('127.0.0.1'))) 
         ? false 
         : { rejectUnauthorized: false }
+});
+
+// Configure PostgreSQL session timezone to Africa/Nairobi whenever a client connects
+pool.on('connect', (client) => {
+    client.query("SET timezone = 'Africa/Nairobi'").catch((err) => {
+        console.warn('Failed to set PostgreSQL timezone to Africa/Nairobi:', err.message);
+    });
 });
 
 pool.on('error', (err) => {

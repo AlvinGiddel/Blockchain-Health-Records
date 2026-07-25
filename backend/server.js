@@ -76,6 +76,16 @@ function decrypt(text) {
     }
 }
 
+// Helper to log audit events with explicit Kenyan timestamp
+const logAuditEvent = (eventType, patientId, patientName, doctorId, doctorName, details, customTimestamp = null) => {
+    const timestamp = customTimestamp || getKenyanTimestamp();
+    return db.query(
+        `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [eventType, patientId, patientName, doctorId, doctorName, details, timestamp]
+    ).catch(err => console.error(`[AUDIT LOG ERROR] Failed to log ${eventType}:`, err.message));
+};
+
 function parseJsonIfNeeded(data) {
     if (!data) return null;
     if (typeof data === 'string') {
@@ -336,22 +346,23 @@ app.post('/api/auth/register', async (req, res) => {
         const patientProfile = role === 'patient' ? profile : null;
         const doctorProfile = role === 'doctor' ? profile : null;
 
+        const createdAt = getKenyanTimestamp();
         const { rows: insertedUsers } = await db.query(
-            `INSERT INTO users (name, email, password, role, public_key, private_key, patient_profile, doctor_profile, is_approved) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+            `INSERT INTO users (name, email, password, role, public_key, private_key, patient_profile, doctor_profile, is_approved, created_at) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
             [name, email.toLowerCase().trim(), hashedPassword, role, publicKey, privateKey, 
              patientProfile ? JSON.stringify(patientProfile) : null, 
              doctorProfile ? JSON.stringify(doctorProfile) : null, 
-             isApprovedVal]
+             isApprovedVal, createdAt]
         );
         const user = insertedUsers[0];
 
         if (role === 'doctor' && !isApprovedVal) {
             // Log doctor registration request event in audit trail (in background)
             db.query(
-                `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-                 VALUES ($1, $2, $3, $4, $5, $6)`,
-                ['doctor_request', user.id, user.name, user.id, 'System Admin', `New doctor registration request submitted by Dr. ${user.name} (${user.email}). Pending approval.`]
+                `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                ['doctor_request', user.id, user.name, user.id, 'System Admin', `New doctor registration request submitted by Dr. ${user.name} (${user.email}). Pending approval.`, createdAt]
             ).catch(err => console.error('Failed to log doctor request audit:', err));
 
             return res.status(202).json({
@@ -502,11 +513,7 @@ app.post('/api/admin/doctors/approve/:id', async (req, res) => {
         const updatedDoctor = updatedDoctors[0];
 
         // Log doctor approval in audit trail (in background)
-        db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            ['doctor_approve', updatedDoctor.id, updatedDoctor.name, updatedDoctor.id, 'System Admin', `Doctor registration request for Dr. ${updatedDoctor.name} (${updatedDoctor.email}) approved.`]
-        ).catch(err => console.error('Failed to log doctor approval audit:', err));
+        logAuditEvent('doctor_approve', updatedDoctor.id, updatedDoctor.name, updatedDoctor.id, 'System Admin', `Doctor registration request for Dr. ${updatedDoctor.name} (${updatedDoctor.email}) approved.`);
 
         // Send Email notification for approval (asynchronously in background)
         sendDoctorApprovalEmail(updatedDoctor.email, updatedDoctor.name).catch(mailError => {
@@ -534,11 +541,7 @@ app.post('/api/admin/doctors/reject/:id', async (req, res) => {
         const updatedDoctor = updatedDoctors[0];
 
         // Log doctor rejection in audit trail (in background)
-        db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            ['doctor_reject', updatedDoctor.id, updatedDoctor.name, updatedDoctor.id, 'System Admin', `Doctor registration request for Dr. ${updatedDoctor.name} (${updatedDoctor.email}) rejected.`]
-        ).catch(err => console.error('Failed to log doctor rejection audit:', err));
+        logAuditEvent('doctor_reject', updatedDoctor.id, updatedDoctor.name, updatedDoctor.id, 'System Admin', `Doctor registration request for Dr. ${updatedDoctor.name} (${updatedDoctor.email}) rejected.`);
 
         // Send Email notification for rejection (asynchronously in background)
         sendDoctorRejectionEmail(updatedDoctor.email, updatedDoctor.name).catch(mailError => {
@@ -1062,18 +1065,19 @@ app.post('/api/appointments', async (req, res) => {
             });
         }
         
+        const createdAt = getKenyanTimestamp();
         const { rows: appointments } = await db.query(
-            `INSERT INTO appointments (patient_id, doctor_id, patient_name, doctor_name, date, time, reason, status) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-            [patientId, doctorId, patient.name, doctor.name, date, time, reason, 'Pending']
+            `INSERT INTO appointments (patient_id, doctor_id, patient_name, doctor_name, date, time, reason, status, created_at) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+            [patientId, doctorId, patient.name, doctor.name, date, time, reason, 'Pending', createdAt]
         );
         const appointment = appointments[0];
 
         // Audit Log Entry (in background)
         db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            ['appointment_request', patientId, patient.name, doctorId, doctor.name, `Patient ${patient.name} requested an appointment with Dr. ${doctor.name} on ${date} at ${time}.`]
+            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            ['appointment_request', patientId, patient.name, doctorId, doctor.name, `Patient ${patient.name} requested an appointment with Dr. ${doctor.name} on ${date} at ${time}.`, createdAt]
         ).catch(err => console.error('Failed to log appointment request audit:', err));
 
         const responseAppointment = {
