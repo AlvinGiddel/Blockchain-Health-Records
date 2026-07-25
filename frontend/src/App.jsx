@@ -13,14 +13,19 @@ import { safeFetch } from './utils/api';
 
 
 export default function App() {
+  // Session storage switched from sessionStorage to localStorage. Note: This is a JWT-in-localStorage tradeoff (XSS exposure) accepted for this project.
   const [user, setUser] = useState(() => {
-    const saved = sessionStorage.getItem('user');
+    const saved = localStorage.getItem('user');
     return saved ? JSON.parse(saved) : null;
   });
-  const [token, setToken] = useState(() => sessionStorage.getItem('token') || '');
+  const [token, setToken] = useState(() => localStorage.getItem('token') || '');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [resetToken, setResetToken] = useState(null);
+
+  // Server status state & resilience tracking
+  const [serverRestartNotice, setServerRestartNotice] = useState(false);
+  const consecutiveFailuresRef = React.useRef(0);
 
   // Sidebar layout states
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -149,7 +154,7 @@ export default function App() {
     }
   }, [activeTab]);
 
-  // Heartbeat to check if backend server is running and matches the current session's server instance ID
+  // Resilient heartbeat check: monitors server health without logging out on single network glitches or server restarts
   useEffect(() => {
     if (!user) return;
 
@@ -160,21 +165,29 @@ export default function App() {
         const data = await safeFetch('/api/health');
         if (!isMounted) return;
 
+        // Reset consecutive network failure counter on successful response
+        consecutiveFailuresRef.current = 0;
+
         const storedInstanceId = sessionStorage.getItem('serverInstanceId');
         if (!storedInstanceId) {
           sessionStorage.setItem('serverInstanceId', data.serverInstanceId);
         } else if (storedInstanceId !== data.serverInstanceId) {
-          console.log('Server restarted. Logging out.');
-          sessionStorage.removeItem('serverInstanceId');
-          handleLogout();
-          alert('The server has restarted. Please log in again.');
+          // On server restart mismatch, display a non-blocking toast notice without destroying session or token
+          console.log('Server restarted in background. Displaying non-blocking notice.');
+          sessionStorage.setItem('serverInstanceId', data.serverInstanceId);
+          setServerRestartNotice(true);
         }
       } catch (err) {
-        console.error('Server is stopped or unreachable:', err);
-        if (isMounted) {
+        if (!isMounted) return;
+        consecutiveFailuresRef.current += 1;
+        console.warn(`[HEALTH PING WARNING] Server health check failed (${consecutiveFailuresRef.current}/3):`, err.message);
+
+        // Only log out after 3 consecutive failures to prevent false logouts from temporary network glitches
+        if (consecutiveFailuresRef.current >= 3) {
+          console.error('Server unreachable after 3 consecutive health pings. Triggering session logout.');
           sessionStorage.removeItem('serverInstanceId');
           handleLogout();
-          alert('The application server is stopped. You have been logged out.');
+          alert('The application server is unreachable after multiple connection attempts. You have been logged out.');
         }
       }
     };
@@ -182,7 +195,7 @@ export default function App() {
     // Run check immediately on mount / user state change
     checkServerStatus();
 
-    const interval = setInterval(checkServerStatus, 3000); // Check every 3 seconds
+    const interval = setInterval(checkServerStatus, 5000); // Check every 5 seconds
 
     return () => {
       isMounted = false;
@@ -207,8 +220,9 @@ export default function App() {
   const handleLoginSuccess = (data) => {
     setUser(data.user);
     setToken(data.token);
-    sessionStorage.setItem('user', JSON.stringify(data.user));
-    sessionStorage.setItem('token', data.token);
+    // Session storage switched from sessionStorage to localStorage. Note: This is a JWT-in-localStorage tradeoff (XSS exposure) accepted for this project.
+    localStorage.setItem('user', JSON.stringify(data.user));
+    localStorage.setItem('token', data.token);
     sessionStorage.removeItem('serverInstanceId'); // Let next heartbeat fetch it fresh
     sessionStorage.removeItem('sessionTimedOut'); // Clear timeout flag
     setActiveTab('dashboard');
@@ -218,8 +232,9 @@ export default function App() {
   const handleLogout = (options) => {
     setUser(null);
     setToken('');
-    sessionStorage.removeItem('user');
-    sessionStorage.removeItem('token');
+    // Session storage switched from sessionStorage to localStorage. Note: This is a JWT-in-localStorage tradeoff (XSS exposure) accepted for this project.
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
     sessionStorage.removeItem('serverInstanceId');
     if (options && options.isTimeout === true) {
       sessionStorage.setItem('sessionTimedOut', 'true');
@@ -280,7 +295,7 @@ export default function App() {
 
   const handleUpdateUser = (updatedUser) => {
     setUser(updatedUser);
-    sessionStorage.setItem('user', JSON.stringify(updatedUser));
+    localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   const renderTabContent = () => {
@@ -362,6 +377,43 @@ export default function App() {
 
   return (
     <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed-layout' : ''} ${isResizing ? 'resizing' : ''}`}>
+      {/* Non-blocking Server Restart Notice Banner */}
+      {serverRestartNotice && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          background: 'rgba(59, 130, 246, 0.95)',
+          color: '#ffffff',
+          padding: '8px 16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontSize: '0.85rem',
+          fontWeight: 500,
+          zIndex: 99999,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          backdropFilter: 'blur(4px)'
+        }}>
+          <span>ℹ️ Backend server restarted in background. Your active session remains authenticated.</span>
+          <button 
+            onClick={() => setServerRestartNotice(false)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#ffffff',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '1rem',
+              marginLeft: '12px'
+            }}
+            title="Dismiss notice"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {/* Collapsible Sidebar */}
       <aside 
         className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileSidebarOpen ? 'open' : ''}`}
