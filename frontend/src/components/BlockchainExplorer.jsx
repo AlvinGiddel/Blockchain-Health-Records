@@ -270,7 +270,7 @@ export default function BlockchainExplorer({ user }) {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.85rem', marginBottom: '16px', width: '100%', minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', width: '100%', minWidth: 0 }}>
                         <span style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>Timestamp</span>
-                        <span style={{ wordBreak: 'break-all', overflowWrap: 'anywhere', textAlign: 'right', minWidth: 0 }}>{new Date(block.timestamp).toLocaleString()}</span>
+                        <span style={{ wordBreak: 'break-all', overflowWrap: 'anywhere', textAlign: 'right', minWidth: 0 }}>{new Date(block.timestamp).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', width: '100%', minWidth: 0 }}>
                         <span style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>Previous Hash</span>

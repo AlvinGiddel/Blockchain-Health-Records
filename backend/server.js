@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { sendResetEmail, sendDoctorApprovalEmail, sendDoctorRejectionEmail } = require('./mailer');
-const { Blockchain, generateKeyPair, signRecord } = require('./blockchain');
+const { Blockchain, generateKeyPair, signRecord, getKenyanTimestamp } = require('./blockchain');
 
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
@@ -18,7 +18,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 86400 // Cache CORS preflight for 24h
 }));
 app.use(express.json());
 
@@ -31,7 +32,7 @@ app.get('/', (req, res) => {
         status: 'ok',
         message: 'Blockchain Health Records API is active for community health nurses',
         serverInstanceId,
-        timestamp: new Date().toISOString()
+        timestamp: getKenyanTimestamp()
     });
 });
 
@@ -134,30 +135,31 @@ async function syncBlockchainWithDatabase() {
             });
         }
         
-        // Sync pending records from database (records not yet mined)
-        const { rows: pendingDbRecords } = await db.query('SELECT * FROM records WHERE is_mined = false ORDER BY timestamp ASC');
-        const medicalPending = [];
-        for (const rec of pendingDbRecords) {
-            const { rows: users } = await db.query('SELECT name FROM users WHERE id = $1', [rec.patient_id]);
-            const patientName = users.length > 0 ? users[0].name : 'Unknown Patient';
-            medicalPending.push({
-                recordId: rec.id,
-                txType: rec.record_type || 'medical',
-                patientId: rec.patient_id,
-                patientName: patientName,
-                doctorId: rec.doctor_id,
-                doctorName: rec.doctor_name,
-                diagnosis: decrypt(rec.diagnosis),
-                treatment: decrypt(rec.treatment),
-                prescriptions: rec.prescriptions,
-                ipfsHash: rec.ipfs_hash,
-                signature: rec.signature,
-                doctorPublicKey: rec.doctor_public_key,
-                timestamp: rec.timestamp,
-                consultationHash: rec.consultation_hash || '',
-                transactionHash: rec.transaction_hash || ''
-            });
-        }
+        // Sync pending records from database (records not yet mined) using single JOIN query
+        const { rows: pendingDbRecords } = await db.query(`
+            SELECT r.*, u.name as patient_name 
+            FROM records r 
+            LEFT JOIN users u ON r.patient_id = u.id 
+            WHERE r.is_mined = false 
+            ORDER BY r.timestamp ASC
+        `);
+        const medicalPending = pendingDbRecords.map(rec => ({
+            recordId: rec.id,
+            txType: rec.record_type || 'medical',
+            patientId: rec.patient_id,
+            patientName: rec.patient_name || 'Unknown Patient',
+            doctorId: rec.doctor_id,
+            doctorName: rec.doctor_name,
+            diagnosis: decrypt(rec.diagnosis),
+            treatment: decrypt(rec.treatment),
+            prescriptions: rec.prescriptions,
+            ipfsHash: rec.ipfs_hash,
+            signature: rec.signature,
+            doctorPublicKey: rec.doctor_public_key,
+            timestamp: rec.timestamp,
+            consultationHash: rec.consultation_hash || '',
+            transactionHash: rec.transaction_hash || ''
+        }));
 
         // Sort by timestamp
         healthBlockchain.pendingRecords = medicalPending.sort(
@@ -1183,7 +1185,7 @@ app.post('/api/consultations', async (req, res) => {
         const consultationDetails = symptoms + diagnosis + treatment + notes + prescriptionsArray.join(',') + (labRequest || '');
         const consultationHash = crypto.createHash('sha256').update(consultationDetails).digest('hex');
 
-        const timestamp = new Date().toISOString();
+        const timestamp = getKenyanTimestamp();
 
         // Sign the record using Doctor's Private Key
         console.log(`Doctor ${doctor.name} is signing consultation record cryptographically...`);
@@ -1207,9 +1209,9 @@ app.post('/api/consultations', async (req, res) => {
         await Promise.all([
             db.query("UPDATE appointments SET status = 'Completed' WHERE id = $1", [appointmentId]),
             db.query(
-                `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-                 VALUES ($1, $2, $3, $4, $5, $6)`,
-                ['consultation_complete', appointment.patient_id, patient.name, appointment.doctor_id, doctor.name, `Dr. ${doctor.name} completed consultation for ${patient.name}.`]
+                `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                ['consultation_complete', appointment.patient_id, patient.name, appointment.doctor_id, doctor.name, `Dr. ${doctor.name} completed consultation for ${patient.name}.`, timestamp]
             )
         ]);
 
@@ -1350,7 +1352,7 @@ app.post('/api/records', async (req, res) => {
             return res.status(403).json({ error: 'Access Denied: You are not actively treating this patient and have no active break-glass authorization.' });
         }
 
-        const timestamp = new Date().toISOString();
+        const timestamp = getKenyanTimestamp();
         
         // Construct the record structure for signing
         const recordData = {
@@ -1380,9 +1382,9 @@ app.post('/api/records', async (req, res) => {
 
         // Create Audit Log Entry (in background)
         db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            ['record_create', patientId, patient.name, doctorId, doctor.name, `Dr. ${doctor.name} added a new diagnosis/treatment record.`]
+            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            ['record_create', patientId, patient.name, doctorId, doctor.name, `Dr. ${doctor.name} added a new diagnosis/treatment record.`, timestamp]
         ).catch(err => console.error('Failed to log record creation audit:', err));
         
         // Add to blockchain's pending record memory list
@@ -2180,10 +2182,26 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('[CRITICAL] Unhandled Promise Rejection:', reason);
 });
 
-// Start Server
-app.listen(PORT, () => {
+// Start Server with optimized HTTP keep-alive settings
+const server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
+
+// Background Keep-Alive Self-Ping for Render deployment
+const RENDER_URL = process.env.RENDER_EXTERNAL_URL || process.env.BACKEND_URL;
+if (RENDER_URL) {
+    console.log(`[Keep-Alive] Self-ping active for Render deployment: ${RENDER_URL}`);
+    setInterval(() => {
+        const httpModule = RENDER_URL.startsWith('https') ? require('https') : require('http');
+        httpModule.get(`${RENDER_URL}/api/health`, (res) => {
+            console.log(`[Keep-Alive] Self-ping sent to ${RENDER_URL}/api/health - Status: ${res.statusCode}`);
+        }).on('error', (err) => {
+            console.warn(`[Keep-Alive] Self-ping warning: ${err.message}`);
+        });
+    }, 10 * 60 * 1000); // Self-ping every 10 minutes to prevent Render free instance spin-down
+}
 
 module.exports = app;
 

@@ -507,7 +507,7 @@ export default function PublicHealthAnalytics() {
                       <div key={bg.id} style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '12px 16px', borderRadius: '8px', fontSize: '0.85rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                           <strong style={{ color: '#ef4444' }}>Dr. {bg.doctorName} ➔ Patient: {bg.patientName}</strong>
-                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{new Date(bg.timestamp).toLocaleString()}</span>
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{new Date(bg.timestamp).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}</span>
                         </div>
                         <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-primary)', fontStyle: 'italic' }}>
                           "{bg.details}"

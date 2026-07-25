@@ -10,6 +10,11 @@ if (!connectionString) {
 
 const pool = new Pool({
     connectionString,
+    max: 20,
+    min: 2,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+    keepAlive: true,
     // Enable SSL since Supabase requires SSL connections (skip for localhost testing)
     ssl: (connectionString && (connectionString.includes('localhost') || connectionString.includes('127.0.0.1'))) 
         ? false 
@@ -22,9 +27,10 @@ pool.on('error', (err) => {
 
 module.exports = {
     query: (text, params) => {
-        // Safe logging of queries
-        const logText = text.replace(/\s+/g, ' ').trim();
-        console.log(`[SQL Query] Executing: ${logText}`);
+        if (process.env.DEBUG === 'true') {
+            const logText = text.replace(/\s+/g, ' ').trim();
+            console.log(`[SQL Query] Executing: ${logText}`);
+        }
         return pool.query(text, params);
     },
     pool

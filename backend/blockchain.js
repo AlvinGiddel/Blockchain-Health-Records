@@ -37,6 +37,16 @@ class Block {
 }
 
 /**
+/**
+ * Helper function to generate ISO timestamp in Kenyan Time (East Africa Time - EAT, UTC+3)
+ */
+function getKenyanTimestamp(date = new Date()) {
+    const eatOffsetMs = 3 * 60 * 60 * 1000;
+    const eatDate = new Date(date.getTime() + eatOffsetMs);
+    return eatDate.toISOString().replace('Z', '+03:00');
+}
+
+/**
  * Handles the Blockchain Ledger Operations
  */
 class Blockchain {
@@ -47,7 +57,7 @@ class Blockchain {
     }
 
     createGenesisBlock() {
-        return new Block(0, new Date().toISOString(), [{
+        return new Block(0, getKenyanTimestamp(), [{
             txType: 'medical',
             message: "Genesis Block: Blockchain Health Records Ledger Initialized",
             doctor: "System Admin"
@@ -65,7 +75,7 @@ class Blockchain {
         // In a real health blockchain, we might reward the miner or just record the event
         const block = new Block(
             this.chain.length,
-            new Date().toISOString(),
+            getKenyanTimestamp(),
             this.pendingRecords,
             this.getLatestBlock().hash
         );
@@ -182,5 +192,6 @@ module.exports = {
     Blockchain,
     Block,
     generateKeyPair,
-    signRecord
+    signRecord,
+    getKenyanTimestamp
 };

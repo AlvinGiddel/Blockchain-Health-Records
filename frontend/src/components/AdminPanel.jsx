@@ -1125,7 +1125,7 @@ export default function AdminPanel({ user }) {
               <tbody>
                 {mempoolRecords.map((rec, i) => (
                   <tr key={rec.recordId || i}>
-                    <td>{new Date(rec.timestamp).toLocaleString()}</td>
+                    <td>{new Date(rec.timestamp).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}</td>
                     <td>
                       <span className={`badge ${rec.txType === 'consent' ? 'badge-success' : 'badge-primary'}`} style={{ fontWeight: 600 }}>
                         {rec.txType === 'consent' ? 'Consent Action' : 'Medical Record'}
@@ -1197,7 +1197,7 @@ export default function AdminPanel({ user }) {
                     Block #{block.index}
                   </span>
                   <span style={{ marginLeft: '12px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    Mined: {new Date(block.timestamp).toLocaleString()}
+                    Mined: {new Date(block.timestamp).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}
                   </span>
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -1251,7 +1251,7 @@ export default function AdminPanel({ user }) {
                           )}
                           {rec.timestamp && (
                             <span style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                              Tx Timestamp: {new Date(rec.timestamp).toLocaleString()}
+                              Tx Timestamp: {new Date(rec.timestamp).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}
                             </span>
                           )}
                         </div>
@@ -1414,7 +1414,7 @@ export default function AdminPanel({ user }) {
                       <tbody>
                         {viewModal.data.map((rec) => (
                           <tr key={rec._id || rec.id}>
-                            <td>{new Date(rec.timestamp).toLocaleString()}</td>
+                            <td>{new Date(rec.timestamp).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}</td>
                             <td>
                               <strong style={{ color: 'var(--text-primary)' }}>{rec.patientId?.name || 'Deleted Patient'}</strong>
                               <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '2px 0 0 0' }}>

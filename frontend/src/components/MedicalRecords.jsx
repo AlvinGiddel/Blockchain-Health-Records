@@ -471,7 +471,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
                           <div>
                             <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)' }}>Diagnosed by Dr. {rec.doctorName}</h4>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>{new Date(rec.timestamp).toLocaleString()}</p>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>{new Date(rec.timestamp).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}</p>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
                               <span style={{ fontWeight: 600 }}>Record ID:</span>
                               <code style={{ background: 'rgba(0,0,0,0.25)', padding: '2px 6px', borderRadius: '4px', color: 'var(--color-primary)', wordBreak: 'break-all' }}>
@@ -586,7 +586,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
                           <div>
                             <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)' }}>Consultation with Dr. {rec.doctorName}</h4>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>{new Date(rec.timestamp).toLocaleString()}</p>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>{new Date(rec.timestamp).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}</p>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
                               <span style={{ fontWeight: 600 }}>Record ID:</span>
                               <code style={{ background: 'rgba(0,0,0,0.25)', padding: '2px 6px', borderRadius: '4px', color: 'var(--color-primary)', wordBreak: 'break-all' }}>

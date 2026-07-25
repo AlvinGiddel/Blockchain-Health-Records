@@ -1562,7 +1562,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                           {rec.txType || 'medical'}
                         </span>
                       </div>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Mined: {new Date(rec.timestamp || rec.blockTimestamp).toLocaleString()}</span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Mined: {new Date(rec.timestamp || rec.blockTimestamp).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}</span>
                     </div>
 
                     <div className="grid-2" style={{ gap: '12px', marginBottom: '12px' }}>
@@ -1715,7 +1715,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                             Block #{block.index} {block.index === 0 ? '(Genesis Block)' : ''}
                           </strong>
                           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
-                            Timestamp: {new Date(block.timestamp).toLocaleString()}
+                            Timestamp: {new Date(block.timestamp).toLocaleString('en-KE', { timeZone: 'Africa/Nairobi' })}
                           </p>
                         </div>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1766,7 +1766,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                               >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                   <span style={{ fontWeight: 600 }}>Type: {rec.txType || 'medical'}</span>
-                                  <span>{new Date(rec.timestamp).toLocaleTimeString()}</span>
+                                  <span>{new Date(rec.timestamp).toLocaleTimeString('en-KE', { timeZone: 'Africa/Nairobi' })}</span>
                                 </div>
                                 {rec.message ? (
                                   <p style={{ margin: 0, fontStyle: 'italic' }}>{rec.message}</p>
