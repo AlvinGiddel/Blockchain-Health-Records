@@ -2194,17 +2194,22 @@ server.keepAliveTimeout = 65000;
 server.headersTimeout = 66000;
 
 // Background Keep-Alive Self-Ping for Render deployment
+// Disabled by default (ENABLE_KEEP_ALIVE must be explicitly set to 'true') to allow Render to spin down when inactive and preserve free compute hours.
 const RENDER_URL = process.env.RENDER_EXTERNAL_URL || process.env.BACKEND_URL;
-if (RENDER_URL) {
-    console.log(`[Keep-Alive] Self-ping active for Render deployment: ${RENDER_URL}`);
+const ENABLE_KEEP_ALIVE = process.env.ENABLE_KEEP_ALIVE === 'true';
+const KEEP_ALIVE_INTERVAL_MINUTES = parseInt(process.env.KEEP_ALIVE_INTERVAL_MINUTES, 10) || 14;
+
+if (RENDER_URL && ENABLE_KEEP_ALIVE) {
+    console.log(`[Keep-Alive] Self-ping active for Render deployment (${KEEP_ALIVE_INTERVAL_MINUTES} min interval): ${RENDER_URL}`);
     setInterval(() => {
         const httpModule = RENDER_URL.startsWith('https') ? require('https') : require('http');
         httpModule.get(`${RENDER_URL}/api/health`, (res) => {
+            res.resume(); // Drains response stream to prevent socket/memory leaks
             console.log(`[Keep-Alive] Self-ping sent to ${RENDER_URL}/api/health - Status: ${res.statusCode}`);
         }).on('error', (err) => {
             console.warn(`[Keep-Alive] Self-ping warning: ${err.message}`);
         });
-    }, 10 * 60 * 1000); // Self-ping every 10 minutes to prevent Render free instance spin-down
+    }, KEEP_ALIVE_INTERVAL_MINUTES * 60 * 1000);
 }
 
 module.exports = app;

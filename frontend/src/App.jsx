@@ -195,7 +195,7 @@ export default function App() {
     // Run check immediately on mount / user state change
     checkServerStatus();
 
-    const interval = setInterval(checkServerStatus, 5000); // Check every 5 seconds
+    const interval = setInterval(checkServerStatus, 30000); // Check every 30 seconds
 
     return () => {
       isMounted = false;
