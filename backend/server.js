@@ -37,7 +37,7 @@ app.get('/', (req, res) => {
 });
 
 // Health check endpoint to retrieve the server status and instance ID
-app.get('/api/health', (req, res) => {
+app.get(['/api/health', '/health'], (req, res) => {
     res.json({ status: 'ok', serverInstanceId });
 });
 
