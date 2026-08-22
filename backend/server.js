@@ -2186,12 +2186,14 @@ process.on('unhandledRejection', (reason, promise) => {
     console.error('[CRITICAL] Unhandled Promise Rejection:', reason);
 });
 
-// Start Server with optimized HTTP keep-alive settings
-const server = app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
-server.keepAliveTimeout = 65000;
-server.headersTimeout = 66000;
+// Start Server with optimized HTTP keep-alive settings (only when not running as a Vercel serverless function)
+if (!process.env.VERCEL) {
+    const server = app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+    server.keepAliveTimeout = 65000;
+    server.headersTimeout = 66000;
+}
 
 // Background Keep-Alive Self-Ping for Render deployment
 // Disabled by default (ENABLE_KEEP_ALIVE must be explicitly set to 'true') to allow Render to spin down when inactive and preserve free compute hours.
