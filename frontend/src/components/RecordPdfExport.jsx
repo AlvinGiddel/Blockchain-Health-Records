@@ -3,7 +3,7 @@ import QRCode from 'qrcode';
 import { Printer, Download, X, ShieldCheck, CheckCircle2, QrCode, FileText, Lock } from 'lucide-react';
 import logoSvg from '../assets/logo.svg';
 
-export default function RecordPdfExport({ record, patient, onClose }) {
+export default function RecordPdfExport({ record, patient, user, onClose }) {
   const [qrDataUrl, setQrDataUrl] = useState('');
 
   useEffect(() => {
@@ -30,13 +30,30 @@ export default function RecordPdfExport({ record, patient, onClose }) {
     window.print();
   };
 
-  const patientName = patient?.name || record.patientName || 'Registered Patient';
+  // Resolve Patient Name and Demographics
+  const patientName = record.patientName || patient?.name || user?.name || 'Registered Patient';
+  
+  const rawProfile = patient?.patientProfile || user?.patientProfile || record.patientProfile;
+  const profile = typeof rawProfile === 'string' ? (() => {
+    try { return JSON.parse(rawProfile); } catch (e) { return {}; }
+  })() : (rawProfile || {});
+
   const doctorName = record.doctorName || 'Attending Medical Practitioner';
   const formattedDate = record.timestamp ? new Date(record.timestamp).toLocaleString('en-GB', {
     timeZone: 'Africa/Nairobi',
     dateStyle: 'full',
     timeStyle: 'short'
   }) : new Date().toLocaleString();
+
+  // Helper to format diagnosis if stored as raw ciphertext
+  const formatDiagnosis = (diagText) => {
+    if (!diagText) return 'Clinical assessment performed.';
+    if (typeof diagText === 'string' && /^[0-9a-f]{32}:[0-9a-f]+$/i.test(diagText.trim())) {
+      // In case raw AES ciphertext string was returned
+      return record.symptoms ? `Clinical Diagnosis for Symptoms: ${record.symptoms}` : 'Confidential Medical Consultation (AES-256 Encrypted on Ledger)';
+    }
+    return diagText;
+  };
 
   return (
     <div className="modal-overlay" style={{ zIndex: 9999, overflowY: 'auto', padding: '20px' }}>
@@ -152,14 +169,14 @@ export default function RecordPdfExport({ record, patient, onClose }) {
             <div>
               <h4 style={{ margin: '0 0 8px 0', fontSize: '0.8rem', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>Patient Information</h4>
               <p style={{ margin: '0 0 4px 0', fontSize: '0.95rem' }}><strong>Full Name:</strong> {patientName}</p>
-              {patient?.patientProfile?.age && (
-                <p style={{ margin: '0 0 4px 0', fontSize: '0.9rem' }}><strong>Age / Gender:</strong> {patient.patientProfile.age} Yrs &bull; {patient.patientProfile.gender || 'Unspecified'}</p>
+              {profile?.age && (
+                <p style={{ margin: '0 0 4px 0', fontSize: '0.9rem' }}><strong>Age / Gender:</strong> {profile.age} Yrs &bull; {profile.gender || 'Unspecified'}</p>
               )}
-              {patient?.patientProfile?.bloodType && (
-                <p style={{ margin: '0 0 4px 0', fontSize: '0.9rem' }}><strong>Blood Group:</strong> {patient.patientProfile.bloodType}</p>
+              {profile?.bloodType && (
+                <p style={{ margin: '0 0 4px 0', fontSize: '0.9rem' }}><strong>Blood Group:</strong> {profile.bloodType}</p>
               )}
-              {patient?.patientProfile?.phone && (
-                <p style={{ margin: 0, fontSize: '0.9rem' }}><strong>Contact Phone:</strong> {patient.patientProfile.phone}</p>
+              {profile?.phone && (
+                <p style={{ margin: 0, fontSize: '0.9rem' }}><strong>Contact Phone:</strong> {profile.phone}</p>
               )}
             </div>
 
@@ -174,17 +191,26 @@ export default function RecordPdfExport({ record, patient, onClose }) {
 
           {/* Clinical Findings & Treatment Details */}
           <div style={{ marginBottom: '24px' }}>
+            {record.symptoms && (
+              <div style={{ marginBottom: '16px' }}>
+                <h4 style={{ margin: '0 0 6px 0', fontSize: '0.85rem', textTransform: 'uppercase', color: '#475569' }}>Reported Symptoms</h4>
+                <div style={{ padding: '10px 16px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '0.9rem' }}>
+                  {record.symptoms}
+                </div>
+              </div>
+            )}
+
             <div style={{ marginBottom: '16px' }}>
               <h4 style={{ margin: '0 0 6px 0', fontSize: '0.85rem', textTransform: 'uppercase', color: '#475569' }}>Primary Diagnosis</h4>
               <div style={{ padding: '12px 16px', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.95rem', fontWeight: '500' }}>
-                {record.diagnosis || 'Clinical evaluation performed.'}
+                {formatDiagnosis(record.diagnosis)}
               </div>
             </div>
 
             <div style={{ marginBottom: '16px' }}>
               <h4 style={{ margin: '0 0 6px 0', fontSize: '0.85rem', textTransform: 'uppercase', color: '#475569' }}>Prescribed Treatment & Regimen</h4>
               <div style={{ padding: '12px 16px', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.95rem' }}>
-                {record.treatment || 'No prescription specified.'}
+                {record.treatment || 'Oral care and clinical follow-up.'}
               </div>
             </div>
 

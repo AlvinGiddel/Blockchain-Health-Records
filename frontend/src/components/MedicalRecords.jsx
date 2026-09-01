@@ -770,7 +770,8 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
       {exportingPdfRecord && (
         <RecordPdfExport
           record={exportingPdfRecord}
-          patient={activePatient}
+          patient={activePatient || (user.role === 'patient' ? user : null)}
+          user={user}
           onClose={() => setExportingPdfRecord(null)}
         />
       )}

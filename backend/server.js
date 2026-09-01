@@ -1694,13 +1694,15 @@ app.get('/api/records/patient/:id', async (req, res) => {
         }
 
         const { rows: records } = await db.query(
-            `SELECT id, patient_id as "patientId", doctor_id as "doctorId", doctor_name as "doctorName", 
-                    diagnosis, treatment, prescriptions, record_type as "recordType", symptoms, 
-                    notes, lab_request as "labRequest", consultation_hash as "consultationHash", 
-                    transaction_hash as "transactionHash", ipfs_hash as "ipfsHash", signature, 
-                    doctor_public_key as "doctorPublicKey", is_mined as "isMined", block_index as "blockIndex", 
-                    timestamp 
-             FROM records WHERE patient_id = $1 ORDER BY timestamp DESC`,
+            `SELECT r.id, r.patient_id as "patientId", r.doctor_id as "doctorId", r.doctor_name as "doctorName", 
+                    r.diagnosis, r.treatment, r.prescriptions, r.record_type as "recordType", r.symptoms, 
+                    r.notes, r.lab_request as "labRequest", r.consultation_hash as "consultationHash", 
+                    r.transaction_hash as "transactionHash", r.ipfs_hash as "ipfsHash", r.signature, 
+                    r.doctor_public_key as "doctorPublicKey", r.is_mined as "isMined", r.block_index as "blockIndex", 
+                    r.timestamp, p.name as "patientName", p.patient_profile as "patientProfile"
+             FROM records r
+             LEFT JOIN users p ON r.patient_id = p.id
+             WHERE r.patient_id = $1 ORDER BY r.timestamp DESC`,
             [patientId]
         );
 
