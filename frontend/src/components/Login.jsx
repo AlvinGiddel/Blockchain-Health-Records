@@ -34,6 +34,49 @@ export default function Login({ onLoginSuccess }) {
   const [profilePhoto, setProfilePhoto] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
+  const [kmpdcStatus, setKmpdcStatus] = useState({ verifying: false, verified: false, error: '', record: null });
+
+  const checkKmpdcLicense = async (licVal, docName) => {
+    if (!licVal || licVal.trim().length < 3) {
+      setKmpdcStatus({ verifying: false, verified: false, error: '', record: null });
+      return;
+    }
+
+    setKmpdcStatus({ verifying: true, verified: false, error: '', record: null });
+
+    try {
+      const url = `/api/kmpdc/verify?license=${encodeURIComponent(licVal.trim())}${docName ? `&name=${encodeURIComponent(docName.trim())}` : ''}`;
+      const data = await safeFetch(url);
+      if (data.valid) {
+        setKmpdcStatus({
+          verifying: false,
+          verified: true,
+          error: '',
+          record: data.practitioner
+        });
+        if (data.practitioner?.specialization && !specialization) {
+          setSpecialization(data.practitioner.specialization);
+        }
+        if (data.practitioner?.facility && !hospital) {
+          setHospital(data.practitioner.facility);
+        }
+      } else {
+        setKmpdcStatus({
+          verifying: false,
+          verified: false,
+          error: data.error || 'License verification failed.',
+          record: null
+        });
+      }
+    } catch (err) {
+      setKmpdcStatus({
+        verifying: false,
+        verified: false,
+        error: err.message || 'Failed to verify license with KMPDC registry.',
+        record: null
+      });
+    }
+  };
 
   const checkPhoneAvailability = async (phoneVal) => {
     const digitsOnly = (phoneVal || '').replace(/[^0-9]/g, '');
@@ -542,16 +585,40 @@ export default function Login({ onLoginSuccess }) {
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="license">Medical License Number</label>
+                      <label htmlFor="license">Medical License Number (KMPDC Registered)</label>
                       <input
                         type="text"
                         id="license"
                         className="form-control"
-                        placeholder="e.g. KMPDB-12345"
+                        placeholder="e.g. A12345 (Medical) or B10234 (Dental)"
                         required
                         value={licenseNumber}
-                        onChange={(e) => setLicenseNumber(e.target.value)}
+                        style={kmpdcStatus.error ? { borderColor: '#ef4444' } : (kmpdcStatus.verified ? { borderColor: '#10b981' } : {})}
+                        onChange={(e) => {
+                          setLicenseNumber(e.target.value);
+                          if (e.target.value.length >= 4) {
+                            checkKmpdcLicense(e.target.value, name);
+                          } else {
+                            setKmpdcStatus({ verifying: false, verified: false, error: '', record: null });
+                          }
+                        }}
+                        onBlur={(e) => checkKmpdcLicense(e.target.value, name)}
                       />
+                      {kmpdcStatus.verifying && (
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '6px' }}>
+                          ⏳ Verifying license with KMPDC Council Register...
+                        </div>
+                      )}
+                      {kmpdcStatus.verified && kmpdcStatus.record && (
+                        <div style={{ color: '#10b981', fontSize: '0.82rem', marginTop: '6px', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '6px 10px', borderRadius: '6px' }}>
+                          ✅ <strong>Verified KMPDC {kmpdcStatus.record.cadre}</strong>: {kmpdcStatus.record.fullName} ({kmpdcStatus.record.specialization}) &bull; {kmpdcStatus.record.facility}
+                        </div>
+                      )}
+                      {kmpdcStatus.error && (
+                        <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <AlertCircle size={14} /> {kmpdcStatus.error}
+                        </div>
+                      )}
                     </div>
                     <div className="form-group">
                       <label htmlFor="hospital">Affiliated Hospital</label>

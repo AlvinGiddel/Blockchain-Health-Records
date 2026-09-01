@@ -11,6 +11,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const db = require('./db');
 const licenseGuard = require('./middleware/licenseGuard');
 const { checkLicense, startLicenseCheckTimer, getLicenseStatus } = require('./services/licenseCheck');
+const { verifyKmpdcLicense } = require('./services/kmpdcVerification');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -285,8 +286,43 @@ function startAutoMineTimer() {
     }
 }
 
-// Initialize database synchronization, remote license checks & start background timers
+// Initialize KMPDC Council Registry Table & Seeds
+async function initKmpdcRegistry() {
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS kmpdc_registry (
+                license_number VARCHAR(50) PRIMARY KEY,
+                full_name VARCHAR(255) NOT NULL,
+                cadre VARCHAR(100) NOT NULL DEFAULT 'Medical Practitioner',
+                specialization VARCHAR(255) DEFAULT 'General Medicine',
+                status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'expired')),
+                retention_year INTEGER DEFAULT 2026,
+                facility VARCHAR(255) DEFAULT 'National Health Service',
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                last_verified_at TIMESTAMPTZ DEFAULT NOW()
+            );
+
+            INSERT INTO kmpdc_registry (license_number, full_name, cadre, specialization, status, retention_year, facility)
+            VALUES 
+                ('A12345', 'Dr. Alvin Giddel Mutuku', 'Medical Practitioner', 'Cardiology & Internal Medicine', 'active', 2026, 'Kenyatta National Hospital'),
+                ('A45892', 'Dr. Jane Wanjiku Kamau', 'Medical Practitioner', 'General Surgery', 'active', 2026, 'Avenue Healthcare Nairobi'),
+                ('A56712', 'Dr. David Ochieng Otieno', 'Medical Practitioner', 'Pediatrics & Child Health', 'active', 2026, 'Aga Khan University Hospital'),
+                ('A78901', 'Dr. Faith Chebet Rono', 'Medical Practitioner', 'Obstetrics & Gynecology', 'active', 2026, 'Moi Teaching and Referral Hospital'),
+                ('A90123', 'Dr. Michael Mwangi Kariuki', 'Medical Practitioner', 'Neurology & Critical Care', 'active', 2026, 'Nairobi Hospital'),
+                ('B10234', 'Dr. Sarah Nyambura Ndungu', 'Dentist', 'Orthodontics & Dental Surgery', 'active', 2026, 'Upper Hill Medical Centre'),
+                ('B20456', 'Dr. Brian Kiprop Korir', 'Dentist', 'Oral & Maxillofacial Surgery', 'active', 2026, 'Eldoret Dental Clinic'),
+                ('A99999', 'Dr. Suspended Practitioner Example', 'Medical Practitioner', 'General Practice', 'suspended', 2025, 'Revoked Practice Node')
+            ON CONFLICT (license_number) DO NOTHING;
+        `);
+        console.log('[KMPDC Service] Practitioner registry initialized.');
+    } catch (err) {
+        console.warn('[KMPDC Service] Registry init notice:', err.message);
+    }
+}
+
+// Initialize database synchronization, remote license checks, KMPDC registry & start background timers
 async function initDb() {
+    await initKmpdcRegistry();
     await checkLicense();
     startLicenseCheckTimer();
     await syncBlockchainWithDatabase();
@@ -340,6 +376,32 @@ app.get('/api/auth/check-phone', async (req, res) => {
     } catch (err) {
         console.error('Check phone error:', err);
         res.status(500).json({ error: 'Failed to verify phone number.' });
+    }
+});
+
+// Real-time KMPDC Doctor License Verification API
+app.get('/api/kmpdc/verify', async (req, res) => {
+    try {
+        const { license, name } = req.query;
+        if (!license) {
+            return res.status(400).json({ error: 'License query parameter is required (e.g. /api/kmpdc/verify?license=A12345&name=Jane+Doe)' });
+        }
+        const result = await verifyKmpdcLicense(String(license), name ? String(name) : undefined);
+        if (!result.verified) {
+            return res.status(422).json({
+                valid: false,
+                error: result.error,
+                matchScore: result.matchScore || 0
+            });
+        }
+        res.json({
+            valid: true,
+            practitioner: result.record,
+            matchScore: result.matchScore
+        });
+    } catch (err) {
+        console.error('KMPDC verification route error:', err);
+        res.status(500).json({ error: 'KMPDC council verification query failed.' });
     }
 });
 
@@ -421,18 +483,38 @@ app.post('/api/auth/register', async (req, res) => {
             }
         }
 
-        // 4. Check Doctor License Number Duplicate
-        if (role === 'doctor' && profile?.licenseNumber) {
-            const incomingLicense = profile.licenseNumber.toLowerCase().trim();
+        // 4. KMPDC Council Verification & Duplicate Check for Doctors
+        if (role === 'doctor') {
+            const incomingLicense = (profile?.licenseNumber || '').trim();
+            if (!incomingLicense) {
+                return res.status(400).json({ error: 'Registration rejected: A valid KMPDC Medical License Number (e.g. A12345) is required for doctor registration.' });
+            }
+
+            // Perform Off-Chain KMPDC Council Verification against practitioner name
+            const kmpdcCheck = await verifyKmpdcLicense(incomingLicense, name);
+            if (!kmpdcCheck.verified) {
+                return res.status(422).json({ error: `KMPDC License Verification Failed: ${kmpdcCheck.error}` });
+            }
+
+            // Attach verified council information to doctor profile
+            if (profile) {
+                profile.licenseNumber = kmpdcCheck.record.licenseNumber;
+                profile.kmpdcVerified = true;
+                profile.kmpdcCadre = kmpdcCheck.record.cadre;
+                profile.kmpdcSpecialization = kmpdcCheck.record.specialization;
+                profile.kmpdcRetentionYear = kmpdcCheck.record.retentionYear;
+                profile.kmpdcFacility = kmpdcCheck.record.facility;
+            }
+
             const isLicenseTaken = allUsers.some(u => {
                 if (u.role !== 'doctor') return false;
                 const dProf = parseProfile(u.doctor_profile);
-                const exLicense = (dProf.licenseNumber || '').toLowerCase().trim();
-                return exLicense && exLicense === incomingLicense;
+                const exLicense = (dProf.licenseNumber || '').toUpperCase().trim();
+                return exLicense && exLicense === incomingLicense.toUpperCase();
             });
 
             if (isLicenseTaken) {
-                return res.status(400).json({ error: 'Registration rejected: A doctor with this medical license number is already registered.' });
+                return res.status(400).json({ error: 'Registration rejected: A doctor with this medical license number is already registered in the system.' });
             }
         }
         
