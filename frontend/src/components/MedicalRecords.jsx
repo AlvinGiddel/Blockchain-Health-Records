@@ -620,6 +620,14 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                             >
                               <ShieldCheck size={12} color="var(--color-primary)" /> Verify Seal
                             </button>
+                            <button
+                              className="btn btn-secondary"
+                              style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(37, 99, 235, 0.12)', borderColor: 'rgba(37, 99, 235, 0.3)', color: 'var(--color-primary)' }}
+                              onClick={() => setExportingPdfRecord(rec)}
+                              title="Export Verifiable Certificate with QR Code"
+                            >
+                              <QrCode size={12} /> Certificate
+                            </button>
                           </div>
                         </div>
 
