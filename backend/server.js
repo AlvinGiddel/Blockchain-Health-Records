@@ -2392,9 +2392,12 @@ app.get('/api/records/:id/verify-blockchain', async (req, res) => {
     try {
         const recordId = req.params.id;
         const { rows: recRows } = await db.query(
-            `SELECT r.*, u.name as "doctorName", u.public_key as "doctorPublicKey" 
+            `SELECT r.*, 
+                    p.name as "patientName", p.email as "patientEmail", p.patient_profile as "patientProfile",
+                    d.name as "docName", d.email as "docEmail", d.doctor_profile as "docProfile", d.public_key as "doctorPublicKey" 
              FROM records r 
-             LEFT JOIN users u ON r.doctor_id = u.id 
+             LEFT JOIN users p ON r.patient_id = p.id 
+             LEFT JOIN users d ON r.doctor_id = d.id 
              WHERE r.id = $1`,
             [recordId]
         );
@@ -2405,7 +2408,6 @@ app.get('/api/records/:id/verify-blockchain', async (req, res) => {
 
         const rec = recRows[0];
         let blockData = null;
-        let isBlockValid = false;
 
         if (rec.is_mined && rec.block_index !== null) {
             const { rows: blockRows } = await db.query(
@@ -2414,7 +2416,6 @@ app.get('/api/records/:id/verify-blockchain', async (req, res) => {
             );
             if (blockRows.length > 0) {
                 blockData = blockRows[0];
-                isBlockValid = true;
             }
         }
 
@@ -2432,11 +2433,25 @@ app.get('/api/records/:id/verify-blockchain', async (req, res) => {
             }
         }
 
+        const decryptedDiagnosis = decrypt(rec.diagnosis);
+        const decryptedTreatment = decrypt(rec.treatment);
+
         res.json({
             verified: true,
             recordId: rec.id,
             patientId: rec.patient_id,
-            doctorName: rec.doctorName || rec.doctor_name,
+            patientName: rec.patientName || 'Registered Patient',
+            patientEmail: rec.patientEmail || '',
+            patientProfile: parseJsonIfNeeded(rec.patientProfile) || {},
+            doctorId: rec.doctor_id,
+            doctorName: rec.doctor_name || rec.docName || 'Attending Physician',
+            doctorProfile: parseJsonIfNeeded(rec.docProfile) || {},
+            diagnosis: decryptedDiagnosis,
+            treatment: decryptedTreatment,
+            symptoms: rec.symptoms || '',
+            notes: rec.notes || '',
+            prescriptions: parseJsonIfNeeded(rec.prescriptions) || [],
+            labRequest: rec.lab_request || '',
             timestamp: rec.timestamp,
             isMined: rec.is_mined,
             blockIndex: rec.block_index,
@@ -2445,6 +2460,8 @@ app.get('/api/records/:id/verify-blockchain', async (req, res) => {
             minedTimestamp: blockData ? blockData.timestamp : null,
             nonce: blockData ? blockData.nonce : null,
             signatureValid: isSignatureValid,
+            signature: rec.signature,
+            doctorPublicKey: rec.doctorPublicKey,
             blockchainSealStatus: rec.is_mined ? 'IMMUTABLE_MINED_ON_CHAIN' : 'QUEUED_IN_MEMPOOL'
         });
     } catch (err) {

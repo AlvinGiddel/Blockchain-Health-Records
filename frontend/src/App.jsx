@@ -9,6 +9,7 @@ import AdminPanel from './components/AdminPanel';
 import ResetPassword from './components/ResetPassword';
 import Profile from './components/Profile';
 import Settings from './components/Settings';
+import PublicCertificateView from './components/PublicCertificateView';
 import { safeFetch } from './utils/api';
 
 
@@ -116,6 +117,8 @@ export default function App() {
     return name.slice(0, 2).toUpperCase();
   };
 
+  const [publicRecordId, setPublicRecordId] = useState(null);
+
   // Theme states & persistence
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
@@ -129,6 +132,10 @@ export default function App() {
     const tokenVal = urlParams.get('resetToken');
     if (tokenVal) {
       setResetToken(tokenVal);
+    }
+    const verifyId = urlParams.get('verifyRecordId');
+    if (verifyId) {
+      setPublicRecordId(verifyId);
     }
   }, []);
 
@@ -344,6 +351,20 @@ export default function App() {
           />
         </main>
       </div>
+    );
+  }
+
+  // Intercept render cycle if QR code scan verification is active in URL
+  if (publicRecordId) {
+    return (
+      <PublicCertificateView
+        recordId={publicRecordId}
+        onDismiss={() => {
+          setPublicRecordId(null);
+          const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }}
+      />
     );
   }
 
