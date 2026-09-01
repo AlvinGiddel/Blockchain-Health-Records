@@ -9,6 +9,8 @@ const { Blockchain, generateKeyPair, signRecord, getKenyanTimestamp } = require(
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const db = require('./db');
+const licenseGuard = require('./middleware/licenseGuard');
+const { checkLicense, startLicenseCheckTimer, getLicenseStatus } = require('./services/licenseCheck');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -22,6 +24,9 @@ app.use(cors({
     maxAge: 86400 // Cache CORS preflight for 24h
 }));
 app.use(express.json());
+
+// Remote Licensing Guard: Enforces active license state across all API routes (except whitelisted auth & diagnostics)
+app.use(licenseGuard);
 
 // Unique identifier for the current server run session (re-generated on every server start)
 const serverInstanceId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(16).toString('hex');
@@ -280,8 +285,10 @@ function startAutoMineTimer() {
     }
 }
 
-// Initialize database synchronization & start auto-mine background timer
+// Initialize database synchronization, remote license checks & start background timers
 async function initDb() {
+    await checkLicense();
+    startLicenseCheckTimer();
     await syncBlockchainWithDatabase();
     startAutoMineTimer();
 }
@@ -341,8 +348,8 @@ app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, password, role, profile } = req.body;
         
-        if (role === 'admin') {
-            return res.status(400).json({ error: 'Registration as Administrator is not allowed.' });
+        if (role === 'admin' || role === 'super_admin' || !['patient', 'doctor'].includes(role)) {
+            return res.status(400).json({ error: 'Registration as Administrator or Super Administrator is not allowed.' });
         }
         
         // 1. Check if email already exists
@@ -496,6 +503,29 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
+// Dedicated In-Memory Rate Limiter for Super Admin Login (5 attempts / 15 min window)
+const superAdminLoginAttempts = new Map(); // key: ip, value: { count: number, resetAt: number }
+
+function checkSuperAdminRateLimit(ip) {
+    const now = Date.now();
+    const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+    const MAX_ATTEMPTS = 5;
+
+    const record = superAdminLoginAttempts.get(ip);
+    if (!record || now > record.resetAt) {
+        superAdminLoginAttempts.set(ip, { count: 1, resetAt: now + WINDOW_MS });
+        return { allowed: true };
+    }
+
+    if (record.count >= MAX_ATTEMPTS) {
+        const retryAfterSec = Math.ceil((record.resetAt - now) / 1000);
+        return { allowed: false, retryAfterSec };
+    }
+
+    record.count += 1;
+    return { allowed: true };
+}
+
 // Login
 app.post('/api/auth/login', async (req, res) => {
     try {
@@ -503,7 +533,23 @@ app.post('/api/auth/login', async (req, res) => {
         if (!email || !password || typeof email !== 'string' || typeof password !== 'string') {
             return res.status(400).json({ error: 'Please provide both email address and password.' });
         }
-        const { rows: users } = await db.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+
+        const cleanEmail = email.toLowerCase().trim();
+        const superAdminEmail = (process.env.SUPER_ADMIN_EMAIL || '').toLowerCase().trim();
+
+        // Stricter rate limit enforcement specifically for Super Admin login attempts
+        if (superAdminEmail && cleanEmail === superAdminEmail) {
+            const clientIp = req.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+            const rateLimitResult = checkSuperAdminRateLimit(clientIp);
+            if (!rateLimitResult.allowed) {
+                console.warn(`[Security Alert] Super Admin login rate limit exceeded from IP: ${clientIp}`);
+                return res.status(429).json({ 
+                    error: `Too many Super Admin login attempts. Rate limit exceeded. Try again in ${rateLimitResult.retryAfterSec} seconds.` 
+                });
+            }
+        }
+
+        const { rows: users } = await db.query('SELECT * FROM users WHERE email = $1', [cleanEmail]);
         if (users.length === 0) {
             return res.status(401).json({ error: 'Invalid credentials.' });
         }
@@ -1907,6 +1953,10 @@ app.delete('/api/users/:id', async (req, res) => {
         }
         const userToDelete = users[0];
 
+        if (userToDelete.role === 'super_admin') {
+            return res.status(403).json({ error: 'Super Administrator accounts cannot be deleted.' });
+        }
+
         // Delete user (cascade foreign keys will clean up appointments/records/logs automatically)
         await db.query('DELETE FROM users WHERE id = $1', [userId]);
 
@@ -2199,6 +2249,30 @@ app.post('/api/records/:id/specialist-note', async (req, res) => {
     } catch (err) {
         console.error('Specialist note error:', err);
         res.status(500).json({ error: 'Failed to save specialist note.' });
+    }
+});
+
+// 5. Remote License Diagnostic Route (Super-Admin Only)
+app.get('/api/license/status', (req, res) => {
+    try {
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Authentication token required.' });
+        }
+        const token = authHeader.substring(7).trim();
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (!decoded || decoded.role !== 'super_admin') {
+            return res.status(403).json({ error: 'Access restricted to Super Administrators only.' });
+        }
+
+        const licenseInfo = getLicenseStatus();
+        res.json({
+            success: true,
+            license: licenseInfo,
+            serverTimestamp: getKenyanTimestamp()
+        });
+    } catch (err) {
+        res.status(401).json({ error: 'Invalid or expired authentication token.' });
     }
 });
 

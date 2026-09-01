@@ -25,9 +25,14 @@ export async function parseResponseJson(response) {
   }
 
   if (!response.ok) {
-    const errorMsg = data && (data.error || data.message)
+    let errorMsg = data && (data.error || data.message)
       ? (data.error || data.message)
       : `Request failed with status ${response.status}`;
+
+    if (response.status === 403 && typeof errorMsg === 'string' && errorMsg.toLowerCase().includes('license inactive')) {
+      errorMsg = 'Service temporarily unavailable. Please contact your system provider.';
+    }
+
     throw new Error(errorMsg);
   }
 

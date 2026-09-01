@@ -16,7 +16,7 @@ CREATE TABLE users (
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL CHECK (role IN ('patient', 'doctor', 'admin')),
+    role VARCHAR(50) NOT NULL CHECK (role IN ('patient', 'doctor', 'admin', 'super_admin')),
     public_key TEXT NOT NULL,
     private_key TEXT NOT NULL,
     patient_profile JSONB DEFAULT NULL,
