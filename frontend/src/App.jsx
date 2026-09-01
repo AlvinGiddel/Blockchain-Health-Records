@@ -92,7 +92,7 @@ export default function App() {
     if (!user) return 'Blockchain Health Records';
     switch (activeTab) {
       case 'dashboard':
-        return user.role === 'admin' ? 'Admin Panel' : 'Dashboard';
+        return (user.role === 'admin' || user.role === 'super_admin') ? 'Admin Panel' : 'Dashboard';
       case 'records':
         return user.role === 'patient' ? 'My Health Folder' : 'Patient Dossiers';
       case 'blockchain':
@@ -315,7 +315,7 @@ export default function App() {
       case 'settings':
         return <Settings user={user} />;
       default:
-        if (user.role === 'admin') {
+        if (user.role === 'admin' || user.role === 'super_admin') {
           return <AdminPanel user={user} />;
         }
         return <Dashboard user={user} onSelectPatient={handleSelectPatient} onUpdateUser={handleUpdateUser} onNavigate={setActiveTab} />;
@@ -387,10 +387,10 @@ export default function App() {
             onClick={() => handleNavClick('dashboard')}
           >
             <LayoutDashboard size={20} />
-            <span>{user.role === 'admin' ? 'Admin Panel' : 'Dashboard'}</span>
+            <span>{(user.role === 'admin' || user.role === 'super_admin') ? 'Admin Panel' : 'Dashboard'}</span>
           </button>
           
-          {user.role !== 'admin' && (
+          {user.role !== 'admin' && user.role !== 'super_admin' && (
             <button
               className={`sidebar-link ${activeTab === 'records' ? 'active' : ''}`}
               onClick={() => handleNavClick('records')}
