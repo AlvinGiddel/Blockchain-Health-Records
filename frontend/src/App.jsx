@@ -290,7 +290,7 @@ export default function App() {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        if (user.role === 'admin') {
+        if (user.role === 'admin' || user.role === 'super_admin') {
           return <AdminPanel user={user} />;
         }
         return <Dashboard user={user} onSelectPatient={handleSelectPatient} onUpdateUser={handleUpdateUser} onNavigate={setActiveTab} />;
