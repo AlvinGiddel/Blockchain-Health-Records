@@ -126,29 +126,26 @@ export default function RecordPdfExport({ record, patient, user, onClose }) {
         {/* Printable Official Medical Certificate Layout */}
         <div 
           id="printable-certificate"
-          style={{
-            padding: '36px 44px',
-            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-          }}
+          className="cert-card-container"
         >
           {/* Certificate Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0f172a', paddingBottom: '20px', marginBottom: '24px' }}>
+          <div className="cert-header-flex">
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <img src={logoSvg} alt="Hospital Seal" style={{ width: '48px', height: '48px' }} />
+              <img src={logoSvg} alt="Hospital Seal" style={{ width: '48px', height: '48px', flexShrink: 0 }} />
               <div>
-                <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800', letterSpacing: '-0.02em', color: '#0f172a' }}>
+                <h2 style={{ margin: 0, fontSize: 'clamp(1.15rem, 3vw, 1.45rem)', fontWeight: '800', letterSpacing: '-0.02em', color: '#0f172a' }}>
                   BLOCKCHAIN HEALTHCARE NETWORK
                 </h2>
-                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#64748b', fontWeight: '500' }}>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.82rem', color: '#64748b', fontWeight: '500' }}>
                   Ministry of Health Registered Medical Node &bull; Republic of Kenya
                 </p>
               </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#ecfdf5', color: '#059669', padding: '4px 10px', borderRadius: '999px', fontSize: '0.8rem', fontWeight: '700', border: '1px solid #a7f3d0' }}>
-                <ShieldCheck size={14} /> ON-CHAIN VERIFIED
+            <div className="cert-header-right" style={{ textAlign: 'right' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: '#ecfdf5', color: '#059669', padding: '5px 12px', borderRadius: '999px', fontSize: '0.8rem', fontWeight: '700', border: '1px solid #a7f3d0' }}>
+                <ShieldCheck size={15} /> ON-CHAIN VERIFIED
               </div>
-              <p style={{ margin: '6px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+              <p style={{ margin: '6px 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
                 Document Ref: <strong>BHC-REC-{record.id?.slice(0, 8).toUpperCase()}</strong>
               </p>
             </div>
@@ -156,16 +153,16 @@ export default function RecordPdfExport({ record, patient, user, onClose }) {
 
           {/* Certificate Title */}
           <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <h1 style={{ margin: 0, fontSize: '1.3rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1e293b' }}>
+            <h1 style={{ margin: 0, fontSize: 'clamp(1.1rem, 2.5vw, 1.35rem)', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#1e293b' }}>
               Official Medical Consultation Certificate & Prescription
             </h1>
-            <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
               Issued in accordance with the Kenya Medical Practitioners and Dentists Act (Cap 253)
             </p>
           </div>
 
           {/* Patient Demographics & Doctor Info Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px', backgroundColor: '#f8fafc', padding: '16px 20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+          <div className="cert-grid-2">
             <div>
               <h4 style={{ margin: '0 0 8px 0', fontSize: '0.8rem', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>Patient Information</h4>
               <p style={{ margin: '0 0 4px 0', fontSize: '0.95rem' }}><strong>Full Name:</strong> {patientName}</p>
