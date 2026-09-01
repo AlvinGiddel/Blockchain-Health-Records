@@ -30,6 +30,39 @@ export default function RecordPdfExport({ record, patient, user, onClose }) {
     window.print();
   };
 
+  const handleDownloadCertificate = () => {
+    const certElement = document.getElementById('printable-certificate');
+    if (!certElement) return;
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verifiable Medical Certificate - BHC-${(record.id || '').slice(0, 8).toUpperCase()}</title>
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; padding: 30px 15px; display: flex; justify-content: center; margin: 0; color: #0f172a; }
+    .cert-card-container { width: 100%; max-width: 850px; background: #ffffff; border-radius: 12px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); padding: 40px 48px; box-sizing: border-box; }
+    .cert-header-flex { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; border-bottom: 2px solid #0f172a; padding-bottom: 20px; margin-bottom: 24px; }
+    .cert-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+  ${certElement.outerHTML}
+</body>
+</html>`;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `BHC_Medical_Certificate_${(record.id || 'record').slice(0, 8).toUpperCase()}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   // Resolve Patient Name and Demographics
   const patientName = record.patientName || patient?.name || user?.name || 'Registered Patient';
   
@@ -103,7 +136,9 @@ export default function RecordPdfExport({ record, patient, user, onClose }) {
             borderBottom: '1px solid #e2e8f0',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -112,7 +147,25 @@ export default function RecordPdfExport({ record, patient, user, onClose }) {
               Cryptographically Verifiable Medical Certificate
             </h3>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              onClick={handleDownloadCertificate}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 16px',
+                backgroundColor: '#059669',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+              title="Download offline verifiable certificate HTML document"
+            >
+              <Download size={16} /> Download
+            </button>
             <button
               onClick={handlePrint}
               style={{
