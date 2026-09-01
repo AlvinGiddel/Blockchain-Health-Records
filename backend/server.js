@@ -102,6 +102,13 @@ function parseJsonIfNeeded(data) {
 // Initialize Blockchain Engine
 let healthBlockchain = new Blockchain();
 
+// Auto-Miner Configurations
+const MEMPOOL_THRESHOLD = parseInt(process.env.MEMPOOL_THRESHOLD, 10) || 10;
+const MINE_INTERVAL_MS = parseInt(process.env.MINE_INTERVAL_MS, 10) || 60000;
+
+// Mutex lock to prevent concurrent mining operations (race conditions between timer, threshold, and manual requests)
+let isMining = false;
+
 /**
  * Synchronize the in-memory blockchain state with the database.
  * Loads mined blocks from PostgreSQL, or saves the Genesis block if the DB is empty.
@@ -182,9 +189,101 @@ async function syncBlockchainWithDatabase() {
     }
 }
 
-// Initialize database synchronization
+/**
+ * Executes a mining operation for pending records with race-condition locking.
+ * Always synchronizes in-memory blockchain state with the database before mining.
+ * @param {string} triggerReason - Reason/source for the mine trigger ('manual admin trigger', 'threshold hit', 'timer fallback')
+ * @returns {Promise<{success: boolean, block?: any, skipped?: boolean, error?: string}>}
+ */
+async function executeMining(triggerReason = 'manual') {
+    if (isMining) {
+        console.log(`[Auto-Miner] Mining is currently in progress. Skipping trigger (${triggerReason}).`);
+        return { skipped: true, reason: 'Mining in progress' };
+    }
+
+    isMining = true;
+    try {
+        await syncBlockchainWithDatabase();
+        if (healthBlockchain.pendingRecords.length === 0) {
+            if (triggerReason.startsWith('manual')) {
+                return { success: false, error: 'No pending records to mine. Add new records first.' };
+            }
+            console.log(`[Auto-Miner] No pending records in mempool to mine (${triggerReason}).`);
+            return { skipped: true, reason: 'No pending records' };
+        }
+
+        console.log(`[Auto-Miner] Mining block started (${triggerReason}). Mempool count: ${healthBlockchain.pendingRecords.length}. Starting Proof of Work...`);
+        const newBlock = healthBlockchain.minePendingRecords();
+
+        // Save block in database
+        await db.query(
+            'INSERT INTO blocks (index, timestamp, records, previous_hash, nonce, hash) VALUES ($1, $2, $3, $4, $5, $6)',
+            [newBlock.index, newBlock.timestamp, JSON.stringify(newBlock.records), newBlock.previousHash, newBlock.nonce, newBlock.hash]
+        );
+
+        // Update records and audit logs
+        const recordIds = newBlock.records.map(r => r.recordId).filter(Boolean);
+        if (recordIds.length > 0) {
+            await Promise.all([
+                db.query('UPDATE records SET is_mined = true, block_index = $1 WHERE id = ANY($2::uuid[])', [newBlock.index, recordIds]),
+                db.query('UPDATE audit_logs SET is_mined = true, block_index = $1 WHERE patient_id = ANY($2::uuid[])', [newBlock.index, recordIds])
+            ]);
+        }
+
+        console.log(`[Auto-Miner] Block #${newBlock.index} mined successfully (${triggerReason}) with ${newBlock.records.length} record(s). Hash: ${newBlock.hash}`);
+        return { success: true, block: newBlock };
+    } catch (error) {
+        console.error(`[Auto-Miner ERROR] Mining failed (${triggerReason}):`, error);
+        throw error;
+    } finally {
+        isMining = false;
+    }
+}
+
+/**
+ * Checks if pending records in mempool have reached MEMPOOL_THRESHOLD and triggers auto-mine.
+ */
+function checkMempoolThreshold() {
+    if (healthBlockchain.pendingRecords.length >= MEMPOOL_THRESHOLD) {
+        console.log(`[Auto-Miner] Mempool threshold reached (${healthBlockchain.pendingRecords.length}/${MEMPOOL_THRESHOLD} records). Triggering auto-mine...`);
+        executeMining(`threshold hit: ${healthBlockchain.pendingRecords.length}/${MEMPOOL_THRESHOLD} records`).catch(err => {
+            console.error('[Auto-Miner] Threshold-triggered mining failed:', err);
+        });
+    }
+}
+
+/**
+ * Starts a background interval timer to periodically mine pending records that have not met the threshold.
+ * Uses global._autoMineTimer to prevent duplicate timers across hot-reloads or repeated module evaluations.
+ */
+function startAutoMineTimer() {
+    if (global._autoMineTimer) {
+        clearInterval(global._autoMineTimer);
+        global._autoMineTimer = null;
+    }
+
+    console.log(`[Auto-Miner] Background timer initialized (Interval: ${MINE_INTERVAL_MS}ms, Threshold: ${MEMPOOL_THRESHOLD} records).`);
+
+    global._autoMineTimer = setInterval(async () => {
+        try {
+            if (healthBlockchain.pendingRecords.length > 0) {
+                console.log(`[Auto-Miner] Timer interval (${MINE_INTERVAL_MS}ms) triggered with ${healthBlockchain.pendingRecords.length} pending record(s).`);
+                await executeMining(`timer fallback (${healthBlockchain.pendingRecords.length} pending record(s))`);
+            }
+        } catch (err) {
+            console.error('[Auto-Miner] Timer-triggered mining error:', err);
+        }
+    }, MINE_INTERVAL_MS);
+
+    if (global._autoMineTimer.unref) {
+        global._autoMineTimer.unref();
+    }
+}
+
+// Initialize database synchronization & start auto-mine background timer
 async function initDb() {
     await syncBlockchainWithDatabase();
+    startAutoMineTimer();
 }
 initDb();
 
@@ -1239,32 +1338,7 @@ app.post('/api/consultations', async (req, res) => {
         };
 
         healthBlockchain.addRecord(pendingRecord);
-
-        // Mine block and update DB in background
-        (async () => {
-            try {
-                console.log('[Auto-Miner] Packaging consultation and mining block in background...');
-                await syncBlockchainWithDatabase();
-                const newBlock = healthBlockchain.minePendingRecords();
-
-                // Save block in DB
-                await db.query(
-                    'INSERT INTO blocks (index, timestamp, records, previous_hash, nonce, hash) VALUES ($1, $2, $3, $4, $5, $6)',
-                    [newBlock.index, newBlock.timestamp, JSON.stringify(newBlock.records), newBlock.previousHash, newBlock.nonce, newBlock.hash]
-                );
-
-                const recordIds = newBlock.records.map(r => r.recordId).filter(Boolean);
-                if (recordIds.length > 0) {
-                    await Promise.all([
-                        db.query('UPDATE records SET is_mined = true, block_index = $1 WHERE id = ANY($2::uuid[])', [newBlock.index, recordIds]),
-                        db.query('UPDATE audit_logs SET is_mined = true, block_index = $1 WHERE patient_id = ANY($2::uuid[])', [newBlock.index, recordIds])
-                    ]);
-                }
-                console.log(`[Auto-Miner] Background mining and database update finished successfully for block #${newBlock.index}.`);
-            } catch (err) {
-                console.error('[Auto-Miner] Background mining failed:', err);
-            }
-        })();
+        checkMempoolThreshold();
 
         // Return updated record
         const responseRecord = {
@@ -1410,33 +1484,7 @@ app.post('/api/records', async (req, res) => {
         };
         
         healthBlockchain.addRecord(pendingRecord);
-        
-        // Mine block and update DB in background
-        (async () => {
-            try {
-                console.log('[Auto-Miner] Packaging record and mining block in background...');
-                await syncBlockchainWithDatabase();
-                const newBlock = healthBlockchain.minePendingRecords();
-                
-                // Save the block in database
-                await db.query(
-                    'INSERT INTO blocks (index, timestamp, records, previous_hash, nonce, hash) VALUES ($1, $2, $3, $4, $5, $6)',
-                    [newBlock.index, newBlock.timestamp, JSON.stringify(newBlock.records), newBlock.previousHash, newBlock.nonce, newBlock.hash]
-                );
-                
-                // Update all records that were in this block
-                const recordIds = newBlock.records.map(r => r.recordId).filter(Boolean);
-                if (recordIds.length > 0) {
-                    await Promise.all([
-                        db.query('UPDATE records SET is_mined = true, block_index = $1 WHERE id = ANY($2::uuid[])', [newBlock.index, recordIds]),
-                        db.query('UPDATE audit_logs SET is_mined = true, block_index = $1 WHERE patient_id = ANY($2::uuid[])', [newBlock.index, recordIds])
-                    ]);
-                }
-                console.log(`[Auto-Miner] Background mining and database update finished successfully for block #${newBlock.index}.`);
-            } catch (err) {
-                console.error('[Auto-Miner] Background mining failed:', err);
-            }
-        })();
+        checkMempoolThreshold();
 
         const responseRecord = {
             id: newRecord.id,
@@ -1617,36 +1665,24 @@ app.get('/api/audit/logs', async (req, res) => {
 
 // ==================== BLOCKCHAIN LEDGER ROUTES ====================
 
-// Mine pending records into a block
+// Mine pending records into a block (Manual Admin Trigger)
 app.post('/api/blockchain/mine', async (req, res) => {
     try {
-        await syncBlockchainWithDatabase();
-        if (healthBlockchain.pendingRecords.length === 0) {
-            return res.status(400).json({ error: 'No pending records to mine. Add new records first.' });
+        if (isMining) {
+            return res.status(409).json({ error: 'Mining is already in progress. Please wait for the current block to seal.' });
         }
         
-        console.log('Mining blocks starting Proof of Work...');
-        const newBlock = healthBlockchain.minePendingRecords();
-        
-        // Save the block in database
-        await db.query(
-            'INSERT INTO blocks (index, timestamp, records, previous_hash, nonce, hash) VALUES ($1, $2, $3, $4, $5, $6)',
-            [newBlock.index, newBlock.timestamp, JSON.stringify(newBlock.records), newBlock.previousHash, newBlock.nonce, newBlock.hash]
-        );
-        
-        // Update records and audit logs
-        const recordIds = newBlock.records.map(r => r.recordId).filter(Boolean);
-        if (recordIds.length > 0) {
-            await db.query('UPDATE records SET is_mined = true, block_index = $1 WHERE id = ANY($2::uuid[])', [newBlock.index, recordIds]);
-            await db.query('UPDATE audit_logs SET is_mined = true, block_index = $1 WHERE patient_id = ANY($2::uuid[])', [newBlock.index, recordIds]);
+        const result = await executeMining('manual admin trigger');
+        if (!result.success) {
+            return res.status(400).json({ error: result.error || 'No pending records to mine. Add new records first.' });
         }
         
         res.status(200).json({
             message: 'Block successfully mined and stored on ledger!',
-            block: newBlock
+            block: result.block
         });
     } catch (error) {
-        console.error('Mining failed:', error);
+        console.error('Manual mining failed:', error);
         res.status(500).json({ error: 'Mining failed: ' + error.message });
     }
 });
