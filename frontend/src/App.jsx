@@ -23,8 +23,7 @@ export default function App() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [resetToken, setResetToken] = useState(null);
 
-  // Server status state & resilience tracking
-  const [serverRestartNotice, setServerRestartNotice] = useState(false);
+  // Server status & network failure tracking
   const consecutiveFailuresRef = React.useRef(0);
 
   // Sidebar layout states
@@ -162,21 +161,11 @@ export default function App() {
 
     const checkServerStatus = async () => {
       try {
-        const data = await safeFetch('/api/health');
+        await safeFetch('/api/health');
         if (!isMounted) return;
 
         // Reset consecutive network failure counter on successful response
         consecutiveFailuresRef.current = 0;
-
-        const storedInstanceId = sessionStorage.getItem('serverInstanceId');
-        if (!storedInstanceId) {
-          sessionStorage.setItem('serverInstanceId', data.serverInstanceId);
-        } else if (storedInstanceId !== data.serverInstanceId) {
-          // On server restart mismatch, display a non-blocking toast notice without destroying session or token
-          console.log('Server restarted in background. Displaying non-blocking notice.');
-          sessionStorage.setItem('serverInstanceId', data.serverInstanceId);
-          setServerRestartNotice(true);
-        }
       } catch (err) {
         if (!isMounted) return;
         consecutiveFailuresRef.current += 1;
@@ -377,43 +366,6 @@ export default function App() {
 
   return (
     <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed-layout' : ''} ${isResizing ? 'resizing' : ''}`}>
-      {/* Non-blocking Server Restart Notice Banner */}
-      {serverRestartNotice && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          background: 'rgba(59, 130, 246, 0.95)',
-          color: '#ffffff',
-          padding: '8px 16px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: '0.85rem',
-          fontWeight: 500,
-          zIndex: 99999,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-          backdropFilter: 'blur(4px)'
-        }}>
-          <span>ℹ️ Backend server restarted in background. Your active session remains authenticated.</span>
-          <button 
-            onClick={() => setServerRestartNotice(false)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#ffffff',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-              fontSize: '1rem',
-              marginLeft: '12px'
-            }}
-            title="Dismiss notice"
-          >
-            ✕
-          </button>
-        </div>
-      )}
       {/* Collapsible Sidebar */}
       <aside 
         className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileSidebarOpen ? 'open' : ''}`}
