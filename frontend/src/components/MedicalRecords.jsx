@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Plus, Link2, FileText, AlertCircle, Check, Award, Lock, HelpCircle, Search, ShieldAlert } from 'lucide-react';
+import { ShieldCheck, Plus, Link2, FileText, AlertCircle, Check, Award, Lock, HelpCircle, Search, ShieldAlert, QrCode } from 'lucide-react';
 import RecordVerificationPortal from './RecordVerificationPortal';
+import RecordPdfExport from './RecordPdfExport';
 import { getApiUrl } from '../utils/api';
 
 export default function MedicalRecords({ user, selectedPatient, onBackToRegistry }) {
@@ -10,6 +11,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
   const [activePatient, setActivePatient] = useState(selectedPatient || null);
   const [accessDenied, setAccessDenied] = useState(false);
   const [verifyRecordId, setVerifyRecordId] = useState(null);
+  const [exportingPdfRecord, setExportingPdfRecord] = useState(null);
 
   // New Record Form Fields
   const [diagnosis, setDiagnosis] = useState('');
@@ -495,6 +497,14 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                             >
                               <ShieldCheck size={12} color="var(--color-primary)" /> Verify Seal
                             </button>
+                            <button
+                              className="btn btn-secondary"
+                              style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(37, 99, 235, 0.12)', borderColor: 'rgba(37, 99, 235, 0.3)', color: 'var(--color-primary)' }}
+                              onClick={() => setExportingPdfRecord(rec)}
+                              title="Export Verifiable Certificate with QR Code"
+                            >
+                              <QrCode size={12} /> Certificate
+                            </button>
                           </div>
                         </div>
 
@@ -747,6 +757,14 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
 
       {verifyRecordId && (
         <RecordVerificationPortal recordId={verifyRecordId} onClose={() => setVerifyRecordId(null)} />
+      )}
+
+      {exportingPdfRecord && (
+        <RecordPdfExport
+          record={exportingPdfRecord}
+          patient={activePatient}
+          onClose={() => setExportingPdfRecord(null)}
+        />
       )}
 
     </div>

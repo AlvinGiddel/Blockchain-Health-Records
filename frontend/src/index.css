@@ -1112,3 +1112,27 @@ select, option {
   }
 }
 
+/* Print Styles for Verifiable Medical Certificate */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-certificate,
+  #printable-certificate * {
+    visibility: visible;
+  }
+  #printable-certificate {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 20px;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+

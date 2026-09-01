@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Database, ShieldAlert, ShieldCheck, UserCheck, Flame, RefreshCw, Layers, Users, Zap, Terminal, Check, X, Clock, Stethoscope, User, Search, BarChart3 } from 'lucide-react';
 import PublicHealthAnalytics from './PublicHealthAnalytics';
+import LicenseControlWidget from './LicenseControlWidget';
 import { getApiUrl } from '../utils/api';
 
 export default function AdminPanel({ user }) {
@@ -561,6 +562,9 @@ export default function AdminPanel({ user }) {
           {refreshing ? 'Refreshing...' : 'Refresh Console'}
         </button>
       </div>
+
+      {/* Super Admin Remote Licensing & Kill-Switch Authority Control Center */}
+      <LicenseControlWidget user={user} />
 
       {/* Network Health Header */}
       <div

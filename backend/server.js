@@ -2358,6 +2358,99 @@ app.get('/api/license/status', (req, res) => {
     }
 });
 
+// 6. Super Admin Live License Refresh Trigger
+app.post('/api/license/refresh', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Authentication token required.' });
+        }
+        const token = authHeader.substring(7).trim();
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (!decoded || decoded.role !== 'super_admin') {
+            return res.status(403).json({ error: 'Access restricted to Super Administrators only.' });
+        }
+
+        console.log('[License Service] Super Admin manually triggered live license authority ping...');
+        const updatedStatus = await checkLicense();
+        res.json({
+            success: true,
+            message: 'License authority ping executed successfully.',
+            license: updatedStatus,
+            serverTimestamp: getKenyanTimestamp()
+        });
+    } catch (err) {
+        console.error('License refresh error:', err);
+        res.status(500).json({ error: 'Failed to refresh license status.' });
+    }
+});
+
+// 7. Public Verifiable Medical Record Blockchain Proof (For QR Code Scans)
+app.get('/api/records/:id/verify-blockchain', async (req, res) => {
+    try {
+        const recordId = req.params.id;
+        const { rows: recRows } = await db.query(
+            `SELECT r.*, u.name as "doctorName", u.public_key as "doctorPublicKey" 
+             FROM records r 
+             LEFT JOIN users u ON r.doctor_id = u.id 
+             WHERE r.id = $1`,
+            [recordId]
+        );
+
+        if (recRows.length === 0) {
+            return res.status(404).json({ verified: false, error: 'Medical record not found in system.' });
+        }
+
+        const rec = recRows[0];
+        let blockData = null;
+        let isBlockValid = false;
+
+        if (rec.is_mined && rec.block_index !== null) {
+            const { rows: blockRows } = await db.query(
+                'SELECT * FROM blocks WHERE index = $1',
+                [rec.block_index]
+            );
+            if (blockRows.length > 0) {
+                blockData = blockRows[0];
+                isBlockValid = true;
+            }
+        }
+
+        // Verify RSA Signature
+        let isSignatureValid = false;
+        if (rec.doctorPublicKey && rec.signature) {
+            const dataToVerify = `${rec.patient_id}-${rec.diagnosis}-${rec.treatment}-${rec.timestamp}`;
+            const verify = crypto.createVerify('SHA256');
+            verify.update(dataToVerify);
+            verify.end();
+            try {
+                isSignatureValid = verify.verify(rec.doctorPublicKey, rec.signature, 'hex');
+            } catch (sigErr) {
+                isSignatureValid = false;
+            }
+        }
+
+        res.json({
+            verified: true,
+            recordId: rec.id,
+            patientId: rec.patient_id,
+            doctorName: rec.doctorName || rec.doctor_name,
+            timestamp: rec.timestamp,
+            isMined: rec.is_mined,
+            blockIndex: rec.block_index,
+            blockHash: blockData ? blockData.hash : null,
+            previousHash: blockData ? blockData.previous_hash : null,
+            minedTimestamp: blockData ? blockData.timestamp : null,
+            nonce: blockData ? blockData.nonce : null,
+            signatureValid: isSignatureValid,
+            blockchainSealStatus: rec.is_mined ? 'IMMUTABLE_MINED_ON_CHAIN' : 'QUEUED_IN_MEMPOOL'
+        });
+    } catch (err) {
+        console.error('Verify blockchain proof error:', err);
+        res.status(500).json({ verified: false, error: 'Failed to verify blockchain proof.' });
+    }
+});
+
 // Global 404 handler for unmatched API routes
 app.use((req, res) => {
     res.status(404).json({ error: `API endpoint ${req.originalUrl} not found.` });

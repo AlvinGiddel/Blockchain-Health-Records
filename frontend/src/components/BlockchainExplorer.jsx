@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Database, ShieldAlert, Cpu, CheckCircle2, ChevronRight, AlertTriangle, RefreshCw, Flame, HelpCircle } from 'lucide-react';
+import { Database, ShieldAlert, Cpu, CheckCircle2, ChevronRight, AlertTriangle, RefreshCw, Flame, HelpCircle, GitFork } from 'lucide-react';
+import MerkleTreeVisualizer from './MerkleTreeVisualizer';
 import { getApiUrl } from '../utils/api';
 
 export default function BlockchainExplorer({ user }) {
@@ -9,6 +10,7 @@ export default function BlockchainExplorer({ user }) {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [mining, setMining] = useState(false);
+  const [expandedMerkleBlock, setExpandedMerkleBlock] = useState(null);
 
   // Tampering states
   const [tamperRecordId, setTamperRecordId] = useState('');
@@ -318,6 +320,35 @@ export default function BlockchainExplorer({ user }) {
                           )}
                         </div>
                       ))}
+
+                      {/* Merkle Tree Inspection Button */}
+                      <button
+                        onClick={() => setExpandedMerkleBlock(expandedMerkleBlock === block.index ? null : block.index)}
+                        style={{
+                          marginTop: '12px',
+                          background: 'none',
+                          border: '1px solid rgba(168, 85, 247, 0.4)',
+                          borderRadius: '6px',
+                          padding: '6px 12px',
+                          color: '#c084fc',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          width: '100%',
+                          justifyContent: 'center',
+                          backgroundColor: 'rgba(168, 85, 247, 0.08)',
+                          transition: 'background 0.2s'
+                        }}
+                      >
+                        <GitFork size={14} />
+                        {expandedMerkleBlock === block.index ? 'Hide Merkle Tree' : 'View Merkle Tree Structure'}
+                      </button>
+
+                      {expandedMerkleBlock === block.index && (
+                        <MerkleTreeVisualizer block={block} />
+                      )}
                     </div>
                   </div>
 
