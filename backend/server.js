@@ -2387,6 +2387,103 @@ app.post('/api/license/refresh', async (req, res) => {
     }
 });
 
+// 6.1 Super Admin Instant License Simulation / Override Endpoint
+app.post('/api/license/simulate', (req, res) => {
+    try {
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Authentication token required.' });
+        }
+        const token = authHeader.substring(7).trim();
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (!decoded || decoded.role !== 'super_admin') {
+            return res.status(403).json({ error: 'Access restricted to Super Administrators only.' });
+        }
+
+        const { targetStatus, reason } = req.body;
+        if (!targetStatus || !['active', 'disabled'].includes(targetStatus)) {
+            return res.status(400).json({ error: "targetStatus must be 'active' or 'disabled'." });
+        }
+
+        global.licenseStatus.status = targetStatus;
+        global.licenseStatus.reason = reason || (targetStatus === 'disabled' ? 'Simulated Super Admin Kill-Switch Trigger' : 'Active Subscription');
+        global.licenseStatus.lastChecked = new Date();
+
+        console.log(`[License Service] Super Admin set simulation license state to: ${targetStatus.toUpperCase()}`);
+
+        res.json({
+            success: true,
+            message: `Instance license state simulated to: ${targetStatus.toUpperCase()}`,
+            license: getLicenseStatus(),
+            serverTimestamp: getKenyanTimestamp()
+        });
+    } catch (err) {
+        console.error('License simulate error:', err);
+        res.status(500).json({ error: 'Failed to set license simulation.' });
+    }
+});
+
+// 6.2 Get Master KMPDC Practitioners Register
+app.get('/api/kmpdc/practitioners', async (req, res) => {
+    try {
+        const { rows } = await db.query('SELECT * FROM kmpdc_registry ORDER BY full_name ASC');
+        res.json({ success: true, practitioners: rows });
+    } catch (err) {
+        console.error('Failed to query KMPDC practitioners:', err);
+        res.status(500).json({ error: 'Failed to load KMPDC registry.' });
+    }
+});
+
+// 6.3 Super Admin Add Practitioner to Master KMPDC Registry
+app.post('/api/kmpdc/practitioners', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Authentication token required.' });
+        }
+        const token = authHeader.substring(7).trim();
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (!decoded || decoded.role !== 'super_admin') {
+            return res.status(403).json({ error: 'Access restricted to Super Administrators only.' });
+        }
+
+        const { licenseNumber, fullName, cadre, specialization, facility, status } = req.body;
+        if (!licenseNumber || !fullName) {
+            return res.status(400).json({ error: 'licenseNumber and fullName are required.' });
+        }
+
+        const cleanLicense = licenseNumber.trim().toUpperCase();
+        const cleanName = fullName.trim();
+        const cleanCadre = cadre || 'Medical Practitioner';
+        const cleanSpec = specialization || 'General Practice';
+        const cleanFacility = facility || 'Kenyatta National Hospital';
+        const cleanStatus = status || 'active';
+
+        const { rows } = await db.query(
+            `INSERT INTO kmpdc_registry (license_number, full_name, cadre, specialization, facility, status, retention_year)
+             VALUES ($1, $2, $3, $4, $5, $6, 2026)
+             ON CONFLICT (license_number) DO UPDATE
+             SET full_name = EXCLUDED.full_name,
+                 cadre = EXCLUDED.cadre,
+                 specialization = EXCLUDED.specialization,
+                 facility = EXCLUDED.facility,
+                 status = EXCLUDED.status,
+                 updated_at = NOW()
+             RETURNING *`,
+            [cleanLicense, cleanName, cleanCadre, cleanSpec, cleanFacility, cleanStatus]
+        );
+
+        res.status(201).json({
+            success: true,
+            message: `Practitioner ${cleanName} (${cleanLicense}) successfully registered in KMPDC Oracle!`,
+            practitioner: rows[0]
+        });
+    } catch (err) {
+        console.error('Failed to add practitioner to KMPDC registry:', err);
+        res.status(500).json({ error: err.message || 'Failed to save practitioner.' });
+    }
+});
+
 // 7. Public Verifiable Medical Record Blockchain Proof (For QR Code Scans)
 app.get('/api/records/:id/verify-blockchain', async (req, res) => {
     try {
