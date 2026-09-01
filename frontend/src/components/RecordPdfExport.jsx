@@ -56,7 +56,30 @@ export default function RecordPdfExport({ record, patient, user, onClose }) {
   };
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 9999, overflowY: 'auto', padding: '20px' }}>
+    <div 
+      className="certificate-modal-overlay" 
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'flex-start',
+        zIndex: 99999,
+        overflowY: 'auto',
+        padding: '24px 16px',
+        boxSizing: 'border-box',
+        backdropFilter: 'blur(8px)'
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div 
         className="modal-content certificate-modal-content"
         style={{
@@ -65,9 +88,10 @@ export default function RecordPdfExport({ record, patient, user, onClose }) {
           backgroundColor: '#ffffff',
           color: '#0f172a',
           borderRadius: '12px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
           overflow: 'hidden',
-          padding: '0'
+          padding: '0',
+          margin: 'auto 0'
         }}
       >
         {/* Modal Top Action Bar (Hidden on Print) */}

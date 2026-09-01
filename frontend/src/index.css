@@ -1191,5 +1191,26 @@ select, option {
   }
 }
 
+.certificate-modal-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  background-color: rgba(0, 0, 0, 0.85) !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+  z-index: 99999 !important;
+  overflow-y: auto !important;
+  padding: 24px 16px !important;
+  box-sizing: border-box !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+
 
 
