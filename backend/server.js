@@ -806,6 +806,52 @@ app.get('/api/admin/all', async (req, res) => {
     }
 });
 
+// Provision New Hospital Tenant Administrator (Super Admin Authority)
+app.post('/api/admin/provision-tenant', async (req, res) => {
+    try {
+        const { hospitalName, name, email, password } = req.body;
+        if (!name || !email || !password) {
+            return res.status(400).json({ error: 'Administrator Name, Email, and Password are required.' });
+        }
+
+        // Check if user email already exists
+        const existing = await db.query('SELECT 1 FROM users WHERE email = $1', [email]);
+        if (existing.rows.length > 0) {
+            return res.status(400).json({ error: `An account with email "${email}" already exists.` });
+        }
+
+        // Generate RSA-2048 cryptographic keypair
+        const { publicKey, privateKey } = generateKeyPair();
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const displayName = hospitalName ? `${name} (${hospitalName})` : name;
+
+        const { rows: newAdmin } = await db.query(
+            `INSERT INTO users (name, email, password, role, public_key, private_key, is_approved, is_rejected)
+             VALUES ($1, $2, $3, 'admin', $4, $5, true, false)
+             RETURNING id, name, email, role, is_approved as "isApproved", created_at as "createdAt"`,
+            [displayName, email, hashedPassword, publicKey, privateKey]
+        );
+
+        // Record immutable audit log
+        db.query(
+            `INSERT INTO audit_logs (event_type, details) 
+             VALUES ($1, $2)`,
+            ['tenant_admin_provision', `New tenant administrator provisioned by Super Admin: ${displayName} (${email})`]
+        ).catch(e => console.error('Audit log error:', e));
+
+        console.log(`[TENANT PROVISION] Hospital Administrator "${displayName}" created successfully.`);
+        res.status(201).json({
+            success: true,
+            message: `Hospital Administrator account for "${hospitalName || name}" provisioned successfully!`,
+            admin: newAdmin[0]
+        });
+    } catch (err) {
+        console.error('Error provisioning tenant admin:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Approve Pending Admin
 app.post('/api/admin/approve/:id', async (req, res) => {
     try {

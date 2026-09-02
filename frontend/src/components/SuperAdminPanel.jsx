@@ -3,7 +3,7 @@ import {
   Database, ShieldAlert, ShieldCheck, UserCheck, RefreshCw, 
   Layers, Users, Zap, Terminal, Check, X, Stethoscope, 
   User, Search, UserCog, Activity, Lock, Cpu, Server, CheckCircle2,
-  ChevronRight, ArrowUpRight, Shield, Clock, Hash
+  ChevronRight, ArrowUpRight, Shield, Clock, Hash, Building2, Plus
 } from 'lucide-react';
 import LicenseControlWidget from './LicenseControlWidget';
 import { getApiUrl } from '../utils/api';
@@ -38,6 +38,15 @@ export default function SuperAdminPanel({ user }) {
   // Interactive Metric Card Modal State: 'admins' | 'doctors' | 'patients' | 'blocks' | 'consensus' | null
   const [activeMetricModal, setActiveMetricModal] = useState(null);
   const [modalSearchQuery, setModalSearchQuery] = useState('');
+
+  // Onboard New Hospital Admin State
+  const [showProvisionForm, setShowProvisionForm] = useState(false);
+  const [newHospitalName, setNewHospitalName] = useState('');
+  const [newAdminName, setNewAdminName] = useState('');
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [provisioningLoading, setProvisioningLoading] = useState(false);
+  const [provisionError, setProvisionError] = useState('');
 
   // Search state for Node Directory & Registry Control
   const [nodeSearchQuery, setNodeSearchQuery] = useState('');
@@ -334,6 +343,55 @@ export default function SuperAdminPanel({ user }) {
     } catch (err) {
       console.error(err);
       alert('Failed to reject admin request.');
+    }
+  };
+
+  const handleProvisionTenant = async (e) => {
+    e.preventDefault();
+    setProvisionError('');
+    if (!newAdminName.trim() || !newAdminEmail.trim() || !newAdminPassword) {
+      setProvisionError('Please fill in administrator name, email, and password.');
+      return;
+    }
+
+    setProvisioningLoading(true);
+    try {
+      const res = await fetch(getApiUrl('/api/admin/provision-tenant'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hospitalName: newHospitalName.trim(),
+          name: newAdminName.trim(),
+          email: newAdminEmail.trim(),
+          password: newAdminPassword
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to provision tenant admin.');
+      }
+
+      setToast({
+        message: `Success! Tenant Administrator for "${newHospitalName || newAdminName}" provisioned.`,
+        type: 'success'
+      });
+      setLogs(prev => [
+        ...prev,
+        `[${new Date().toLocaleTimeString()}] [PROVISION] Tenant hospital administrator ${newAdminEmail} created and authorized.`
+      ]);
+
+      // Clear form
+      setNewHospitalName('');
+      setNewAdminName('');
+      setNewAdminEmail('');
+      setNewAdminPassword('');
+      setShowProvisionForm(false);
+      fetchAdminData();
+    } catch (err) {
+      console.error(err);
+      setProvisionError(err.message);
+    } finally {
+      setProvisioningLoading(false);
     }
   };
 
@@ -1115,17 +1173,115 @@ export default function SuperAdminPanel({ user }) {
               {/* 1. Admins Modal */}
               {activeMetricModal === 'admins' && (
                 <div>
-                  <div style={{ position: 'relative', marginBottom: '16px' }}>
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Filter administrators by name or email..."
-                      value={modalSearchQuery}
-                      onChange={(e) => setModalSearchQuery(e.target.value)}
-                      style={{ paddingLeft: '32px', fontSize: '0.85rem' }}
-                    />
-                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                    <div style={{ position: 'relative', flex: 1, minWidth: '220px' }}>
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Filter administrators by name or email..."
+                        value={modalSearchQuery}
+                        onChange={(e) => setModalSearchQuery(e.target.value)}
+                        style={{ paddingLeft: '32px', fontSize: '0.85rem' }}
+                      />
+                      <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    </div>
+
+                    <button
+                      className="btn btn-primary"
+                      type="button"
+                      onClick={() => setShowProvisionForm(!showProvisionForm)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', padding: '8px 14px', background: '#f59e0b', borderColor: '#f59e0b', color: '#000', fontWeight: 700 }}
+                    >
+                      <Plus size={15} /> {showProvisionForm ? 'Hide Form' : '+ Onboard Hospital Admin'}
+                    </button>
                   </div>
+
+                  {/* Onboarding Provision Form */}
+                  {showProvisionForm && (
+                    <div className="glass-card" style={{ padding: '18px', marginBottom: '20px', border: '1px solid rgba(245, 158, 11, 0.4)', background: 'rgba(245, 158, 11, 0.05)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                        <Building2 size={18} color="#f59e0b" />
+                        <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#f59e0b', fontWeight: 700 }}>Onboard Rented Hospital Administrator</h4>
+                      </div>
+                      <p style={{ margin: '0 0 14px 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        Creates an active administrator account for the rented facility. Generates RSA-2048 cryptographic keys and secure password hash in the database.
+                      </p>
+
+                      {provisionError && (
+                        <div className="badge-error" style={{ padding: '8px 12px', fontSize: '0.8rem', marginBottom: '12px' }}>
+                          {provisionError}
+                        </div>
+                      )}
+
+                      <form onSubmit={handleProvisionTenant} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+                        <div>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Hospital Facility Name</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="e.g. Nairobi West Hospital"
+                            value={newHospitalName}
+                            onChange={(e) => setNewHospitalName(e.target.value)}
+                            style={{ fontSize: '0.8rem', height: '36px' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Admin Contact Name *</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="e.g. Dr. Evans Kilonzo"
+                            required
+                            value={newAdminName}
+                            onChange={(e) => setNewAdminName(e.target.value)}
+                            style={{ fontSize: '0.8rem', height: '36px' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Official Admin Email *</label>
+                          <input
+                            type="email"
+                            className="form-control"
+                            placeholder="admin@nairobiwest.org"
+                            required
+                            value={newAdminEmail}
+                            onChange={(e) => setNewAdminEmail(e.target.value)}
+                            style={{ fontSize: '0.8rem', height: '36px' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Initial Secure Password *</label>
+                          <input
+                            type="password"
+                            className="form-control"
+                            placeholder="Create initial password"
+                            required
+                            value={newAdminPassword}
+                            onChange={(e) => setNewAdminPassword(e.target.value)}
+                            style={{ fontSize: '0.8rem', height: '36px' }}
+                          />
+                        </div>
+                        <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => setShowProvisionForm(false)}
+                            style={{ padding: '6px 14px', fontSize: '0.8rem' }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            className="btn btn-primary"
+                            disabled={provisioningLoading}
+                            style={{ padding: '6px 18px', fontSize: '0.8rem', background: '#10b981', borderColor: '#10b981', fontWeight: 600 }}
+                          >
+                            {provisioningLoading ? 'Provisioning Keys...' : 'Create & Authorize Admin'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
 
                   <div className="table-container">
                     <table className="custom-table" style={{ fontSize: '0.8rem' }}>
