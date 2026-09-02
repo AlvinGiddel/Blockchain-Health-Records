@@ -1205,9 +1205,22 @@ app.get('/api/admin/pending', async (req, res) => {
 // Get All Registered Hospital Administrators (Super Admin Authority)
 app.get('/api/admin/all', async (req, res) => {
     try {
-        const { rows: admins } = await db.query(
-            'SELECT id, name, email, role, profile_photo as "profilePhoto", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role IN (\'admin\', \'super_admin\') ORDER BY created_at DESC'
-        );
+        const { rows: admins } = await db.query(`
+            SELECT 
+                u.id, 
+                u.name, 
+                u.email, 
+                u.role, 
+                u.organization_id as "organizationId", 
+                COALESCE(o.name, CASE WHEN u.role = 'super_admin' THEN 'Global Platform Governance' ELSE 'Unassigned Facility' END) as "organizationName",
+                u.profile_photo as "profilePhoto", 
+                u.is_approved as "isApproved", 
+                u.created_at as "createdAt" 
+            FROM users u 
+            LEFT JOIN organizations o ON u.organization_id = o.id 
+            WHERE u.role IN ('admin', 'super_admin') 
+            ORDER BY u.created_at DESC;
+        `);
         res.json(admins);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -1228,31 +1241,61 @@ app.post('/api/admin/provision-tenant', async (req, res) => {
             return res.status(400).json({ error: `An account with email "${email}" already exists.` });
         }
 
+        let orgId = null;
+        let finalHospitalName = (hospitalName || '').trim();
+        if (finalHospitalName) {
+            let orgRes = await db.query('SELECT id, name FROM organizations WHERE name ILIKE $1 LIMIT 1', [finalHospitalName]);
+            if (orgRes.rows.length > 0) {
+                orgId = orgRes.rows[0].id;
+                finalHospitalName = orgRes.rows[0].name;
+            } else {
+                const newOrg = await db.query(
+                    'INSERT INTO organizations (name) VALUES ($1) RETURNING id, name',
+                    [finalHospitalName]
+                );
+                orgId = newOrg.rows[0].id;
+                finalHospitalName = newOrg.rows[0].name;
+
+                // Create isolated Genesis Block for the new hospital ledger
+                const genesis = new Block(0, new Date().toISOString(), [{ type: 'GENESIS_BLOCK', message: `Genesis Ledger for ${finalHospitalName}` }], '0', 0, orgId);
+                await db.query(
+                    'INSERT INTO blocks (index, timestamp, records, previous_hash, hash, nonce, organization_id) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                    [genesis.index, genesis.timestamp, JSON.stringify(genesis.records), genesis.previousHash, genesis.hash, genesis.nonce, orgId]
+                );
+            }
+        }
+
         // Generate RSA-2048 cryptographic keypair
         const { publicKey, privateKey } = generateKeyPair();
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const displayName = hospitalName ? `${name} (${hospitalName})` : name;
-
         const { rows: newAdmin } = await db.query(
-            `INSERT INTO users (name, email, password, role, public_key, private_key, is_approved, is_rejected)
-             VALUES ($1, $2, $3, 'admin', $4, $5, true, false)
-             RETURNING id, name, email, role, is_approved as "isApproved", created_at as "createdAt"`,
-            [displayName, email, hashedPassword, publicKey, privateKey]
+            `INSERT INTO users (name, email, password, role, organization_id, public_key, private_key, is_approved, is_rejected)
+             VALUES ($1, $2, $3, 'admin', $4, $5, $6, true, false)
+             RETURNING id, name, email, role, organization_id as "organizationId", is_approved as "isApproved", created_at as "createdAt"`,
+            [name, email, hashedPassword, orgId, publicKey, privateKey]
         );
 
-        // Record immutable audit log
-        db.query(
-            `INSERT INTO audit_logs (event_type, details) 
-             VALUES ($1, $2)`,
-            ['tenant_admin_provision', `New tenant administrator provisioned by Super Admin: ${displayName} (${email})`]
-        ).catch(e => console.error('Audit log error:', e));
+        if (orgId) {
+            await db.query(
+                `INSERT INTO tenant_memberships (user_id, organization_id, role, status)
+                 VALUES ($1, $2, 'admin', 'active')
+                 ON CONFLICT (user_id, organization_id) DO NOTHING;`,
+                [newAdmin[0].id, orgId]
+            );
+        }
 
-        console.log(`[TENANT PROVISION] Hospital Administrator "${displayName}" created successfully.`);
+        // Record immutable audit log
+        logAuditEvent('tenant_admin_provision', newAdmin[0].id, name, newAdmin[0].id, 'Super Administrator', `New hospital administrator provisioned for "${finalHospitalName || 'Platform'}": ${name} (${email})`, orgId);
+
+        console.log(`[TENANT PROVISION] Hospital Administrator "${name}" for "${finalHospitalName}" created successfully.`);
         res.status(201).json({
             success: true,
-            message: `Hospital Administrator account for "${hospitalName || name}" provisioned successfully!`,
-            admin: newAdmin[0]
+            message: `Hospital Administrator account for "${finalHospitalName || name}" provisioned successfully!`,
+            admin: {
+                ...newAdmin[0],
+                organizationName: finalHospitalName || 'Global Platform Governance'
+            }
         });
     } catch (err) {
         console.error('Error provisioning tenant admin:', err);

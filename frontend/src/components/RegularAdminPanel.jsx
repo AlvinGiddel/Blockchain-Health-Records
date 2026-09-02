@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Database, ShieldAlert, ShieldCheck, UserCheck, Flame, RefreshCw, Layers, Users, Zap, Terminal, Check, X, Clock, Stethoscope, User, Search, BarChart3 } from 'lucide-react';
+import { Database, ShieldAlert, ShieldCheck, UserCheck, Flame, RefreshCw, Layers, Users, Zap, Terminal, Check, X, Clock, Stethoscope, User, Search, BarChart3, Building2 } from 'lucide-react';
 import PublicHealthAnalytics from './PublicHealthAnalytics';
 import LicenseControlWidget from './LicenseControlWidget';
 import { getApiUrl, safeFetch } from '../utils/api';
@@ -541,8 +541,29 @@ export default function RegularAdminPanel({ user }) {
 
       <div className="page-header-flex">
         <div>
-          <h1 style={{ fontSize: '2.00rem', fontWeight: 800 }}>Admin Command Center</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>System metrics, P2P network diagnostics, and ledger security monitoring</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <h1 style={{ fontSize: '2.00rem', fontWeight: 800, margin: 0 }}>Admin Command Center</h1>
+            {user?.organizationName && (
+              <span style={{ 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '6px', 
+                background: 'rgba(59, 130, 246, 0.12)', 
+                color: '#60a5fa', 
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                padding: '4px 10px',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                fontWeight: 600
+              }}>
+                <Building2 size={15} />
+                {user.organizationName}
+              </span>
+            )}
+          </div>
+          <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
+            {user?.organizationName ? `Tenant Node Management & Cryptographic Ledger for ${user.organizationName}` : 'System metrics, P2P network diagnostics, and ledger security monitoring'}
+          </p>
         </div>
         <button
           className="btn btn-secondary"

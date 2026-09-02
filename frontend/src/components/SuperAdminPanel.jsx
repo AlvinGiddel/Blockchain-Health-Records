@@ -6,7 +6,7 @@ import {
   ChevronRight, ArrowUpRight, Shield, Clock, Hash, Building2, Plus
 } from 'lucide-react';
 import LicenseControlWidget from './LicenseControlWidget';
-import { getApiUrl } from '../utils/api';
+import { getApiUrl, safeFetch } from '../utils/api';
 
 export default function SuperAdminPanel({ user }) {
   const [stats, setStats] = useState({
@@ -135,9 +135,8 @@ export default function SuperAdminPanel({ user }) {
       const pendingData = resPending.ok ? await resPending.json() : [];
 
       // Fetch all admins
-      const resAllAdmins = await fetch(getApiUrl('/api/admin/all'));
-      const allAdminsData = resAllAdmins.ok ? await resAllAdmins.json() : [];
-      setAllAdmins(allAdminsData.length > 0 ? allAdminsData : [{ id: user.id || user._id, name: user.name, email: user.email, role: user.role, isApproved: true, createdAt: new Date() }]);
+      const allAdminsData = await safeFetch('/api/admin/all').catch(() => []);
+      setAllAdmins(Array.isArray(allAdminsData) && allAdminsData.length > 0 ? allAdminsData : [{ id: user.id || user._id, name: user.name, email: user.email, role: user.role, organizationName: 'Global Platform Governance', isApproved: true, createdAt: new Date() }]);
 
       // Fetch pending doctor requests
       const resPendingDocs = await fetch(getApiUrl('/api/admin/doctors/pending'));
@@ -1289,6 +1288,7 @@ export default function SuperAdminPanel({ user }) {
                         <tr>
                           <th>Admin Name</th>
                           <th>Email</th>
+                          <th>Hospital / Facility</th>
                           <th>Role Tier</th>
                           <th>Status</th>
                           <th>Registered</th>
@@ -1300,17 +1300,37 @@ export default function SuperAdminPanel({ user }) {
                           .filter(a => {
                             if (!modalSearchQuery.trim()) return true;
                             const q = modalSearchQuery.toLowerCase();
-                            return (a.name || '').toLowerCase().includes(q) || (a.email || '').toLowerCase().includes(q);
+                            return (a.name || '').toLowerCase().includes(q) || 
+                                   (a.email || '').toLowerCase().includes(q) ||
+                                   (a.organizationName || '').toLowerCase().includes(q);
                           })
                           .map(adm => {
                             const isPending = adm.isApproved === false;
+                            const isSuper = adm.role === 'super_admin';
                             return (
                               <tr key={adm.id || adm._id}>
                                 <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{adm.name}</td>
                                 <td>{adm.email}</td>
                                 <td>
-                                  <span className={`badge ${adm.role === 'super_admin' ? 'badge-primary' : 'badge-warning'}`} style={{ fontSize: '0.7rem' }}>
-                                    {adm.role === 'super_admin' ? 'Root Super Admin' : 'Tenant Admin'}
+                                  <span style={{ 
+                                    display: 'inline-flex', 
+                                    alignItems: 'center', 
+                                    gap: '6px',
+                                    padding: '4px 10px',
+                                    borderRadius: '6px',
+                                    background: isSuper ? 'rgba(59, 130, 246, 0.12)' : 'rgba(16, 185, 129, 0.12)',
+                                    color: isSuper ? '#60a5fa' : '#34d399',
+                                    fontWeight: 600,
+                                    fontSize: '0.75rem',
+                                    border: isSuper ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)'
+                                  }}>
+                                    <Building2 size={13} />
+                                    {adm.organizationName || (isSuper ? 'Global Platform Governance' : 'Unassigned Facility')}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className={`badge ${isSuper ? 'badge-primary' : 'badge-warning'}`} style={{ fontSize: '0.7rem' }}>
+                                    {isSuper ? 'Root Super Admin' : 'Tenant Admin'}
                                   </span>
                                 </td>
                                 <td>

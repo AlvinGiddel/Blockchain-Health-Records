@@ -454,8 +454,11 @@ export default function App() {
               )}
             </div>
             <div className="user-info">
-              <span className="user-name">{user.name}</span>
-              <span className="user-role">{user.role}</span>
+              <span className="user-name" title={user.name}>{user.name}</span>
+              <span className="user-role" title={user.organizationName || user.role}>
+                {user.role}
+                {user.organizationName ? ` • ${user.organizationName}` : ''}
+              </span>
             </div>
           </div>
 
