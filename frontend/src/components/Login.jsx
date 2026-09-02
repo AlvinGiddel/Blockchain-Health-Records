@@ -53,9 +53,16 @@ export default function Login({ onLoginSuccess }) {
   const [phoneError, setPhoneError] = useState('');
   const [cadre, setCadre] = useState('doctor');
   const [councilStatus, setCouncilStatus] = useState({ verifying: false, verified: false, error: '', record: null, regulator: '' });
+  const latestLicenseRef = React.useRef('');
+  const debounceTimerRef = React.useRef(null);
 
   const checkPractitionerLicense = async (licVal, docName, currentCadre = cadre) => {
-    if (!licVal || licVal.trim().length < 3) {
+    const trimmed = (licVal || '').trim();
+    latestLicenseRef.current = trimmed;
+
+    // Minimum sensible lengths: KMPDC usually starts with letter + 4 digits (5+), NCK is 5+ digits
+    const minLen = (currentCadre === 'nurse' || currentCadre === 'midwife') ? 5 : 4;
+    if (!trimmed || trimmed.length < minLen) {
       setCouncilStatus({ verifying: false, verified: false, error: '', record: null, regulator: '' });
       return;
     }
@@ -63,8 +70,14 @@ export default function Login({ onLoginSuccess }) {
     setCouncilStatus({ verifying: true, verified: false, error: '', record: null, regulator: '' });
 
     try {
-      const url = `/api/practitioner/verify?license=${encodeURIComponent(licVal.trim())}&cadre=${encodeURIComponent(currentCadre)}${docName ? `&name=${encodeURIComponent(docName.trim())}` : ''}`;
+      const url = `/api/practitioner/verify?license=${encodeURIComponent(trimmed)}&cadre=${encodeURIComponent(currentCadre)}${docName ? `&name=${encodeURIComponent(docName.trim())}` : ''}`;
       const data = await safeFetch(url);
+
+      // Drop stale response if user continued typing
+      if (latestLicenseRef.current.toUpperCase() !== trimmed.toUpperCase()) {
+        return;
+      }
+
       if (data.valid) {
         setCouncilStatus({
           verifying: false,
@@ -89,6 +102,9 @@ export default function Login({ onLoginSuccess }) {
         });
       }
     } catch (err) {
+      if (latestLicenseRef.current.toUpperCase() !== trimmed.toUpperCase()) {
+        return;
+      }
       setCouncilStatus({
         verifying: false,
         verified: false,
@@ -97,6 +113,23 @@ export default function Login({ onLoginSuccess }) {
         regulator: ''
       });
     }
+  };
+
+  const debouncedCheckLicense = (licVal, docName, currentCadre = cadre) => {
+    const trimmed = (licVal || '').trim();
+    latestLicenseRef.current = trimmed;
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    const minLen = (currentCadre === 'nurse' || currentCadre === 'midwife') ? 5 : 4;
+    if (trimmed.length < minLen) {
+      setCouncilStatus({ verifying: false, verified: false, error: '', record: null, regulator: '' });
+      return;
+    }
+    setCouncilStatus(prev => ({ ...prev, verifying: true, error: '' }));
+    debounceTimerRef.current = setTimeout(() => {
+      checkPractitionerLicense(trimmed, docName, currentCadre);
+    }, 600);
   };
 
   const checkPhoneAvailability = async (phoneVal) => {
@@ -758,7 +791,8 @@ export default function Login({ onLoginSuccess }) {
                             onClick={() => {
                               setCadre(item.id);
                               setCouncilStatus({ verifying: false, verified: false, error: '', record: null, regulator: '' });
-                              if (licenseNumber && licenseNumber.length >= 3) {
+                              if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+                              if (licenseNumber && licenseNumber.trim().length >= 4) {
                                 checkPractitionerLicense(licenseNumber, name, item.id);
                               }
                             }}
@@ -799,14 +833,14 @@ export default function Login({ onLoginSuccess }) {
                         value={licenseNumber}
                         style={councilStatus.error ? { borderColor: '#ef4444' } : (councilStatus.verified ? { borderColor: '#10b981' } : {})}
                         onChange={(e) => {
-                          setLicenseNumber(e.target.value);
-                          if (e.target.value.length >= 3) {
-                            checkPractitionerLicense(e.target.value, name, cadre);
-                          } else {
-                            setCouncilStatus({ verifying: false, verified: false, error: '', record: null, regulator: '' });
-                          }
+                          const val = e.target.value;
+                          setLicenseNumber(val);
+                          debouncedCheckLicense(val, name, cadre);
                         }}
-                        onBlur={(e) => checkPractitionerLicense(e.target.value, name, cadre)}
+                        onBlur={(e) => {
+                          if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+                          checkPractitionerLicense(e.target.value, name, cadre);
+                        }}
                       />
                       {councilStatus.verifying && (
                         <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '6px' }}>
