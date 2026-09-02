@@ -777,25 +777,64 @@ app.post('/api/auth/register', async (req, res) => {
                 hospitalName: facilityName
             }).catch(mErr => console.error('Failed to send practitioner pending email:', mErr.message));
 
-            // Notify facility admin of new practitioner in approval queue
-            if (targetOrg) {
-                db.query(`
-                    SELECT name, email FROM users 
-                    WHERE organization_id = $1 AND role = 'admin' 
-                    LIMIT 1;
-                `, [targetOrg.id]).then(({ rows: adminRows }) => {
-                    if (adminRows.length > 0) {
-                        sendAdminNewPractitionerAlert({
-                            adminEmail: adminRows[0].email,
-                            adminName: adminRows[0].name,
-                            practitionerName: user.name,
-                            cadre: cadreVal,
-                            hospitalName: targetOrg.name,
-                            licenseNumber: profile?.licenseNumber
-                        }).catch(aErr => console.error('Failed to send admin alert email:', aErr.message));
+            // Notify facility admin (or Super Admin) of new practitioner in approval queue
+            (async () => {
+                try {
+                    if (targetOrg) {
+                        const { rows: adminRows } = await db.pool.query(`
+                            SELECT DISTINCT u.name, u.email 
+                            FROM users u
+                            LEFT JOIN tenant_memberships tm ON tm.user_id = u.id
+                            WHERE (u.organization_id = $1 OR tm.organization_id = $1)
+                              AND (u.role = 'admin' OR tm.role = 'admin')
+                              AND u.email IS NOT NULL;
+                        `, [targetOrg.id]);
+
+                        if (adminRows.length > 0) {
+                            for (const admin of adminRows) {
+                                sendAdminNewPractitionerAlert({
+                                    adminEmail: admin.email,
+                                    adminName: admin.name,
+                                    practitionerName: user.name,
+                                    cadre: cadreVal,
+                                    hospitalName: targetOrg.name,
+                                    licenseNumber: profile?.licenseNumber
+                                }).catch(aErr => console.error(`Failed to send admin alert email to ${admin.email}:`, aErr.message));
+                            }
+                        } else {
+                            // Fallback to Super Admin if facility admin has not yet completed setup
+                            const { rows: superRows } = await db.pool.query("SELECT name, email FROM users WHERE role = 'super_admin' LIMIT 1;");
+                            const sEmail = superRows.length > 0 ? superRows[0].email : process.env.SUPER_ADMIN_EMAIL;
+                            if (sEmail) {
+                                sendAdminNewPractitionerAlert({
+                                    adminEmail: sEmail,
+                                    adminName: superRows[0]?.name || 'Platform Super Administrator',
+                                    practitionerName: user.name,
+                                    cadre: cadreVal,
+                                    hospitalName: targetOrg.name,
+                                    licenseNumber: profile?.licenseNumber
+                                }).catch(sErr => console.error('Failed to send super admin alert:', sErr.message));
+                            }
+                        }
+                    } else {
+                        // Practitioner applied with unlisted / external facility -> notify Super Admin
+                        const { rows: superRows } = await db.pool.query("SELECT name, email FROM users WHERE role = 'super_admin' LIMIT 1;");
+                        const sEmail = superRows.length > 0 ? superRows[0].email : process.env.SUPER_ADMIN_EMAIL;
+                        if (sEmail) {
+                            sendAdminNewPractitionerAlert({
+                                adminEmail: sEmail,
+                                adminName: superRows[0]?.name || 'Platform Super Administrator',
+                                practitionerName: user.name,
+                                cadre: cadreVal,
+                                hospitalName: profile?.hospital || 'Unlisted Healthcare Facility',
+                                licenseNumber: profile?.licenseNumber
+                            }).catch(sErr => console.error('Failed to send super admin alert:', sErr.message));
+                        }
                     }
-                }).catch(qErr => console.error('Failed to query hospital admin for email alert:', qErr.message));
-            }
+                } catch (notifyErr) {
+                    console.error('[Practitioner Notification Error]:', notifyErr.message);
+                }
+            })();
 
             // Log doctor registration request event in audit trail (in background)
             db.query(

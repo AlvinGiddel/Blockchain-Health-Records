@@ -57,6 +57,7 @@ export default function RegularAdminPanel({ user }) {
   // Custom states for admin approval workflow & ledger explorations
   const [pendingAdmins, setPendingAdmins] = useState([]);
   const [pendingDoctors, setPendingDoctors] = useState([]);
+  const [isRefreshingPendingDocs, setIsRefreshingPendingDocs] = useState(false);
   const [mempoolRecords, setMempoolRecords] = useState([]);
   const [blocks, setBlocks] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, name, role }
@@ -104,7 +105,7 @@ export default function RegularAdminPanel({ user }) {
 
   useEffect(() => {
     fetchAdminData(false);
-    // Poll backend state and node updates every 10 seconds
+    // Poll backend state and node updates every 4 seconds for snappy real-time admin experience
     const interval = setInterval(() => {
       fetchAdminData(true);
       
@@ -117,7 +118,7 @@ export default function RegularAdminPanel({ user }) {
       ];
       const randomMsg = pingMsgs[Math.floor(Math.random() * pingMsgs.length)];
       setLogs(prev => [...prev.slice(-8), `[${new Date().toLocaleTimeString()}] ${randomMsg}`]);
-    }, 10000);
+    }, 4000);
 
     return () => clearInterval(interval);
   }, []);
@@ -131,41 +132,60 @@ export default function RegularAdminPanel({ user }) {
     }
   }, [toast]);
 
+  const refreshPendingDoctors = async () => {
+    try {
+      setIsRefreshingPendingDocs(true);
+      const data = await safeFetch('/api/admin/doctors/pending');
+      setPendingDoctors(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.warn('Failed to refresh pending doctors:', e.message);
+    } finally {
+      setIsRefreshingPendingDocs(false);
+    }
+  };
+
   const fetchAdminData = async (isBackground = false) => {
     try {
       if (!isBackground) setLoading(true);
-      // Fetch stats
-      const statsData = await safeFetch('/api/admin/stats').catch(() => null);
-      
-      const blocks = await safeFetch('/api/blockchain/blocks').catch(() => []);
-      setBlocks(Array.isArray(blocks) ? blocks : []);
-      
-      // Get all doctors and patients
-      const patientsData = await safeFetch('/api/users/patients').catch(() => []);
-      setDbPatients(Array.isArray(patientsData) ? patientsData : []);
 
-      const doctorsData = await safeFetch('/api/users/doctors').catch(() => []);
-      setDbDoctors(Array.isArray(doctorsData) ? doctorsData : []);
-      
-      // Fetch system audit logs
-      const auditData = await safeFetch('/api/audit/logs').catch(() => []);
-      setAuditLogs(Array.isArray(auditData) ? auditData : []);
-
-      // Fetch pending admin requests
-      const pendingData = await safeFetch('/api/admin/pending').catch(() => []);
-
-      // Fetch pending doctor requests
-      const pendingDocsData = await safeFetch('/api/admin/doctors/pending').catch(() => []);
-
-      // Fetch appointments
       const uId = user.id || user._id;
-      const apptsData = await safeFetch(`/api/appointments?requesterId=${uId}&requesterRole=admin`).catch(() => []);
+
+      // Parallelize all endpoint requests concurrently with Promise.all for instant sub-second response
+      const [
+        statsData,
+        blocks,
+        patientsData,
+        doctorsData,
+        auditData,
+        pendingData,
+        pendingDocsData,
+        apptsData,
+        mempoolData
+      ] = await Promise.all([
+        safeFetch('/api/admin/stats').catch(() => null),
+        safeFetch('/api/blockchain/blocks').catch(() => []),
+        safeFetch('/api/users/patients').catch(() => []),
+        safeFetch('/api/users/doctors').catch(() => []),
+        safeFetch('/api/audit/logs').catch(() => []),
+        safeFetch('/api/admin/pending').catch(() => []),
+        safeFetch('/api/admin/doctors/pending').catch(() => []),
+        safeFetch(`/api/appointments?requesterId=${uId}&requesterRole=admin`).catch(() => []),
+        fetch(getApiUrl('/api/blockchain/mempool')).then(r => r.ok ? r.json() : []).catch(() => [])
+      ]);
+
+      setBlocks(Array.isArray(blocks) ? blocks : []);
+      setDbPatients(Array.isArray(patientsData) ? patientsData : []);
+      setDbDoctors(Array.isArray(doctorsData) ? doctorsData : []);
+      setAuditLogs(Array.isArray(auditData) ? auditData : []);
       setAppointments(Array.isArray(apptsData) ? apptsData : []);
-      
+      setPendingAdmins(Array.isArray(pendingData) ? pendingData : []);
+      setPendingDoctors(Array.isArray(pendingDocsData) ? pendingDocsData : []);
+      setMempoolRecords(Array.isArray(mempoolData) ? mempoolData : []);
+
       if (isInitialFetched) {
         // Toast and alert for new admins
         const existingIds = pendingAdmins.map(a => a.id || a._id);
-        const newRequests = pendingData.filter(a => !existingIds.includes(a.id || a._id));
+        const newRequests = (Array.isArray(pendingData) ? pendingData : []).filter(a => !existingIds.includes(a.id || a._id));
         newRequests.forEach(newAdmin => {
           setToast({
             message: `New Admin Request: ${newAdmin.name} (${newAdmin.email}) is awaiting approval.`,
@@ -176,7 +196,7 @@ export default function RegularAdminPanel({ user }) {
 
         // Toast and alert for new doctors
         const existingDocIds = pendingDoctors.map(d => d.id || d._id);
-        const newDocRequests = pendingDocsData.filter(d => !existingDocIds.includes(d.id || d._id));
+        const newDocRequests = (Array.isArray(pendingDocsData) ? pendingDocsData : []).filter(d => !existingDocIds.includes(d.id || d._id));
         newDocRequests.forEach(newDoc => {
           setToast({
             message: `New Doctor Request: Dr. ${newDoc.name} (${newDoc.email}) is awaiting approval.`,
@@ -187,12 +207,6 @@ export default function RegularAdminPanel({ user }) {
       } else {
         setIsInitialFetched(true);
       }
-      setPendingAdmins(pendingData);
-      setPendingDoctors(pendingDocsData);
-
-      // Fetch signed mempool records
-      const resMempool = await fetch(getApiUrl('/api/blockchain/mempool'));
-      const mempoolData = resMempool.ok ? await resMempool.json() : [];
       setMempoolRecords(mempoolData);
 
       // Compute records count and gather doctors
@@ -676,11 +690,24 @@ export default function RegularAdminPanel({ user }) {
 
       {/* Pending Doctor Approvals */}
       <div className="glass-card" style={{ border: '1px solid rgba(99, 102, 241, 0.3)', marginBottom: '32px', boxShadow: '0 0 15px rgba(99, 102, 241, 0.1)' }}>
-        <h3 style={{ fontSize: '1.25rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
-          <Stethoscope size={22} color="var(--color-primary)" /> Pending Doctor Approvals ({pendingDoctors.length})
-        </h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <h3 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
+            <Stethoscope size={22} color="var(--color-primary)" /> Pending Practitioner Approvals ({pendingDoctors.length})
+          </h3>
+          <button
+            type="button"
+            onClick={refreshPendingDoctors}
+            disabled={isRefreshingPendingDocs}
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '6px 12px' }}
+            title="Instantly refresh approval queue"
+          >
+            <RefreshCw size={14} className={isRefreshingPendingDocs ? 'spin' : ''} />
+            {isRefreshingPendingDocs ? 'Checking...' : 'Refresh List'}
+          </button>
+        </div>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-          The following medical practitioners have registered as clinical node operators. They cannot access medical dossiers or sign diagnoses until their license credentials are verified and approved.
+          The following medical practitioners (Doctors, Nurses, Dentists, Midwives) have registered as clinical node operators for this facility. They cannot access medical dossiers or sign diagnoses until their license credentials are verified and approved.
         </p>
         {pendingDoctors.length === 0 ? (
           <div style={{ padding: '24px', color: 'var(--text-muted)', fontSize: '0.9rem', textAlign: 'center', border: '1px dashed var(--glass-border)', borderRadius: '8px' }}>

@@ -31,6 +31,7 @@ export default function SuperAdminPanel({ user }) {
   const [clinicActionLoading, setClinicActionLoading] = useState(null);
   const [pendingAdmins, setPendingAdmins] = useState([]);
   const [pendingDoctors, setPendingDoctors] = useState([]);
+  const [isRefreshingPendingDocs, setIsRefreshingPendingDocs] = useState(false);
   const [mempoolRecords, setMempoolRecords] = useState([]);
   const [blocks, setBlocks] = useState([]);
   const [deleteTarget, setDeleteTarget] = useState(null); // { id, name, role }
@@ -85,7 +86,7 @@ export default function SuperAdminPanel({ user }) {
 
   useEffect(() => {
     fetchAdminData(false);
-    // Poll backend state and node updates every 10 seconds
+    // Poll backend state and node updates every 4 seconds for snappy live updates
     const interval = setInterval(() => {
       fetchAdminData(true);
       
@@ -98,7 +99,7 @@ export default function SuperAdminPanel({ user }) {
       ];
       const randomMsg = pingMsgs[Math.floor(Math.random() * pingMsgs.length)];
       setLogs(prev => [...prev.slice(-10), `[${new Date().toLocaleTimeString()}] ${randomMsg}`]);
-    }, 10000);
+    }, 4000);
 
     return () => clearInterval(interval);
   }, []);
@@ -112,43 +113,58 @@ export default function SuperAdminPanel({ user }) {
     }
   }, [toast]);
 
+  const refreshPendingDoctors = async () => {
+    try {
+      setIsRefreshingPendingDocs(true);
+      const data = await safeFetch('/api/admin/doctors/pending');
+      setPendingDoctors(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.warn('Failed to refresh pending doctors:', e.message);
+    } finally {
+      setIsRefreshingPendingDocs(false);
+    }
+  };
+
   const fetchAdminData = async (isBackground = false) => {
     try {
       if (!isBackground) setLoading(true);
       
-      // Fetch stats
-      const resStats = await fetch(getApiUrl('/api/admin/stats'));
-      const statsData = resStats.ok ? await resStats.json() : null;
-      
-      const resBlocks = await fetch(getApiUrl('/api/blockchain/blocks'));
-      const blocksData = resBlocks.ok ? await resBlocks.json() : [];
-      setBlocks(blocksData);
-      
-      // Get all doctors and patients
-      const resPatients = await fetch(getApiUrl('/api/users/patients'));
-      const patientsData = resPatients.ok ? await resPatients.json() : [];
-      setDbPatients(patientsData);
+      // Parallelize all endpoint requests concurrently with Promise.all for instant sub-second response
+      const [
+        statsData,
+        blocksData,
+        patientsData,
+        doctorsData,
+        pendingData,
+        allAdminsData,
+        pendingDocsData,
+        resPendingClinics,
+        mempoolData
+      ] = await Promise.all([
+        safeFetch('/api/admin/stats').catch(() => null),
+        safeFetch('/api/blockchain/blocks').catch(() => []),
+        safeFetch('/api/users/patients').catch(() => []),
+        safeFetch('/api/users/doctors').catch(() => []),
+        safeFetch('/api/admin/pending').catch(() => []),
+        safeFetch('/api/admin/all').catch(() => []),
+        safeFetch('/api/admin/doctors/pending').catch(() => []),
+        safeFetch('/api/admin/organizations/pending').catch(() => ({ pendingClinics: [] })),
+        fetch(getApiUrl('/api/blockchain/mempool')).then(r => r.ok ? r.json() : []).catch(() => [])
+      ]);
 
-      const resDoctors = await fetch(getApiUrl('/api/users/doctors'));
-      const doctorsData = resDoctors.ok ? await resDoctors.json() : [];
-      setDbDoctors(doctorsData);
-
-      // Fetch pending admin requests
-      const resPending = await fetch(getApiUrl('/api/admin/pending'));
-      const pendingData = resPending.ok ? await resPending.json() : [];
-
-      // Fetch all admins
-      const allAdminsData = await safeFetch('/api/admin/all').catch(() => []);
+      setBlocks(Array.isArray(blocksData) ? blocksData : []);
+      setDbPatients(Array.isArray(patientsData) ? patientsData : []);
+      setDbDoctors(Array.isArray(doctorsData) ? doctorsData : []);
       setAllAdmins(Array.isArray(allAdminsData) && allAdminsData.length > 0 ? allAdminsData : [{ id: user.id || user._id, name: user.name, email: user.email, role: user.role, organizationName: 'Global Platform Governance', isApproved: true, createdAt: new Date() }]);
-
-      // Fetch pending doctor requests
-      const resPendingDocs = await fetch(getApiUrl('/api/admin/doctors/pending'));
-      const pendingDocsData = resPendingDocs.ok ? await resPendingDocs.json() : [];
+      setPendingClinics(resPendingClinics?.pendingClinics || []);
+      setPendingAdmins(Array.isArray(pendingData) ? pendingData : []);
+      setPendingDoctors(Array.isArray(pendingDocsData) ? pendingDocsData : []);
+      setMempoolRecords(Array.isArray(mempoolData) ? mempoolData : []);
 
       if (isInitialFetched) {
         // Toast and alert for new admins
         const existingIds = pendingAdmins.map(a => a.id || a._id);
-        const newRequests = pendingData.filter(a => !existingIds.includes(a.id || a._id));
+        const newRequests = (Array.isArray(pendingData) ? pendingData : []).filter(a => !existingIds.includes(a.id || a._id));
         newRequests.forEach(newAdmin => {
           setToast({
             message: `New Tenant Admin Request: ${newAdmin.name} (${newAdmin.email}) is awaiting approval.`,
@@ -159,7 +175,7 @@ export default function SuperAdminPanel({ user }) {
 
         // Toast and alert for new doctors
         const existingDocIds = pendingDoctors.map(d => d.id || d._id);
-        const newDocRequests = pendingDocsData.filter(d => !existingDocIds.includes(d.id || d._id));
+        const newDocRequests = (Array.isArray(pendingDocsData) ? pendingDocsData : []).filter(d => !existingDocIds.includes(d.id || d._id));
         newDocRequests.forEach(newDoc => {
           setToast({
             message: `New Clinical Node Request: Dr. ${newDoc.name} (${newDoc.email}) is awaiting approval.`,
@@ -170,17 +186,6 @@ export default function SuperAdminPanel({ user }) {
       } else {
         setIsInitialFetched(true);
       }
-      // Fetch pending clinic registrations
-      const resPendingClinics = await safeFetch('/api/admin/organizations/pending').catch(() => ({ pendingClinics: [] }));
-      const pendingClinicsData = resPendingClinics.pendingClinics || [];
-      setPendingClinics(pendingClinicsData);
-
-      setPendingAdmins(pendingData);
-      setPendingDoctors(pendingDocsData);
-
-      // Fetch signed mempool records
-      const resMempool = await fetch(getApiUrl('/api/blockchain/mempool'));
-      const mempoolData = resMempool.ok ? await resMempool.json() : [];
       setMempoolRecords(mempoolData);
 
       if (statsData) {
@@ -871,9 +876,22 @@ export default function SuperAdminPanel({ user }) {
       {/* Pending Doctor Approvals (Global Practitioner Verification) */}
       {pendingDoctors.length > 0 && (
         <div className="glass-card" style={{ border: '1px solid rgba(99, 102, 241, 0.3)', marginBottom: '28px', boxShadow: '0 0 15px rgba(99, 102, 241, 0.1)' }}>
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
-            <Stethoscope size={20} color="var(--color-primary)" /> Pending Clinical Practitioner Approvals ({pendingDoctors.length})
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
+              <Stethoscope size={20} color="var(--color-primary)" /> Pending Clinical Practitioner Approvals ({pendingDoctors.length})
+            </h3>
+            <button
+              type="button"
+              onClick={refreshPendingDoctors}
+              disabled={isRefreshingPendingDocs}
+              className="btn btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '6px 12px' }}
+              title="Instantly refresh approval queue"
+            >
+              <RefreshCw size={14} className={isRefreshingPendingDocs ? 'spin' : ''} />
+              {isRefreshingPendingDocs ? 'Checking...' : 'Refresh Queue'}
+            </button>
+          </div>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
             Practitioners awaiting license credential validation before their cryptographic signing keys are enabled in the tenant node network.
           </p>
