@@ -1,7 +1,5 @@
 const nodemailer = require('nodemailer');
-
-let transporter = null;
-let testAccount = null;
+const { sendMail } = require('./utils/mailer');
 
 /**
  * Helper to execute a promise with a hard timeout limit.
@@ -102,8 +100,6 @@ async function getTransporter() {
  * @param {string} resetUrl - Clickable frontend link to reset password
  */
 async function sendResetEmail(email, name, resetUrl) {
-    const currentTransporter = await getTransporter();
-
     // Elegant dark glassmorphic HTML email template alignment with Block Health theme
     const htmlContent = `
     <!DOCTYPE html>
@@ -238,20 +234,13 @@ async function sendResetEmail(email, name, resetUrl) {
     };
 
     try {
-        const info = await withTimeout(currentTransporter.sendMail(mailOptions), 6000, 'SMTP reset mail delivery timed out after 6 seconds');
-        console.log(`[Mailer] Reset password mail dispatched to ${email}. Message ID: ${info.messageId}`);
-
-        // If Ethereal test account is active, log the URL to preview the email
-        if (testAccount && !info.mockFallback) {
-            const etherealUrl = nodemailer.getTestMessageUrl(info);
-            console.log(`[Mailer Preview] Email received in sandbox inbox! View it at: ${etherealUrl}`);
-            return {
-                success: true,
-                messageId: info.messageId,
-                previewUrl: etherealUrl,
-                resetUrl: resetUrl
-            };
-        }
+        const info = await sendMail({
+            to: email,
+            subject: '🔐 Reset Password - Blockchain Health Records',
+            html: htmlContent,
+            text: textContent
+        });
+        console.log(`[Mailer] Reset password mail dispatched via Gmail API OAuth2 to ${email}. Message ID: ${info.messageId}`);
 
         return {
             success: true,
@@ -260,7 +249,7 @@ async function sendResetEmail(email, name, resetUrl) {
             resetUrl: resetUrl
         };
     } catch (sendError) {
-        console.error(`[Mailer] SMTP delivery failed to ${email}. Falling back to console dispatch. Error:`, sendError.message);
+        console.error(`[Mailer] Gmail OAuth2 delivery failed to ${email}. Falling back to console dispatch. Error:`, sendError.message);
         
         console.log('\n--- CONSOLE FALLBACK DISPATCH ---');
         console.log(`TO: ${mailOptions.to}`);
@@ -516,10 +505,6 @@ async function sendDoctorRejectionEmail(email, name) {
 module.exports = {
     sendResetEmail,
     sendDoctorApprovalEmail,
-    sendDoctorRejectionEmail
+    sendDoctorRejectionEmail,
+    sendMail
 };
-
-// Pre-warm the transporter in the background on startup
-getTransporter().catch(err => {
-    console.warn('Failed to pre-warm Ethereal SMTP transporter on boot:', err.message);
-});

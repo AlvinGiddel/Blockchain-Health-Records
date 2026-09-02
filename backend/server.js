@@ -3,7 +3,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const { sendResetEmail, sendDoctorApprovalEmail, sendDoctorRejectionEmail } = require('./mailer');
+const { sendResetEmail, sendDoctorApprovalEmail, sendDoctorRejectionEmail, sendMail } = require('./mailer');
 const { Blockchain, generateKeyPair, signRecord, getKenyanTimestamp } = require('./blockchain');
 
 const path = require('path');
