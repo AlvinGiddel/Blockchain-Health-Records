@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, LayoutDashboard, FileText, Globe, LogOut, UserCheck, Sun, Moon, Menu, X, ArrowLeft } from 'lucide-react';
+import { Shield, LayoutDashboard, FileText, Globe, LogOut, UserCheck, Sun, Moon, Menu, X, ArrowLeft, Clock, AlertTriangle } from 'lucide-react';
 import logoSvg from './assets/logo.svg';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
@@ -23,6 +23,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [resetToken, setResetToken] = useState(null);
+  const [isTrialExpired, setIsTrialExpired] = useState(() => {
+    const savedUser = localStorage.getItem('user');
+    const u = savedUser ? JSON.parse(savedUser) : null;
+    return u && u.organizationStatus === 'expired';
+  });
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Server status & network failure tracking
   const consecutiveFailuresRef = React.useRef(0);
@@ -249,6 +255,23 @@ export default function App() {
     };
     window.addEventListener('tenant-suspended', handleSuspended);
     return () => window.removeEventListener('tenant-suspended', handleSuspended);
+  }, []);
+
+  // Sync trial expired status from user or custom event
+  useEffect(() => {
+    if (user && user.organizationStatus === 'expired') {
+      setIsTrialExpired(true);
+    } else {
+      setIsTrialExpired(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    const handleExpired = () => {
+      setIsTrialExpired(true);
+    };
+    window.addEventListener('tenant-trial-expired', handleExpired);
+    return () => window.removeEventListener('tenant-trial-expired', handleExpired);
   }, []);
 
   // Inactivity timeout logic to auto log out after inactivity
@@ -540,6 +563,45 @@ export default function App() {
           <h2 className="header-title">{getTabTitle()}</h2>
         </header>
 
+        {/* Persistent Trial Expired Read-Only Grace Mode Banner */}
+        {isTrialExpired && (
+          <div style={{
+            background: 'linear-gradient(90deg, rgba(239, 68, 68, 0.16), rgba(245, 158, 11, 0.16))',
+            borderBottom: '1px solid rgba(239, 68, 68, 0.4)',
+            padding: '12px 24px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.25)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ background: 'rgba(239, 68, 68, 0.2)', padding: '8px', borderRadius: '8px', color: '#f87171' }}>
+                <Clock size={20} />
+              </div>
+              <div>
+                <strong style={{ color: '#fca5a5', fontSize: '0.95rem', display: 'block' }}>
+                  ⚠️ Trial Expired — Read-Only Grace Mode Active
+                </strong>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
+                  Your clinic trial ({user.organizationName || 'Facility'}) has expired. You can view existing patient charts, records, and blockchain ledger history, but adding new records and booking appointments is paused.
+                </span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ fontSize: '0.82rem', padding: '6px 14px', background: '#6366f1', borderColor: '#6366f1' }}
+                onClick={() => setShowUpgradeModal(true)}
+              >
+                Upgrade to Full License &rarr;
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Workspace content */}
         <main className="main-content">
           {renderTabContent()}
@@ -551,6 +613,72 @@ export default function App() {
           <span>Distributed Ledger Network &bull; Healthcare Security Node</span>
         </footer>
       </div>
+
+      {/* Upgrade Subscription Modal */}
+      {showUpgradeModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(6px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div className="glass-card" style={{ maxWidth: '480px', width: '100%', padding: '28px', border: '1px solid var(--color-primary)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Shield size={20} color="var(--color-primary)" /> Upgrade Facility License
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.1rem' }}
+              >
+                ✕
+              </button>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: '1.6', marginBottom: '20px' }}>
+              Your 14-day free trial for <strong>{user?.organizationName || 'your clinic'}</strong> has concluded. In accordance with clinical data safety guidelines, your facility is in <strong>Read-Only Grace Mode</strong>.
+            </p>
+            <div style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>Clinical Tier Plan: $149 / mo</div>
+              <ul style={{ margin: 0, paddingLeft: '18px', color: 'var(--text-secondary)', fontSize: '0.82rem', lineHeight: '1.6' }}>
+                <li>Unlimited patient EHR records & SHA-256 block mining</li>
+                <li>Unlimited practitioners & staff accounts</li>
+                <li>Isolated cryptographic chain ledger</li>
+              </ul>
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontStyle: 'italic', marginBottom: '20px' }}>
+              Note: Automated card billing (Paystack gateway) is currently being integrated. Please reach out to your platform Super Administrator to reactivate or extend your trial instantly.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowUpgradeModal(false)}
+              >
+                Continue in Read-Only
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  alert('Billing desk notified! A platform representative will contact your primary administrator.');
+                  setShowUpgradeModal(false);
+                }}
+              >
+                Request Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

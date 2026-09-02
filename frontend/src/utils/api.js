@@ -33,13 +33,26 @@ export async function parseResponseJson(response) {
       errorMsg = 'Service temporarily unavailable. Please contact your system provider.';
     }
 
-    if (response.status === 403 && typeof errorMsg === 'string' && (errorMsg.toLowerCase().includes('suspended') || errorMsg.toLowerCase().includes('expired'))) {
-      if (typeof window !== 'undefined' && window.dispatchEvent) {
-        window.dispatchEvent(new CustomEvent('tenant-suspended', { detail: errorMsg }));
+    if (response.status === 403) {
+      if (data && (data.code === 'TRIAL_EXPIRED_READ_ONLY' || (typeof errorMsg === 'string' && errorMsg.toLowerCase().includes('trial has expired')))) {
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('tenant-trial-expired', { detail: errorMsg }));
+        }
+      } else if (typeof errorMsg === 'string' && (errorMsg.toLowerCase().includes('suspended') || errorMsg.toLowerCase().includes('facility has been disabled'))) {
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('tenant-suspended', { detail: errorMsg }));
+        }
       }
     }
 
     throw new Error(errorMsg);
+  }
+
+  // Check if server indicated read-only expired status in response header
+  if (response.headers && response.headers.get('x-clinic-license-status') === 'expired') {
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      window.dispatchEvent(new CustomEvent('tenant-trial-expired', { detail: 'Trial expired' }));
+    }
   }
 
   return data;

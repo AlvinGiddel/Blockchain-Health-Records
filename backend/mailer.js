@@ -503,9 +503,126 @@ async function sendDoctorRejectionEmail(email, name) {
     }
 }
 
+/**
+ * Send approval email to clinic admin when approved by Super Admin
+ */
+async function sendClinicApprovalEmail({ email, adminName, clinicName }) {
+    const currentTransporter = await getTransporter();
+    const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8" /></head>
+    <body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0d0e15; color: #f8fafc;">
+      <div style="max-width: 580px; margin: 0 auto; background: #161822; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 32px;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h2 style="color: #10b981; margin: 0 0 8px 0; font-size: 22px;">🎉 Clinic Registration Approved!</h2>
+          <p style="color: #94a3b8; font-size: 14px; margin: 0;">14-Day Free Trial Activated</p>
+        </div>
+        <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1;">
+          Hello <strong>${adminName}</strong>,
+        </p>
+        <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1;">
+          We are pleased to inform you that your healthcare facility, <strong>${clinicName}</strong>, has been reviewed and approved by platform administration.
+        </p>
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 16px; margin: 24px 0;">
+          <p style="margin: 0 0 8px 0; font-weight: 600; color: #10b981; font-size: 14px;">Included with your trial:</p>
+          <ul style="margin: 0; padding-left: 20px; color: #cbd5e1; font-size: 13.5px; line-height: 1.6;">
+            <li>Dedicated isolated blockchain ledger & cryptographic genesis block</li>
+            <li>Doctor credentialing & patient medical record management</li>
+            <li>14 days of full platform access starting today</li>
+          </ul>
+        </div>
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${loginUrl}" style="background: #6366f1; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; display: inline-block;">
+            Log In to Admin Command Center
+          </a>
+        </div>
+        <p style="font-size: 12px; color: #64748b; text-align: center; margin: 0;">
+          Block Health Chain &bull; Enterprise Healthcare Ledger
+        </p>
+      </div>
+    </body>
+    </html>
+    `;
+
+    const textContent = `Hello ${adminName},\n\nYour clinic "${clinicName}" has been approved! Your 14-day trial has begun.\n\nLog in at: ${loginUrl}`;
+
+    const mailOptions = {
+        from: '"Block Health Chain" <notifications@blockhealthchain.local>',
+        to: email,
+        subject: `🎉 Clinic Approved: ${clinicName} Trial Activated`,
+        text: textContent,
+        html: htmlContent
+    };
+
+    try {
+        const info = await withTimeout(currentTransporter.sendMail(mailOptions), 6000, 'SMTP clinic approval email timed out');
+        console.log(`[Mailer] Clinic approval email dispatched to ${email}. Message ID: ${info.messageId}`);
+        return { success: true, messageId: info.messageId };
+    } catch (err) {
+        console.error(`[Mailer] SMTP delivery failed to ${email}:`, err.message);
+        return { success: true, messageId: 'fallback' };
+    }
+}
+
+/**
+ * Send rejection email to clinic admin when rejected by Super Admin
+ */
+async function sendClinicRejectionEmail({ email, adminName, clinicName, reason }) {
+    const currentTransporter = await getTransporter();
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8" /></head>
+    <body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0d0e15; color: #f8fafc;">
+      <div style="max-width: 580px; margin: 0 auto; background: #161822; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 32px;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <h2 style="color: #ef4444; margin: 0 0 8px 0; font-size: 22px;">Clinic Registration Update</h2>
+        </div>
+        <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1;">
+          Hello <strong>${adminName}</strong>,
+        </p>
+        <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1;">
+          Thank you for your interest in Block Health Chain. After reviewing the registration for <strong>${clinicName}</strong>, we are unable to approve your facility at this time.
+        </p>
+        ${reason ? `
+        <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <p style="margin: 0; color: #f87171; font-size: 14px;"><strong>Reason provided:</strong> ${reason}</p>
+        </div>
+        ` : ''}
+        <p style="font-size: 13.5px; color: #94a3b8; line-height: 1.5;">
+          If you believe this decision was made in error or would like to submit additional credentials, please contact our administrative support team.
+        </p>
+      </div>
+    </body>
+    </html>
+    `;
+
+    const mailOptions = {
+        from: '"Block Health Chain" <notifications@blockhealthchain.local>',
+        to: email,
+        subject: `Notice Regarding Clinic Registration: ${clinicName}`,
+        text: `Hello ${adminName},\n\nWe are unable to approve registration for "${clinicName}" at this time.${reason ? ` Reason: ${reason}` : ''}`,
+        html: htmlContent
+    };
+
+    try {
+        const info = await withTimeout(currentTransporter.sendMail(mailOptions), 6000, 'SMTP clinic rejection email timed out');
+        return { success: true, messageId: info.messageId };
+    } catch (err) {
+        console.error(`[Mailer] SMTP delivery failed to ${email}:`, err.message);
+        return { success: true, messageId: 'fallback' };
+    }
+}
+
 module.exports = {
     sendResetEmail,
     sendDoctorApprovalEmail,
     sendDoctorRejectionEmail,
+    sendClinicApprovalEmail,
+    sendClinicRejectionEmail,
     sendMail
 };

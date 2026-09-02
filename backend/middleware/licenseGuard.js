@@ -71,17 +71,42 @@ async function licenseGuard(req, res, next) {
 
         const org = rows[0];
 
-        // If specific organization is suspended/disabled by Super Admin
-        if (org.status === 'suspended' || org.status === 'disabled') {
+        // 1. If organization is pending approval
+        if (org.status === 'pending_approval') {
             return res.status(403).json({
-                error: `Access Denied: ${org.name}'s license is suspended by platform administration.`
+                error: `Access Denied: ${org.name} registration is pending review by platform administrators.`
             });
         }
 
-        // If organization license has expired
-        if (org.license_expires_at && new Date(org.license_expires_at) < new Date()) {
+        // 2. If specific organization is suspended/disabled by Super Admin
+        if (org.status === 'suspended' || org.status === 'disabled') {
             return res.status(403).json({
-                error: `Access Denied: ${org.name}'s subscription expired on ${new Date(org.license_expires_at).toLocaleDateString()}. Please renew your organization license.`
+                error: `Access Denied: ${org.name}'s access has been ${org.status === 'disabled' ? 'disabled' : 'suspended'} by platform administration.`
+            });
+        }
+
+        // 3. Auto-transition: if trial expiration has passed, update status to 'expired'
+        if (org.status === 'trial' && org.license_expires_at && new Date(org.license_expires_at) < new Date()) {
+            await db.query("UPDATE organizations SET status = 'expired', updated_at = NOW() WHERE id = $1;", [targetOrgId]);
+            await db.query("UPDATE licenses SET status = 'expired', updated_at = NOW() WHERE organization_id = $1;", [targetOrgId]);
+            org.status = 'expired';
+        }
+
+        // 4. Trial expiry enforcement (read-only grace mode)
+        const isExpired = org.status === 'expired' || (org.license_expires_at && new Date(org.license_expires_at) < new Date());
+        if (isExpired) {
+            // Allow all GET/read requests (viewing existing patients, records, appointments, blockchain ledger, etc.)
+            if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+                res.setHeader('X-Clinic-License-Status', 'expired');
+                return next();
+            }
+
+            // Block all create/write actions (new records, new appointments, new patient registrations, new block mining)
+            return res.status(403).json({
+                error: 'Your trial has expired. Upgrade to continue adding new records.',
+                code: 'TRIAL_EXPIRED_READ_ONLY',
+                organizationId: org.id,
+                organizationName: org.name
             });
         }
 

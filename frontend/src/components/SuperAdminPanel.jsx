@@ -3,7 +3,8 @@ import {
   Database, ShieldAlert, ShieldCheck, UserCheck, RefreshCw, 
   Layers, Users, Zap, Terminal, Check, X, Stethoscope, 
   User, Search, UserCog, Activity, Lock, Cpu, Server, CheckCircle2,
-  ChevronRight, ArrowUpRight, Shield, Clock, Hash, Building2, Plus
+  ChevronRight, ArrowUpRight, Shield, Clock, Hash, Building2, Plus,
+  CheckCircle, XCircle
 } from 'lucide-react';
 import LicenseControlWidget from './LicenseControlWidget';
 import { getApiUrl, safeFetch } from '../utils/api';
@@ -26,6 +27,8 @@ export default function SuperAdminPanel({ user }) {
   const [allAdmins, setAllAdmins] = useState([]);
   
   // Custom states for admin approval workflow & ledger explorations
+  const [pendingClinics, setPendingClinics] = useState([]);
+  const [clinicActionLoading, setClinicActionLoading] = useState(null);
   const [pendingAdmins, setPendingAdmins] = useState([]);
   const [pendingDoctors, setPendingDoctors] = useState([]);
   const [mempoolRecords, setMempoolRecords] = useState([]);
@@ -167,6 +170,11 @@ export default function SuperAdminPanel({ user }) {
       } else {
         setIsInitialFetched(true);
       }
+      // Fetch pending clinic registrations
+      const resPendingClinics = await safeFetch('/api/admin/organizations/pending').catch(() => ({ pendingClinics: [] }));
+      const pendingClinicsData = resPendingClinics.pendingClinics || [];
+      setPendingClinics(pendingClinicsData);
+
       setPendingAdmins(pendingData);
       setPendingDoctors(pendingDocsData);
 
@@ -181,15 +189,46 @@ export default function SuperAdminPanel({ user }) {
           mempool: statsData.mempool,
           doctors: statsData.doctors,
           patients: statsData.patients,
-          admins: allAdminsData.length > 0 ? allAdminsData.length : (statsData.admins || (pendingData.length + 1)),
+          admins: statsData.admins,
           isValid: statsData.isValid
         });
       }
-
     } catch (err) {
       console.error('Error fetching admin stats:', err);
     } finally {
       if (!isBackground) setLoading(false);
+    }
+  };
+
+  const handleApproveClinic = async (clinicId) => {
+    setClinicActionLoading(clinicId);
+    try {
+      const res = await safeFetch(`/api/admin/organizations/${clinicId}/approve`, { method: 'POST' });
+      setToast({ message: res.message || 'Clinic approved successfully! 14-day trial started.', type: 'success' });
+      fetchAdminData(true);
+    } catch (err) {
+      setToast({ message: err.message || 'Failed to approve clinic.', type: 'error' });
+    } finally {
+      setClinicActionLoading(null);
+    }
+  };
+
+  const handleRejectClinic = async (clinicId) => {
+    const reason = window.prompt('Optional: Enter rejection reason to send to clinic applicant:');
+    if (reason === null) return; // cancelled
+    setClinicActionLoading(clinicId);
+    try {
+      const res = await safeFetch(`/api/admin/organizations/${clinicId}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: reason || 'Facility credentials could not be verified at this time.' })
+      });
+      setToast({ message: res.message || 'Clinic registration rejected and set to disabled.', type: 'warning' });
+      fetchAdminData(true);
+    } catch (err) {
+      setToast({ message: err.message || 'Failed to reject clinic.', type: 'error' });
+    } finally {
+      setClinicActionLoading(null);
     }
   };
 
@@ -504,6 +543,116 @@ export default function SuperAdminPanel({ user }) {
           <RefreshCw size={16} className={refreshing || loading ? 'rotate-spin' : ''} />
           {refreshing ? 'Refreshing...' : 'Refresh Console'}
         </button>
+      </div>
+
+      {/* Super Admin Pending Clinic Approvals Queue */}
+      <div className="glass-card" style={{ marginBottom: '28px', border: pendingClinics.length > 0 ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--glass-border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ background: pendingClinics.length > 0 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(99, 102, 241, 0.1)', padding: '10px', borderRadius: '10px' }}>
+              <Building2 size={22} color={pendingClinics.length > 0 ? '#f59e0b' : 'var(--color-primary)'} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                Pending Clinic Approvals
+                {pendingClinics.length > 0 ? (
+                  <span className="badge badge-warning" style={{ fontSize: '0.75rem', padding: '3px 8px' }}>
+                    {pendingClinics.length} Awaiting Review
+                  </span>
+                ) : (
+                  <span className="badge badge-success" style={{ fontSize: '0.72rem', padding: '2px 7px' }}>
+                    Queue Clear
+                  </span>
+                )}
+              </h3>
+              <p style={{ margin: '3px 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                Review institutional registration requests before activating isolated blockchain ledgers and 14-day trials.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => fetchAdminData(true)}
+            style={{ fontSize: '0.75rem', padding: '6px 12px' }}
+          >
+            Refresh Queue
+          </button>
+        </div>
+
+        {pendingClinics.length === 0 ? (
+          <div style={{ padding: '24px', textAlign: 'center', background: 'rgba(255, 255, 255, 0.01)', borderRadius: '8px', border: '1px dashed var(--glass-border)' }}>
+            <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+              ✓ All clinic registration applications have been reviewed. Zero requests currently pending.
+            </span>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: '0.85rem', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-secondary)', textAlign: 'left' }}>
+                  <th style={{ padding: '10px 8px' }}>Healthcare Facility</th>
+                  <th style={{ padding: '10px 8px' }}>Lead Administrator</th>
+                  <th style={{ padding: '10px 8px' }}>Admin Email</th>
+                  <th style={{ padding: '10px 8px' }}>Submission Date</th>
+                  <th style={{ padding: '10px 8px' }}>Status</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingClinics.map(clinic => {
+                  const isBusy = clinicActionLoading === clinic.id;
+                  return (
+                    <tr key={clinic.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '12px 8px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Building2 size={16} color="var(--color-accent)" />
+                          <span>{clinic.organizationName}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '12px 8px', color: 'var(--text-primary)' }}>
+                        {clinic.adminName || 'Pending Provision'}
+                      </td>
+                      <td style={{ padding: '12px 8px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                        {clinic.adminEmail || 'N/A'}
+                      </td>
+                      <td style={{ padding: '12px 8px', color: 'var(--text-secondary)' }}>
+                        {clinic.createdAt ? new Date(clinic.createdAt).toLocaleDateString() : 'Recent'}
+                      </td>
+                      <td style={{ padding: '12px 8px' }}>
+                        <span className="badge badge-warning" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
+                          PENDING APPROVAL
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 8px', textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            onClick={() => handleApproveClinic(clinic.id)}
+                            disabled={isBusy}
+                            style={{ fontSize: '0.78rem', padding: '5px 12px', background: '#10b981', borderColor: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <CheckCircle size={14} /> {isBusy ? 'Approving...' : 'Approve (14d Trial)'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => handleRejectClinic(clinic.id)}
+                            disabled={isBusy}
+                            style={{ fontSize: '0.78rem', padding: '5px 12px', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.4)', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <XCircle size={14} /> Reject
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Super Admin Remote Licensing & Kill-Switch Authority Control Center */}

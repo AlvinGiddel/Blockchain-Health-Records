@@ -3,7 +3,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const { sendResetEmail, sendDoctorApprovalEmail, sendDoctorRejectionEmail, sendMail } = require('./mailer');
+const { sendResetEmail, sendDoctorApprovalEmail, sendDoctorRejectionEmail, sendClinicApprovalEmail, sendClinicRejectionEmail, sendMail } = require('./mailer');
 const { Blockchain, generateKeyPair, signRecord, getKenyanTimestamp } = require('./blockchain');
 
 const path = require('path');
@@ -773,6 +773,7 @@ app.post('/api/auth/login', async (req, res) => {
         // Check organization license and suspension status for tenant staff (admins, doctors, nurses)
         // Super Admin always bypasses to maintain platform governance and emergency recovery authority
         let organizationName = null;
+        let organizationStatus = null;
         if (user.role !== 'super_admin' && user.organization_id) {
             const { rows: orgRows } = await db.query(
                 'SELECT id, name, status, license_expires_at FROM organizations WHERE id = $1',
@@ -781,19 +782,28 @@ app.post('/api/auth/login', async (req, res) => {
             if (orgRows.length > 0) {
                 const org = orgRows[0];
                 organizationName = org.name;
+                organizationStatus = org.status;
 
-                // 1. Check if hospital facility is suspended or disabled
-                if (org.status === 'suspended' || org.status === 'disabled') {
+                // 1. Check if hospital facility is pending approval
+                if (org.status === 'pending_approval') {
                     return res.status(403).json({
-                        error: `Access Denied: Your hospital facility ("${org.name}") has been suspended by platform administration. All access to this ledger is blocked.`
+                        error: 'Your clinic registration is still under review.'
                     });
                 }
 
-                // 2. Check if hospital license has expired
-                if (org.license_expires_at && new Date(org.license_expires_at) < new Date()) {
+                // 2. Check if hospital facility is suspended or disabled
+                if (org.status === 'suspended' || org.status === 'disabled') {
                     return res.status(403).json({
-                        error: `Access Denied: Your hospital facility ("${org.name}") license expired on ${new Date(org.license_expires_at).toLocaleDateString()}. Please contact administration or renew your subscription.`
+                        error: `Access Denied: Your hospital facility ("${org.name}") has been ${org.status === 'disabled' ? 'disabled' : 'suspended'} by platform administration. All access to this ledger is blocked.`
                     });
+                }
+
+                // 3. Auto-transition: if trial expiration has passed, update status to 'expired'
+                if (org.status === 'trial' && org.license_expires_at && new Date(org.license_expires_at) < new Date()) {
+                    await db.query("UPDATE organizations SET status = 'expired', updated_at = NOW() WHERE id = $1;", [org.id]);
+                    await db.query("UPDATE licenses SET status = 'expired', updated_at = NOW() WHERE organization_id = $1;", [org.id]);
+                    org.status = 'expired';
+                    organizationStatus = 'expired';
                 }
             }
         }
@@ -814,7 +824,8 @@ app.post('/api/auth/login', async (req, res) => {
             id: user.id, 
             role: user.role,
             organization_id: user.organization_id || null,
-            organizationName: organizationName || null
+            organizationName: organizationName || null,
+            organizationStatus: organizationStatus || null
         }, JWT_SECRET, { expiresIn: '1d' });
 
         const doctorProfile = parseJsonIfNeeded(user.doctor_profile);
@@ -830,6 +841,7 @@ app.post('/api/auth/login', async (req, res) => {
                 role: user.role,
                 organizationId: user.organization_id || null,
                 organizationName: organizationName || null,
+                organizationStatus: organizationStatus || null,
                 memberships: memberships,
                 publicKey: user.public_key,
                 profilePhoto: profilePhoto,
@@ -897,28 +909,27 @@ app.post('/api/auth/register-clinic', async (req, res) => {
 
         await client.query('BEGIN;');
 
-        // 3. Insert into organizations (defaults to 'trial' with 14-day validity)
-        const trialExpiry = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+        // 3. Insert into organizations with status = 'pending_approval' (awaits Super Admin review)
         const { rows: insertedOrgs } = await client.query(`
             INSERT INTO organizations (name, slug, status, license_expires_at)
-            VALUES ($1, $2, 'trial', $3)
+            VALUES ($1, $2, 'pending_approval', NULL)
             RETURNING *;
-        `, [cleanOrgName, slug, trialExpiry]);
+        `, [cleanOrgName, slug]);
         const newOrg = insertedOrgs[0];
 
-        // 4. Insert into users as admin scoped to new organization_id
+        // 4. Insert into users as admin scoped to new organization_id with is_approved = false
         const createdAt = getKenyanTimestamp();
         const { rows: insertedUsers } = await client.query(`
             INSERT INTO users (organization_id, name, email, password, role, public_key, private_key, is_approved, is_rejected, created_at)
-            VALUES ($1, $2, $3, $4, 'admin', $5, $6, true, false, $7)
+            VALUES ($1, $2, $3, $4, 'admin', $5, $6, false, false, $7)
             RETURNING *;
         `, [newOrg.id, cleanAdminName, cleanEmail, hashedPassword, publicKey, privateKey, createdAt]);
         const newAdmin = insertedUsers[0];
 
-        // 5. Insert into tenant_memberships
+        // 5. Insert into tenant_memberships with status = 'pending'
         await client.query(`
             INSERT INTO tenant_memberships (user_id, organization_id, role, status)
-            VALUES ($1, $2, 'admin', 'active');
+            VALUES ($1, $2, 'admin', 'pending');
         `, [newAdmin.id, newOrg.id]);
 
         // 6. Seed isolated Genesis block for this new clinic
@@ -944,47 +955,30 @@ app.post('/api/auth/register-clinic', async (req, res) => {
             VALUES ($1, $2, $3, $4, $5, $6, $7);
         `, [newOrg.id, 0, genesisTimestamp, JSON.stringify(genesisRecords), genesisPrevHash, nonce.toString(), genesisHash]);
 
-        // 7. Insert row in licenses
+        // 7. Insert row in licenses with status = 'pending_approval'
         await client.query(`
             INSERT INTO licenses (organization_id, client_id, status, expires_at, updated_at)
-            VALUES ($1, $2, 'trial', $3, NOW());
-        `, [newOrg.id, cleanOrgName, trialExpiry]);
+            VALUES ($1, $2, 'pending_approval', NULL, NOW());
+        `, [newOrg.id, cleanOrgName]);
 
         // 8. Log audit trail
         await client.query(`
             INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp)
-            VALUES ($1, 'clinic_registration', $2, $3, $2, $3, $4, $5);
-        `, [newOrg.id, newAdmin.id, cleanAdminName, `New clinic "${cleanOrgName}" onboarded with 14-day trial. Primary admin: ${cleanAdminName}.`, createdAt]);
+            VALUES ($1, 'clinic_registration_submitted', $2, $3, $2, $3, $4, $5);
+        `, [newOrg.id, newAdmin.id, cleanAdminName, `New clinic registration for "${cleanOrgName}" submitted by ${cleanAdminName}. Pending Super Admin review.`, createdAt]);
 
         await client.query('COMMIT;');
 
-        const token = jwt.sign({
-            id: newAdmin.id,
-            role: 'admin',
-            organization_id: newOrg.id,
-            organizationName: newOrg.name
-        }, JWT_SECRET, { expiresIn: '1d' });
-
+        // Return confirmation without JWT (Do NOT log in immediately)
         res.status(201).json({
             success: true,
-            message: `Clinic "${cleanOrgName}" registered successfully! 14-day trial activated.`,
-            token,
-            user: {
-                id: newAdmin.id,
-                name: newAdmin.name,
-                email: newAdmin.email,
-                role: 'admin',
-                organizationId: newOrg.id,
-                organizationName: newOrg.name,
-                publicKey: newAdmin.public_key,
-                isApproved: true
-            },
+            pendingApproval: true,
+            message: 'Your registration has been submitted and is pending review.',
             organization: {
                 id: newOrg.id,
                 name: newOrg.name,
                 slug: newOrg.slug,
-                status: newOrg.status,
-                licenseExpiresAt: newOrg.license_expires_at
+                status: 'pending_approval'
             }
         });
 
@@ -1059,6 +1053,218 @@ app.get('/api/admin/organizations', async (req, res) => {
     }
 });
 
+// Get pending clinic approval requests for Super Admin
+app.get('/api/admin/organizations/pending', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Authentication token required.' });
+        }
+        const decoded = jwt.verify(authHeader.substring(7).trim(), JWT_SECRET);
+        if (decoded.role !== 'super_admin') {
+            return res.status(403).json({ error: 'Access restricted to Super Administrators only.' });
+        }
+
+        const { rows: pendingClinics } = await db.query(`
+            SELECT 
+                o.id,
+                o.name as "organizationName",
+                o.slug,
+                o.status,
+                o.created_at as "createdAt",
+                u.id as "adminId",
+                u.name as "adminName",
+                u.email as "adminEmail"
+            FROM organizations o
+            LEFT JOIN users u ON u.organization_id = o.id AND u.role = 'admin'
+            WHERE o.status = 'pending_approval'
+            ORDER BY o.created_at ASC;
+        `);
+
+        res.json({ success: true, pendingClinics });
+    } catch (err) {
+        console.error('Error fetching pending clinic approvals:', err);
+        res.status(500).json({ error: err.message || 'Failed to fetch pending clinic approvals.' });
+    }
+});
+
+// Approve a pending clinic registration (activates 14-day trial)
+app.post('/api/admin/organizations/:id/approve', async (req, res) => {
+    const client = await db.pool.connect();
+    try {
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Authentication token required.' });
+        }
+        const decoded = jwt.verify(authHeader.substring(7).trim(), JWT_SECRET);
+        if (decoded.role !== 'super_admin') {
+            return res.status(403).json({ error: 'Access restricted to Super Administrators only.' });
+        }
+
+        const { id } = req.params;
+        await client.query('BEGIN;');
+
+        // 1. Update organization: status = 'trial', license_expires_at = NOW() + 14 days
+        const { rows: updatedOrgs } = await client.query(`
+            UPDATE organizations 
+            SET status = 'trial',
+                license_expires_at = NOW() + INTERVAL '14 days',
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING *;
+        `, [id]);
+
+        if (updatedOrgs.length === 0) {
+            await client.query('ROLLBACK;');
+            return res.status(404).json({ error: 'Organization not found.' });
+        }
+        const org = updatedOrgs[0];
+
+        // 2. Update licenses table
+        await client.query(`
+            UPDATE licenses 
+            SET status = 'trial',
+                expires_at = $1,
+                updated_at = NOW()
+            WHERE organization_id = $2;
+        `, [org.license_expires_at, id]);
+
+        // 3. Approve the clinic's admin user
+        const { rows: adminUsers } = await client.query(`
+            UPDATE users 
+            SET is_approved = true, is_rejected = false 
+            WHERE organization_id = $1 AND role = 'admin'
+            RETURNING id, name, email;
+        `, [id]);
+
+        // 4. Update tenant_memberships
+        await client.query(`
+            UPDATE tenant_memberships 
+            SET status = 'active' 
+            WHERE organization_id = $1 AND role = 'admin';
+        `, [id]);
+
+        // 5. Audit log
+        await client.query(`
+            INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp)
+            VALUES ($1, 'clinic_approved', $2, $3, $2, $3, $4, NOW());
+        `, [id, decoded.id, decoded.name || 'Super Admin', `Clinic "${org.name}" approved by Super Admin. 14-day trial activated.`]);
+
+        await client.query('COMMIT;');
+
+        // 6. Send approval email via mailer
+        if (adminUsers.length > 0) {
+            const admin = adminUsers[0];
+            sendClinicApprovalEmail({
+                email: admin.email,
+                adminName: admin.name,
+                clinicName: org.name
+            }).catch(e => console.error('Failed to send clinic approval email:', e));
+        }
+
+        res.json({
+            success: true,
+            message: `Clinic "${org.name}" approved successfully! 14-day trial activated.`,
+            organization: org
+        });
+    } catch (err) {
+        await client.query('ROLLBACK;').catch(() => {});
+        console.error('Error approving clinic:', err);
+        res.status(500).json({ error: err.message || 'Failed to approve clinic.' });
+    } finally {
+        client.release();
+    }
+});
+
+// Reject a pending clinic registration (sets status to disabled, keeps record)
+app.post('/api/admin/organizations/:id/reject', async (req, res) => {
+    const client = await db.pool.connect();
+    try {
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Authentication token required.' });
+        }
+        const decoded = jwt.verify(authHeader.substring(7).trim(), JWT_SECRET);
+        if (decoded.role !== 'super_admin') {
+            return res.status(403).json({ error: 'Access restricted to Super Administrators only.' });
+        }
+
+        const { id } = req.params;
+        const { reason } = req.body || {};
+
+        await client.query('BEGIN;');
+
+        // 1. Update organization: status = 'disabled'
+        const { rows: updatedOrgs } = await client.query(`
+            UPDATE organizations 
+            SET status = 'disabled',
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING *;
+        `, [id]);
+
+        if (updatedOrgs.length === 0) {
+            await client.query('ROLLBACK;');
+            return res.status(404).json({ error: 'Organization not found.' });
+        }
+        const org = updatedOrgs[0];
+
+        // 2. Update licenses table
+        await client.query(`
+            UPDATE licenses 
+            SET status = 'disabled',
+                updated_at = NOW()
+            WHERE organization_id = $1;
+        `, [id]);
+
+        // 3. Mark admin user as rejected and unapproved
+        const { rows: adminUsers } = await client.query(`
+            UPDATE users 
+            SET is_approved = false, is_rejected = true 
+            WHERE organization_id = $1 AND role = 'admin'
+            RETURNING id, name, email;
+        `, [id]);
+
+        // 4. Update tenant_memberships
+        await client.query(`
+            UPDATE tenant_memberships 
+            SET status = 'inactive' 
+            WHERE organization_id = $1 AND role = 'admin';
+        `, [id]);
+
+        // 5. Audit log
+        await client.query(`
+            INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp)
+            VALUES ($1, 'clinic_rejected', $2, $3, $2, $3, $4, NOW());
+        `, [id, decoded.id, decoded.name || 'Super Admin', `Clinic "${org.name}" registration rejected by Super Admin.${reason ? ` Reason: ${reason}` : ''}`]);
+
+        await client.query('COMMIT;');
+
+        // 6. Send rejection email via mailer
+        if (adminUsers.length > 0) {
+            const admin = adminUsers[0];
+            sendClinicRejectionEmail({
+                email: admin.email,
+                adminName: admin.name,
+                clinicName: org.name,
+                reason
+            }).catch(e => console.error('Failed to send clinic rejection email:', e));
+        }
+
+        res.json({
+            success: true,
+            message: `Clinic "${org.name}" registration has been rejected and set to disabled.`,
+            organization: org
+        });
+    } catch (err) {
+        await client.query('ROLLBACK;').catch(() => {});
+        console.error('Error rejecting clinic:', err);
+        res.status(500).json({ error: err.message || 'Failed to reject clinic.' });
+    } finally {
+        client.release();
+    }
+});
+
 // Update an organization's license status or extend trial
 app.post('/api/admin/organizations/:id/status', async (req, res) => {
     try {
@@ -1074,8 +1280,8 @@ app.post('/api/admin/organizations/:id/status', async (req, res) => {
         const { id } = req.params;
         const { status, extendDays } = req.body || {};
 
-        if (!status || !['active', 'suspended', 'trial', 'disabled'].includes(status)) {
-            return res.status(400).json({ error: 'Invalid status. Must be active, suspended, trial, or disabled.' });
+        if (!status || !['active', 'suspended', 'trial', 'disabled', 'pending_approval', 'expired'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status. Must be active, suspended, trial, disabled, pending_approval, or expired.' });
         }
 
         const client = await db.pool.connect();

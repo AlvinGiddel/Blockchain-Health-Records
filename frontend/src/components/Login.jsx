@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Shield, Lock, Mail, User, Activity, AlertCircle, Heart, Stethoscope, ArrowLeft, KeyRound, Eye, EyeOff, Building2 } from 'lucide-react';
+import { Shield, Lock, Mail, User, Activity, AlertCircle, Heart, Stethoscope, ArrowLeft, KeyRound, Eye, EyeOff, Building2, Clock } from 'lucide-react';
 import logoSvg from '../assets/logo.svg';
 import { safeFetch } from '../utils/api';
 
 export default function Login({ onLoginSuccess }) {
   const [isRegister, setIsRegister] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [pendingReview, setPendingReview] = useState(false);
   const [role, setRole] = useState('patient');
   const [clinicName, setClinicName] = useState('');
   const [email, setEmail] = useState('');
@@ -180,6 +181,12 @@ export default function Login({ onLoginSuccess }) {
             password
           })
         });
+
+        if (data.pendingApproval || !data.token) {
+          setPendingReview(true);
+          setLoading(false);
+          return;
+        }
 
         if (data.token) {
           onLoginSuccess(data);
@@ -383,19 +390,76 @@ export default function Login({ onLoginSuccess }) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          {isRegister && (
-            <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'flex', gap: '8px' }}>Registration Type</label>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  className={`btn ${role === 'patient' ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ flex: 1, minWidth: '110px' }}
-                  onClick={() => setRole('patient')}
-                >
-                  <Heart size={16} /> Patient
-                </button>
+        {pendingReview ? (
+          <div style={{ textAlign: 'center', padding: '28px 16px' }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              background: 'rgba(99, 102, 241, 0.12)',
+              border: '2px solid rgba(99, 102, 241, 0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 20px auto'
+            }}>
+              <Clock size={32} color="var(--color-accent)" />
+            </div>
+
+            <h3 style={{ fontSize: '1.35rem', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>
+              Registration Submitted
+            </h3>
+
+            <div style={{
+              background: 'rgba(99, 102, 241, 0.08)',
+              border: '1px solid rgba(99, 102, 241, 0.25)',
+              borderRadius: '10px',
+              padding: '14px 18px',
+              marginBottom: '16px'
+            }}>
+              <p style={{ color: 'var(--color-accent)', fontWeight: 600, fontSize: '0.95rem', margin: 0 }}>
+                Your registration has been submitted and is pending review.
+              </p>
+            </div>
+
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: '1.6', maxWidth: '380px', margin: '0 auto 28px auto' }}>
+              Platform Super Administrators verify clinical institutions for credentialing compliance before activating the network ledger node. You will receive an activation email once your facility is approved to begin your 14-day trial.
+            </p>
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              style={{ width: '100%', maxWidth: '280px', padding: '12px' }}
+              onClick={() => {
+                setPendingReview(false);
+                setIsRegister(false);
+                setRole('patient');
+                setEmail('');
+                setPassword('');
+                setName('');
+                setClinicName('');
+                setError('');
+                setSuccessMessage('');
+              }}
+            >
+              Back to Sign In
+            </button>
+          </div>
+        ) : (
+          <>
+            <form onSubmit={handleSubmit}>
+              {isRegister && (
+                <div className="form-group" style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'flex', gap: '8px' }}>Registration Type</label>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className={`btn ${role === 'patient' ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{ flex: 1, minWidth: '110px' }}
+                      onClick={() => setRole('patient')}
+                    >
+                      <Heart size={16} /> Patient
+                    </button>
                 <button
                   type="button"
                   className={`btn ${role === 'doctor' ? 'btn-primary' : 'btn-secondary'}`}
@@ -433,7 +497,7 @@ export default function Login({ onLoginSuccess }) {
                 />
               </div>
               <span style={{ fontSize: '0.78rem', color: 'var(--color-primary)', marginTop: '4px', display: 'block' }}>
-                ✓ Includes instant 14-day trial & dedicated isolated blockchain ledger.
+                ✓ 14-day trial activated upon Super Admin approval & cryptographic ledger provisioning.
               </span>
             </div>
           )}
@@ -808,7 +872,9 @@ export default function Login({ onLoginSuccess }) {
             {isRegister ? 'Login Here' : 'Register Here'}
           </button>
         </div>
-      </div>
-    </div>
+      </>
+    )}
+  </div>
+</div>
   );
 }
