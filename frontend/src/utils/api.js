@@ -54,7 +54,12 @@ export function getApiUrl(endpoint) {
 export async function safeFetch(url, options = {}) {
   try {
     const fullUrl = getApiUrl(url);
-    const response = await fetch(fullUrl, options);
+    const headers = { ...(options.headers || {}) };
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
+    if (token && !headers['Authorization'] && !headers['authorization']) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const response = await fetch(fullUrl, { ...options, headers });
     return await parseResponseJson(response);
   } catch (err) {
     if (err.name === 'TypeError' && err.message.toLowerCase().includes('fetch')) {

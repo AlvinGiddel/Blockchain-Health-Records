@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Database, ShieldAlert, ShieldCheck, UserCheck, Flame, RefreshCw, Layers, Users, Zap, Terminal, Check, X, Clock, Stethoscope, User, Search, BarChart3 } from 'lucide-react';
 import PublicHealthAnalytics from './PublicHealthAnalytics';
 import LicenseControlWidget from './LicenseControlWidget';
-import { getApiUrl } from '../utils/api';
+import { getApiUrl, safeFetch } from '../utils/api';
 
 export default function RegularAdminPanel({ user }) {
   // Helper to format 24h time string to 12h AM/PM format
@@ -135,40 +135,32 @@ export default function RegularAdminPanel({ user }) {
     try {
       if (!isBackground) setLoading(true);
       // Fetch stats
-      const resStats = await fetch(getApiUrl('/api/admin/stats'));
-      const statsData = resStats.ok ? await resStats.json() : null;
+      const statsData = await safeFetch('/api/admin/stats').catch(() => null);
       
-      const resBlocks = await fetch(getApiUrl('/api/blockchain/blocks'));
-      const blocks = resBlocks.ok ? await resBlocks.json() : [];
-      setBlocks(blocks);
+      const blocks = await safeFetch('/api/blockchain/blocks').catch(() => []);
+      setBlocks(Array.isArray(blocks) ? blocks : []);
       
       // Get all doctors and patients
-      const resPatients = await fetch(getApiUrl('/api/users/patients'));
-      const patientsData = resPatients.ok ? await resPatients.json() : [];
-      setDbPatients(patientsData);
+      const patientsData = await safeFetch('/api/users/patients').catch(() => []);
+      setDbPatients(Array.isArray(patientsData) ? patientsData : []);
 
-      const resDoctors = await fetch(getApiUrl('/api/users/doctors'));
-      const doctorsData = resDoctors.ok ? await resDoctors.json() : [];
-      setDbDoctors(doctorsData);
+      const doctorsData = await safeFetch('/api/users/doctors').catch(() => []);
+      setDbDoctors(Array.isArray(doctorsData) ? doctorsData : []);
       
       // Fetch system audit logs
-      const resAudit = await fetch(getApiUrl('/api/audit/logs'));
-      const auditData = resAudit.ok ? await resAudit.json() : [];
-      setAuditLogs(auditData);
+      const auditData = await safeFetch('/api/audit/logs').catch(() => []);
+      setAuditLogs(Array.isArray(auditData) ? auditData : []);
 
       // Fetch pending admin requests
-      const resPending = await fetch(getApiUrl('/api/admin/pending'));
-      const pendingData = resPending.ok ? await resPending.json() : [];
+      const pendingData = await safeFetch('/api/admin/pending').catch(() => []);
 
       // Fetch pending doctor requests
-      const resPendingDocs = await fetch(getApiUrl('/api/admin/doctors/pending'));
-      const pendingDocsData = resPendingDocs.ok ? await resPendingDocs.json() : [];
+      const pendingDocsData = await safeFetch('/api/admin/doctors/pending').catch(() => []);
 
       // Fetch appointments
       const uId = user.id || user._id;
-      const resAppts = await fetch(getApiUrl(`/api/appointments?requesterId=${uId}&requesterRole=admin`));
-      const apptsData = resAppts.ok ? await resAppts.json() : [];
-      setAppointments(apptsData);
+      const apptsData = await safeFetch(`/api/appointments?requesterId=${uId}&requesterRole=admin`).catch(() => []);
+      setAppointments(Array.isArray(apptsData) ? apptsData : []);
       
       if (isInitialFetched) {
         // Toast and alert for new admins

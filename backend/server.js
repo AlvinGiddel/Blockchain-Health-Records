@@ -18,6 +18,31 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
 
+/**
+ * Helper to safely extract authenticated user context and organization scope.
+ * Guarantees strict multi-tenant isolation: regular clinic admins are strictly bound
+ * to their organization_id. Only super_admin can view global cross-org data.
+ */
+function getRequesterOrgScope(req) {
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    let currentUser = null;
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+        try {
+            currentUser = jwt.verify(authHeader.substring(7).trim(), JWT_SECRET);
+        } catch (e) {}
+    }
+    
+    // If super_admin, they can optionally target a specific clinic or see global (null)
+    if (currentUser && currentUser.role === 'super_admin') {
+        const explicitOrg = req.headers['x-organization-id'] || req.query.orgId || req.query.organizationId || null;
+        return { currentUser, isSuperAdmin: true, targetOrgId: explicitOrg };
+    }
+
+    // For all other users (clinic admins, doctors, nurses), strictly scoped to their assigned organization_id
+    const targetOrgId = currentUser ? (currentUser.organization_id || null) : null;
+    return { currentUser, isSuperAdmin: false, targetOrgId };
+}
+
 // Middleware - CORS configured to allow any origin with GET, POST, PUT, DELETE, and OPTIONS methods
 app.use(cors({
     origin: '*',
@@ -1013,9 +1038,27 @@ app.post('/api/admin/organizations/:id/status', async (req, res) => {
 // Get Patients
 app.get('/api/users/patients', async (req, res) => {
     try {
-        const { rows: patients } = await db.query(
-            'SELECT id, name, email, role, public_key as "publicKey", profile_photo as "profilePhoto", patient_profile as "patientProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'patient\' ORDER BY created_at DESC'
-        );
+        const { currentUser, isSuperAdmin, targetOrgId } = getRequesterOrgScope(req);
+
+        let query;
+        let params = [];
+        if (targetOrgId) {
+            // Filter strictly to patients with an active membership in this organization
+            query = `
+                SELECT u.id, u.name, u.email, u.role, u.public_key as "publicKey", u.profile_photo as "profilePhoto", u.patient_profile as "patientProfile", u.is_approved as "isApproved", tm.joined_at as "createdAt"
+                FROM users u
+                JOIN tenant_memberships tm ON u.id = tm.user_id
+                WHERE tm.organization_id = $1 AND tm.status = 'active' AND u.role = 'patient'
+                ORDER BY tm.joined_at DESC;
+            `;
+            params = [targetOrgId];
+        } else if (isSuperAdmin) {
+            query = 'SELECT id, name, email, role, public_key as "publicKey", profile_photo as "profilePhoto", patient_profile as "patientProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'patient\' ORDER BY created_at DESC;';
+        } else {
+            return res.status(401).json({ error: 'Authentication required to list patients.' });
+        }
+
+        const { rows: patients } = await db.query(query, params);
         const formatted = patients.map(p => ({
             ...p,
             patientProfile: parseJsonIfNeeded(p.patientProfile)
@@ -1029,9 +1072,20 @@ app.get('/api/users/patients', async (req, res) => {
 // Get Doctors (only approved ones)
 app.get('/api/users/doctors', async (req, res) => {
     try {
-        const { rows: doctors } = await db.query(
-            'SELECT id, name, email, role, public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = true ORDER BY created_at DESC'
-        );
+        const { currentUser, isSuperAdmin, targetOrgId } = getRequesterOrgScope(req);
+
+        let query;
+        let params = [];
+        if (targetOrgId) {
+            query = 'SELECT id, name, email, role, public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE organization_id = $1 AND role = \'doctor\' AND is_approved = true ORDER BY created_at DESC;';
+            params = [targetOrgId];
+        } else if (isSuperAdmin) {
+            query = 'SELECT id, name, email, role, public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = true ORDER BY created_at DESC;';
+        } else {
+            return res.status(401).json({ error: 'Authentication required to list doctors.' });
+        }
+
+        const { rows: doctors } = await db.query(query, params);
         const formatted = doctors.map(d => ({
             ...d,
             doctorProfile: parseJsonIfNeeded(d.doctorProfile)
@@ -1045,9 +1099,20 @@ app.get('/api/users/doctors', async (req, res) => {
 // Get Pending Doctors (filtering out rejected ones)
 app.get('/api/admin/doctors/pending', async (req, res) => {
     try {
-        const { rows: pendingDoctors } = await db.query(
-            'SELECT id, name, email, role, public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = false AND is_rejected = false ORDER BY created_at DESC'
-        );
+        const { currentUser, isSuperAdmin, targetOrgId } = getRequesterOrgScope(req);
+
+        let query;
+        let params = [];
+        if (targetOrgId) {
+            query = 'SELECT id, name, email, role, public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE organization_id = $1 AND role = \'doctor\' AND is_approved = false AND is_rejected = false ORDER BY created_at DESC;';
+            params = [targetOrgId];
+        } else if (isSuperAdmin) {
+            query = 'SELECT id, name, email, role, public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = false AND is_rejected = false ORDER BY created_at DESC;';
+        } else {
+            return res.status(401).json({ error: 'Authentication required.' });
+        }
+
+        const { rows: pendingDoctors } = await db.query(query, params);
         const formatted = pendingDoctors.map(d => ({
             ...d,
             doctorProfile: parseJsonIfNeeded(d.doctorProfile)
@@ -1117,9 +1182,20 @@ app.post('/api/admin/doctors/reject/:id', async (req, res) => {
 // Get Pending Admins (filtering out rejected ones)
 app.get('/api/admin/pending', async (req, res) => {
     try {
-        const { rows: pendingAdmins } = await db.query(
-            'SELECT id, name, email, role, public_key as "publicKey", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'admin\' AND is_approved = false AND is_rejected = false ORDER BY created_at DESC'
-        );
+        const { currentUser, isSuperAdmin, targetOrgId } = getRequesterOrgScope(req);
+
+        let query;
+        let params = [];
+        if (targetOrgId) {
+            query = 'SELECT id, name, email, role, public_key as "publicKey", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE organization_id = $1 AND role = \'admin\' AND is_approved = false AND is_rejected = false ORDER BY created_at DESC;';
+            params = [targetOrgId];
+        } else if (isSuperAdmin) {
+            query = 'SELECT id, name, email, role, public_key as "publicKey", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'admin\' AND is_approved = false AND is_rejected = false ORDER BY created_at DESC;';
+        } else {
+            return res.status(401).json({ error: 'Authentication required.' });
+        }
+
+        const { rows: pendingAdmins } = await db.query(query, params);
         res.json(pendingAdmins);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -2022,25 +2098,55 @@ app.post('/api/consultations', async (req, res) => {
 // Admin Dashboard stats consolidation endpoint
 app.get('/api/admin/stats', async (req, res) => {
     try {
-        const { rows: aCount } = await db.query('SELECT count(*) FROM appointments');
-        const { rows: pACount } = await db.query("SELECT count(*) FROM appointments WHERE status = 'Pending'");
-        const { rows: cCCount } = await db.query("SELECT count(*) FROM records WHERE record_type = 'consultation'");
-        const { rows: bCount } = await db.query('SELECT count(*) FROM blocks');
-        const { rows: dCount } = await db.query("SELECT count(*) FROM users WHERE role = 'doctor' AND is_approved = true");
-        const { rows: paCount } = await db.query("SELECT count(*) FROM users WHERE role = 'patient'");
-        const { rows: admCount } = await db.query("SELECT count(*) FROM users WHERE role IN ('admin', 'super_admin') AND is_approved = true");
-        
-        res.json({
-            totalAppointments: parseInt(aCount[0].count),
-            pendingAppointments: parseInt(pACount[0].count),
-            completedConsultations: parseInt(cCCount[0].count),
-            blocks: parseInt(bCount[0].count),
-            mempool: healthBlockchain.pendingRecords.length,
-            doctors: parseInt(dCount[0].count),
-            patients: parseInt(paCount[0].count),
-            admins: parseInt(admCount[0]?.count || 0),
-            isValid: await validateMultiTenantChains()
-        });
+        const { currentUser, isSuperAdmin, targetOrgId } = getRequesterOrgScope(req);
+
+        if (targetOrgId) {
+            // Strictly scoped metrics for clinic admin
+            const { rows: aCount } = await db.query('SELECT count(*) FROM appointments WHERE organization_id = $1', [targetOrgId]);
+            const { rows: pACount } = await db.query("SELECT count(*) FROM appointments WHERE organization_id = $1 AND status = 'Pending'", [targetOrgId]);
+            const { rows: cCCount } = await db.query("SELECT count(*) FROM records WHERE organization_id = $1 AND record_type = 'consultation'", [targetOrgId]);
+            const { rows: bCount } = await db.query('SELECT count(*) FROM blocks WHERE organization_id = $1', [targetOrgId]);
+            const { rows: dCount } = await db.query("SELECT count(*) FROM users WHERE organization_id = $1 AND role = 'doctor' AND is_approved = true", [targetOrgId]);
+            const { rows: paCount } = await db.query("SELECT count(DISTINCT tm.user_id) FROM tenant_memberships tm JOIN users u ON tm.user_id = u.id WHERE tm.organization_id = $1 AND tm.status = 'active' AND u.role = 'patient'", [targetOrgId]);
+            const { rows: admCount } = await db.query("SELECT count(*) FROM users WHERE organization_id = $1 AND role = 'admin' AND is_approved = true", [targetOrgId]);
+            
+            return res.json({
+                totalAppointments: parseInt(aCount[0].count),
+                pendingAppointments: parseInt(pACount[0].count),
+                completedConsultations: parseInt(cCCount[0].count),
+                blocks: parseInt(bCount[0].count),
+                mempool: 0,
+                doctors: parseInt(dCount[0].count),
+                patients: parseInt(paCount[0].count),
+                admins: parseInt(admCount[0]?.count || 0),
+                isValid: await validateMultiTenantChains(targetOrgId)
+            });
+        }
+
+        if (isSuperAdmin) {
+            // Global Cross-Org View strictly for Super Admin Command Center
+            const { rows: aCount } = await db.query('SELECT count(*) FROM appointments');
+            const { rows: pACount } = await db.query("SELECT count(*) FROM appointments WHERE status = 'Pending'");
+            const { rows: cCCount } = await db.query("SELECT count(*) FROM records WHERE record_type = 'consultation'");
+            const { rows: bCount } = await db.query('SELECT count(*) FROM blocks');
+            const { rows: dCount } = await db.query("SELECT count(*) FROM users WHERE role = 'doctor' AND is_approved = true");
+            const { rows: paCount } = await db.query("SELECT count(*) FROM users WHERE role = 'patient'");
+            const { rows: admCount } = await db.query("SELECT count(*) FROM users WHERE role IN ('admin', 'super_admin') AND is_approved = true");
+            
+            return res.json({
+                totalAppointments: parseInt(aCount[0].count),
+                pendingAppointments: parseInt(pACount[0].count),
+                completedConsultations: parseInt(cCCount[0].count),
+                blocks: parseInt(bCount[0].count),
+                mempool: healthBlockchain.pendingRecords.length,
+                doctors: parseInt(dCount[0].count),
+                patients: parseInt(paCount[0].count),
+                admins: parseInt(admCount[0]?.count || 0),
+                isValid: await validateMultiTenantChains()
+            });
+        }
+
+        return res.status(401).json({ error: 'Authentication required.' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -2300,13 +2406,27 @@ app.get('/api/admin/records', async (req, res) => {
 // Get system audit logs
 app.get('/api/audit/logs', async (req, res) => {
     try {
+        const { currentUser, isSuperAdmin, targetOrgId } = getRequesterOrgScope(req);
         const { patientId } = req.query;
+
         let query = 'SELECT id, event_type as "eventType", patient_id as "patientId", patient_name as "patientName", doctor_id as "doctorId", doctor_name as "doctorName", details, timestamp, is_mined as "isMined", block_index as "blockIndex", signature FROM audit_logs';
-        let params = [];
-        
+        const conditions = [];
+        const params = [];
+
+        if (targetOrgId) {
+            params.push(targetOrgId);
+            conditions.push(`organization_id = $${params.length}`);
+        } else if (!isSuperAdmin) {
+            return res.status(401).json({ error: 'Authentication required to access audit logs.' });
+        }
+
         if (patientId) {
-            query += ' WHERE patient_id = $1';
             params.push(patientId);
+            conditions.push(`patient_id = $${params.length}`);
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
         }
         
         query += ' ORDER BY timestamp DESC';
@@ -2769,53 +2889,128 @@ app.post('/api/records/verify-seal', async (req, res) => {
 // 3. Privacy-Preserving Public Health Analytics
 app.get('/api/analytics/public-health', async (req, res) => {
     try {
-        const { rows: allUsers } = await db.query(
-            `SELECT id, name, email, role, is_approved, patient_profile as "patientProfile", doctor_profile as "doctorProfile", created_at as "createdAt" FROM users ORDER BY created_at DESC`
-        );
+        const { currentUser, isSuperAdmin, targetOrgId } = getRequesterOrgScope(req);
+        if (!currentUser) {
+            return res.status(401).json({ error: 'Authentication required to access health analytics.' });
+        }
 
-        let totalPatients = 0;
-        let totalDoctors = 0;
-        const patientsList = [];
-        const doctorsList = [];
+        let doctors = [];
+        let patients = [];
+        let recordsList = [];
+        let blocksList = [];
+        let breakGlassLogs = [];
+
+        if (targetOrgId) {
+            // Strictly scoped to this organization
+            const { rows: docRows } = await db.query(`
+                SELECT id, name, email, role, is_approved, doctor_profile as "doctorProfile", created_at as "createdAt"
+                FROM users 
+                WHERE organization_id = $1 AND role = 'doctor' AND is_approved = true
+                ORDER BY created_at DESC;
+            `, [targetOrgId]);
+            doctors = docRows;
+
+            const { rows: patRows } = await db.query(`
+                SELECT u.id, u.name, u.email, u.role, u.patient_profile as "patientProfile", tm.joined_at as "createdAt"
+                FROM users u
+                JOIN tenant_memberships tm ON u.id = tm.user_id
+                WHERE tm.organization_id = $1 AND tm.status = 'active' AND u.role = 'patient'
+                ORDER BY tm.joined_at DESC;
+            `, [targetOrgId]);
+            patients = patRows;
+
+            const { rows: recRows } = await db.query(`
+                SELECT id, patient_id as "patientId", doctor_id as "doctorId", doctor_name as "doctorName", is_mined as "isMined", block_index as "blockIndex", timestamp 
+                FROM records 
+                WHERE organization_id = $1 
+                ORDER BY timestamp DESC;
+            `, [targetOrgId]);
+            recordsList = recRows;
+
+            const { rows: blkRows } = await db.query(`
+                SELECT index, hash, previous_hash as "previousHash", nonce, records, timestamp 
+                FROM blocks 
+                WHERE organization_id = $1 
+                ORDER BY index ASC;
+            `, [targetOrgId]);
+            blocksList = blkRows;
+
+            const { rows: bgRows } = await db.query(`
+                SELECT id, patient_id as "patientId", patient_name as "patientName", doctor_id as "doctorId", doctor_name as "doctorName", details, timestamp 
+                FROM audit_logs 
+                WHERE organization_id = $1 AND event_type = 'emergency_break_glass' 
+                ORDER BY timestamp DESC;
+            `, [targetOrgId]);
+            breakGlassLogs = bgRows;
+
+        } else if (isSuperAdmin) {
+            // Global Cross-Org View strictly for Super Admin Command Center
+            const { rows: docRows } = await db.query(`
+                SELECT id, name, email, role, is_approved, doctor_profile as "doctorProfile", created_at as "createdAt"
+                FROM users 
+                WHERE role = 'doctor' AND is_approved = true
+                ORDER BY created_at DESC;
+            `);
+            doctors = docRows;
+
+            const { rows: patRows } = await db.query(`
+                SELECT id, name, email, role, patient_profile as "patientProfile", created_at as "createdAt"
+                FROM users 
+                WHERE role = 'patient'
+                ORDER BY created_at DESC;
+            `);
+            patients = patRows;
+
+            const { rows: recRows } = await db.query(`
+                SELECT id, patient_id as "patientId", doctor_id as "doctorId", doctor_name as "doctorName", is_mined as "isMined", block_index as "blockIndex", timestamp 
+                FROM records 
+                ORDER BY timestamp DESC;
+            `);
+            recordsList = recRows;
+
+            const { rows: blkRows } = await db.query(`
+                SELECT index, hash, previous_hash as "previousHash", nonce, records, timestamp 
+                FROM blocks 
+                ORDER BY index ASC;
+            `);
+            blocksList = blkRows;
+
+            const { rows: bgRows } = await db.query(`
+                SELECT id, patient_id as "patientId", patient_name as "patientName", doctor_id as "doctorId", doctor_name as "doctorName", details, timestamp 
+                FROM audit_logs 
+                WHERE event_type = 'emergency_break_glass' 
+                ORDER BY timestamp DESC;
+            `);
+            breakGlassLogs = bgRows;
+        } else {
+            return res.status(403).json({ error: 'Organization scope is missing from session.' });
+        }
+
         const bloodTypeCounts = {};
         const genderCounts = {};
-
-        allUsers.forEach(u => {
-            if (u.role === 'patient') {
-                totalPatients++;
-                const profile = parseJsonIfNeeded(u.patientProfile) || {};
-                patientsList.push({
-                    ...u,
-                    patientProfile: profile
-                });
-                if (profile.bloodType) {
-                    bloodTypeCounts[profile.bloodType] = (bloodTypeCounts[profile.bloodType] || 0) + 1;
-                }
-                if (profile.gender) {
-                    genderCounts[profile.gender] = (genderCounts[profile.gender] || 0) + 1;
-                }
-            } else if (u.role === 'doctor' && u.is_approved) {
-                totalDoctors++;
-                doctorsList.push({
-                    ...u,
-                    doctorProfile: parseJsonIfNeeded(u.doctorProfile) || {}
-                });
+        const patientsList = patients.map(p => {
+            const profile = parseJsonIfNeeded(p.patientProfile) || {};
+            if (profile.bloodType) {
+                bloodTypeCounts[profile.bloodType] = (bloodTypeCounts[profile.bloodType] || 0) + 1;
             }
+            if (profile.gender) {
+                genderCounts[profile.gender] = (genderCounts[profile.gender] || 0) + 1;
+            }
+            return {
+                ...p,
+                patientProfile: profile
+            };
         });
 
-        const { rows: recordsList } = await db.query(
-            `SELECT id, patient_id as "patientId", doctor_id as "doctorId", doctor_name as "doctorName", is_mined as "isMined", block_index as "blockIndex", timestamp FROM records ORDER BY timestamp DESC`
-        );
+        const doctorsList = doctors.map(d => ({
+            ...d,
+            doctorProfile: parseJsonIfNeeded(d.doctorProfile) || {}
+        }));
+
+        const totalPatients = patientsList.length;
+        const totalDoctors = doctorsList.length;
         const totalRecords = recordsList.length;
-
-        const { rows: blocksList } = await db.query(
-            `SELECT index, hash, previous_hash as "previousHash", nonce, records, timestamp FROM blocks ORDER BY index ASC`
-        );
         const totalBlocks = blocksList.length;
-
-        const { rows: breakGlassLogs } = await db.query(
-            "SELECT id, patient_id as \"patientId\", patient_name as \"patientName\", doctor_id as \"doctorId\", doctor_name as \"doctorName\", details, timestamp FROM audit_logs WHERE event_type = 'emergency_break_glass' ORDER BY timestamp DESC"
-        );
         const breakGlassEvents = breakGlassLogs.length;
 
         res.json({
@@ -2833,7 +3028,7 @@ app.get('/api/analytics/public-health', async (req, res) => {
             genderCounts,
             miningMetrics: {
                 difficulty: '2 Leading Hex Zeros',
-                avgRecordsPerBlock: totalBlocks > 1 ? Math.round(totalRecords / Math.max(1, totalBlocks - 1)) : 1
+                avgRecordsPerBlock: totalBlocks > 1 ? Math.round(totalRecords / Math.max(1, totalBlocks - 1)) : (totalRecords > 0 ? totalRecords : 0)
             }
         });
     } catch (err) {
