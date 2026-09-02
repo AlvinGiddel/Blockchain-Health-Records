@@ -430,72 +430,71 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
       {user.role === 'patient' ? (
         <div>
-          {/* Health Summary & Cryptographic Identity */}
-          <div className="grid-3" style={{ gap: '24px', marginBottom: '24px' }}>
-            {/* Health Summary Card */}
-            <div className="glass-card span-2-desktop">
-              <h3 style={{ fontSize: '1.2rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
-                <Activity size={20} /> Personal Health Summary
-              </h3>
+          {/* Personal Health Summary */}
+          <div className="glass-card" style={{ marginBottom: '24px' }}>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
+              <Activity size={20} /> Personal Health Summary
+            </h3>
 
-              <div className="grid-2" style={{ gap: '20px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Blood Group</span>
-                    <span className="badge badge-success" style={{ fontSize: '0.85rem' }}>{user.patientProfile?.bloodType || 'O+'}</span>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}><AlertTriangle size={14} color="var(--color-warning)" /> Known Allergies</span>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
-                      {user.patientProfile?.allergies && user.patientProfile.allergies.length > 0 ? (
-                        user.patientProfile.allergies.map((allergy, i) => (
-                          <span key={i} className="badge badge-error" style={{ textTransform: 'capitalize' }}>{allergy}</span>
-                        ))
-                      ) : (
-                        <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No known allergies</span>
-                      )}
-                    </div>
+            <div className="grid-2" style={{ gap: '24px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Blood Group</span>
+                  <span className="badge badge-success" style={{ fontSize: '0.85rem' }}>{user.patientProfile?.bloodType || 'O+'}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertTriangle size={14} color="var(--color-warning)" /> Known Allergies
+                  </span>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+                    {user.patientProfile?.allergies && user.patientProfile.allergies.length > 0 ? (
+                      user.patientProfile.allergies.map((allergy, i) => (
+                        <span key={i} className="badge badge-error" style={{ textTransform: 'capitalize' }}>{allergy}</span>
+                      ))
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No known allergies</span>
+                    )}
                   </div>
                 </div>
+              </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '1px solid var(--glass-border)', paddingLeft: '20px' }}>
-                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                    <Calendar size={14} color="var(--color-primary)" /> Next Appointment
-                  </span>
-                  {(() => {
-                    const upcoming = appointments.filter(a => ['Pending', 'Confirmed'].includes(a.status));
-                    if (upcoming.length === 0) {
-                      return <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>No upcoming appointments</span>;
-                    }
-                    const next = upcoming[0];
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderLeft: '1px solid var(--glass-border)', paddingLeft: '24px' }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                  <Calendar size={14} color="var(--color-primary)" /> Next Scheduled Appointment
+                </span>
+                {(() => {
+                  const upcoming = appointments.filter(a => ['Pending', 'Confirmed'].includes(a.status));
+                  if (upcoming.length === 0) {
                     return (
-                      <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
-                        <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Dr. {next.doctorName}</strong>
-                        <p style={{ margin: '4px 0 0 0', color: 'var(--color-accent)', fontSize: '0.8rem', fontWeight: 500 }}>
-                          {next.date} at {next.time}
-                        </p>
-                        <span className={`badge ${next.status === 'Confirmed' ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.65rem', padding: '1px 6px', marginTop: '8px', display: 'inline-block' }}>
-                          {next.status}
-                        </span>
+                      <div style={{ padding: '16px', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '8px', border: '1px dashed var(--glass-border)', textAlign: 'center' }}>
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic', display: 'block', marginBottom: '8px' }}>No upcoming appointments scheduled</span>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          style={{ fontSize: '0.75rem', padding: '6px 12px' }}
+                          onClick={() => {
+                            const formEl = document.getElementById('appointment-booking-section');
+                            if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
+                          }}
+                        >
+                          Book an Appointment Below
+                        </button>
                       </div>
                     );
-                  })()}
-                </div>
-              </div>
-            </div>
-
-            {/* Cryptographic Identity */}
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <h3 style={{ fontSize: '1.2rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
-                  <ShieldCheck size={20} /> Identity Keys
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
-                  Your secure health folder is cryptographically locked. Ledger address:
-                </p>
-              </div>
-              <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '10px', wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '0.7rem', maxHeight: '72px', overflowY: 'auto', color: 'var(--color-accent)', marginTop: '8px' }}>
-                {user.publicKey}
+                  }
+                  const next = upcoming[0];
+                  return (
+                    <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+                      <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Dr. {next.doctorName}</strong>
+                      <p style={{ margin: '4px 0 0 0', color: 'var(--color-accent)', fontSize: '0.85rem', fontWeight: 500 }}>
+                        {next.date} at {next.time}
+                      </p>
+                      <span className={`badge ${next.status === 'Confirmed' ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.7rem', padding: '2px 8px', marginTop: '8px', display: 'inline-block' }}>
+                        {next.status}
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -524,18 +523,22 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                   >
                     <User size={16} color="var(--color-success)" /> View Profile Details
                   </button>
+
                   <button
                     className="btn btn-secondary"
-                    style={{ fontSize: '0.85rem', padding: '14px', display: 'flex', gap: '8px', justifyContent: 'center', background: 'rgba(245, 158, 11, 0.05)' }}
-                    onClick={() => onNavigate && onNavigate('profile')}
+                    style={{ fontSize: '0.85rem', padding: '14px', display: 'flex', gap: '8px', justifyContent: 'center', background: 'rgba(99, 102, 241, 0.08)' }}
+                    onClick={() => {
+                      const formEl = document.getElementById('appointment-booking-section');
+                      if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
+                    }}
                   >
-                    <ShieldCheck size={16} color="var(--color-warning)" /> Security Keys
+                    <Calendar size={16} color="var(--color-primary)" /> Book an Appointment
                   </button>
                 </div>
               </div>
 
               {/* Appointment Booking Form */}
-              <div className="glass-card">
+              <div id="appointment-booking-section" className="glass-card">
                 <h3 style={{ fontSize: '1.25rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
                   <Calendar size={20} /> Request an Appointment
                 </h3>

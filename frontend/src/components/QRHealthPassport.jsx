@@ -167,11 +167,9 @@ export default function QRHealthPassport({ user, onClose }) {
             </div>
           </div>
 
-          <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: '1px solid var(--glass-border)', fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Key size={14} /> RSA-2048 Public Key Fingerprint:</span>
-            <code style={{ background: 'rgba(0,0,0,0.2)', padding: '2px 6px', borderRadius: '4px', wordBreak: 'break-all', display: 'block', maxWidth: '100%' }}>
-              {(user.publicKey || 'PUBLIC_KEY_NOT_AVAILABLE').slice(0, 36)}...
-            </code>
+          <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: '1px solid var(--glass-border)', fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Digital Health Passport & Verification QR</span>
+            <span className="badge badge-success" style={{ fontSize: '0.75rem', padding: '3px 8px' }}>Active & Verified</span>
           </div>
         </div>
 
