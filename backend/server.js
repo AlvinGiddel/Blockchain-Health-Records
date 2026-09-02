@@ -1506,6 +1506,7 @@ app.get('/api/admin/stats', async (req, res) => {
         const { rows: bCount } = await db.query('SELECT count(*) FROM blocks');
         const { rows: dCount } = await db.query("SELECT count(*) FROM users WHERE role = 'doctor' AND is_approved = true");
         const { rows: paCount } = await db.query("SELECT count(*) FROM users WHERE role = 'patient'");
+        const { rows: admCount } = await db.query("SELECT count(*) FROM users WHERE role IN ('admin', 'super_admin') AND is_approved = true");
         
         res.json({
             totalAppointments: parseInt(aCount[0].count),
@@ -1515,6 +1516,7 @@ app.get('/api/admin/stats', async (req, res) => {
             mempool: healthBlockchain.pendingRecords.length,
             doctors: parseInt(dCount[0].count),
             patients: parseInt(paCount[0].count),
+            admins: parseInt(admCount[0]?.count || 0),
             isValid: healthBlockchain.isChainValid()
         });
     } catch (err) {
