@@ -462,7 +462,7 @@ app.get('/api/nck/verify', async (req, res) => {
     try {
         const { license, name, cadre = 'nurse' } = req.query;
         if (!license) {
-            return res.status(400).json({ error: 'License query parameter is required (e.g. /api/nck/verify?license=594079&name=Mary+Kung''u)' });
+            return res.status(400).json({ error: 'License query parameter is required (e.g. /api/nck/verify?license=594079&name=Mary+Kungu)' });
         }
         const result = await verifyNckLicense(String(license), name ? String(name) : undefined, String(cadre));
         if (!result.verified) {
