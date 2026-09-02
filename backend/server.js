@@ -975,25 +975,32 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         const resetUrl = `${frontendOrigin}/?resetToken=${token}`;
 
         // Send email with fallback safety
-        let mailResult = { previewUrl: null };
+        let mailResult = { success: false, error: null, previewUrl: null };
         try {
             mailResult = await sendResetEmail(user.email, user.name, resetUrl);
         } catch (mailErr) {
             console.error('[Forgot Password] Mailer error encountered:', mailErr.message);
+            mailResult = { success: false, error: mailErr.message, previewUrl: null };
         }
+
+        const isEmailDelivered = mailResult && mailResult.success;
 
         // Log to Audit trail (in background)
         db.query(
             `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6)`,
-            ['password_reset_request', user.id, user.name, user.id, 'System Admin', `Password reset requested for ${user.name} (${user.email}).`]
+            ['password_reset_request', user.id, user.name, user.id, 'System Admin', `Password reset requested for ${user.name} (${user.email}). Email sent: ${isEmailDelivered}`]
         ).catch(err => console.error('Failed to log password reset request audit:', err));
 
         res.json({
             success: true,
-            message: 'A password reset link has been generated and dispatched to your email.',
+            emailSent: isEmailDelivered,
+            mailError: mailResult?.error || null,
+            message: isEmailDelivered
+                ? 'A password reset link has been dispatched to your Gmail inbox!'
+                : `Password reset link generated. (Email delivery notice: ${mailResult?.error || 'Email could not be delivered to inbox'}).`,
             resetUrl: resetUrl,
-            previewUrl: mailResult.previewUrl
+            previewUrl: mailResult?.previewUrl || null
         });
     } catch (err) {
         console.error('Forgot password error:', err);

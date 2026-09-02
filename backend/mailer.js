@@ -258,8 +258,9 @@ async function sendResetEmail(email, name, resetUrl) {
         console.log('---------------------------------\n');
 
         return {
-            success: true,
-            messageId: 'console-fallback-id',
+            success: false,
+            error: sendError.message,
+            messageId: null,
             previewUrl: null,
             resetUrl: resetUrl
         };
