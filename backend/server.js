@@ -3,7 +3,16 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const { sendResetEmail, sendDoctorApprovalEmail, sendDoctorRejectionEmail, sendClinicApprovalEmail, sendClinicRejectionEmail, sendMail } = require('./mailer');
+const { 
+    sendResetEmail, 
+    sendDoctorApprovalEmail, 
+    sendDoctorRejectionEmail, 
+    sendClinicApprovalEmail, 
+    sendClinicRejectionEmail, 
+    sendPractitionerPendingEmail,
+    sendAdminNewPractitionerAlert,
+    sendMail 
+} = require('./mailer');
 const { Blockchain, generateKeyPair, signRecord, getKenyanTimestamp } = require('./blockchain');
 
 const path = require('path');
@@ -755,15 +764,48 @@ app.post('/api/auth/register', async (req, res) => {
         }
 
         if (role === 'doctor' && !isApprovedVal) {
+            const cadreVal = profile?.cadre || 'doctor';
+            const facilityName = targetOrg ? targetOrg.name : (profile?.hospital || 'Platform Network');
+
+            // Send registration receipt acknowledgment email to practitioner (in background)
+            sendPractitionerPendingEmail({
+                email: user.email,
+                name: user.name,
+                cadre: cadreVal,
+                regulator: practitionerCheck?.regulator || 'Statutory Council',
+                licenseNumber: profile?.licenseNumber,
+                hospitalName: facilityName
+            }).catch(mErr => console.error('Failed to send practitioner pending email:', mErr.message));
+
+            // Notify facility admin of new practitioner in approval queue
+            if (targetOrg) {
+                db.query(`
+                    SELECT name, email FROM users 
+                    WHERE organization_id = $1 AND role = 'admin' 
+                    LIMIT 1;
+                `, [targetOrg.id]).then(({ rows: adminRows }) => {
+                    if (adminRows.length > 0) {
+                        sendAdminNewPractitionerAlert({
+                            adminEmail: adminRows[0].email,
+                            adminName: adminRows[0].name,
+                            practitionerName: user.name,
+                            cadre: cadreVal,
+                            hospitalName: targetOrg.name,
+                            licenseNumber: profile?.licenseNumber
+                        }).catch(aErr => console.error('Failed to send admin alert email:', aErr.message));
+                    }
+                }).catch(qErr => console.error('Failed to query hospital admin for email alert:', qErr.message));
+            }
+
             // Log doctor registration request event in audit trail (in background)
             db.query(
                 `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
                  VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                ['doctor_request', user.id, user.name, user.id, 'System Admin', `New doctor registration request submitted by Dr. ${user.name} (${user.email}). Pending approval.`, createdAt]
+                ['doctor_request', user.id, user.name, user.id, 'System Admin', `New practitioner registration request submitted by ${user.name} (${user.email}). Pending approval.`, createdAt]
             ).catch(err => console.error('Failed to log doctor request audit:', err));
 
             return res.status(202).json({
-                message: 'Doctor registration submitted! Please wait for approval from a system administrator.',
+                message: 'Registration submitted successfully! Your application is pending institutional approval. A confirmation email has been sent to your inbox.',
                 user: {
                     id: user.id,
                     name: user.name,

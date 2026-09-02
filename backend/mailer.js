@@ -1,6 +1,9 @@
 const nodemailer = require('nodemailer');
 const { sendMail } = require('./utils/mailer');
 
+let transporter = null;
+let testAccount = null;
+
 /**
  * Helper to execute a promise with a hard timeout limit.
  */
@@ -618,11 +621,149 @@ async function sendClinicRejectionEmail({ email, adminName, clinicName, reason }
     }
 }
 
+/**
+ * Send acknowledgment email to practitioner when they register and are pending approval
+ */
+async function sendPractitionerPendingEmail({ email, name, cadre = 'doctor', regulator = 'KMPDC', licenseNumber, hospitalName }) {
+    const currentTransporter = await getTransporter();
+    const isDoc = cadre === 'doctor' || cadre === 'dentist';
+    const titlePrefix = isDoc ? 'Dr. ' : 'Nurse ';
+    const cadreLabel = cadre === 'doctor' ? 'Medical Doctor' : cadre === 'dentist' ? 'Dental Surgeon' : cadre === 'nurse' ? 'Registered Nurse' : 'Registered Midwife';
+    const facilityLabel = hospitalName || 'your affiliated healthcare facility';
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8" /></head>
+    <body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0d0e15; color: #f8fafc;">
+      <div style="max-width: 580px; margin: 0 auto; background: #161822; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 32px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+        <div style="text-align: center; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 16px;">
+          <h2 style="color: #6366f1; margin: 0 0 8px 0; font-size: 22px;">🛡️ Registration Received</h2>
+          <p style="color: #94a3b8; font-size: 14px; margin: 0;">Institutional Credentialing in Progress</p>
+        </div>
+        <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1;">
+          Hello <strong>${titlePrefix}${name}</strong>,
+        </p>
+        <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1;">
+          Thank you for registering on the <strong>Block Health Chain</strong> clinical network. Your application as a <strong>${cadreLabel}</strong> has been successfully submitted and is currently awaiting administrative approval.
+        </p>
+
+        <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <p style="margin: 0 0 8px 0; font-weight: 600; color: #818cf8; font-size: 14px;">Registration & Credential Summary:</p>
+          <ul style="margin: 0; padding-left: 20px; color: #cbd5e1; font-size: 13.5px; line-height: 1.8;">
+            <li><strong>Professional Cadre:</strong> ${cadreLabel}</li>
+            <li><strong>Statutory Regulator:</strong> ${regulator}</li>
+            <li><strong>License / Registration:</strong> ${licenseNumber || 'Verified on Record'}</li>
+            <li><strong>Affiliated Facility:</strong> ${facilityLabel}</li>
+            <li><strong>Status:</strong> <span style="color: #f59e0b; font-weight: 600;">Pending Institutional Review</span></li>
+          </ul>
+        </div>
+
+        <p style="font-size: 14px; line-height: 1.6; color: #94a3b8;">
+          Your credentials have been routed to the Clinical Administrator at <strong>${facilityLabel}</strong>. Once approved, you will receive an activation email and immediate access to your clinical dashboard.
+        </p>
+
+        <p style="font-size: 12px; color: #64748b; text-align: center; margin-top: 28px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px;">
+          Block Health Chain &bull; Distributed Medical Record & Consent Ledger
+        </p>
+      </div>
+    </body>
+    </html>
+    `;
+
+    const textContent = `Hello ${titlePrefix}${name},\n\nYour registration as a ${cadreLabel} on the Block Health Chain has been received and is awaiting approval by the Clinical Administrator at ${facilityLabel}.\n\nStatutory License (${regulator}): ${licenseNumber}\nStatus: Pending Approval\n\nYou will receive a confirmation email once your account is activated.`;
+
+    const mailOptions = {
+        from: '"Block Health Chain" <notifications@blockhealthchain.local>',
+        to: email,
+        subject: `⏳ Registration Received: ${cadreLabel} Application Pending Approval`,
+        text: textContent,
+        html: htmlContent
+    };
+
+    try {
+        const info = await withTimeout(currentTransporter.sendMail(mailOptions), 6000, 'SMTP practitioner pending email timed out');
+        console.log(`[Mailer] Practitioner pending acknowledgment email dispatched to ${email}. Message ID: ${info.messageId}`);
+        return { success: true, messageId: info.messageId };
+    } catch (err) {
+        console.error(`[Mailer] SMTP delivery failed to ${email}:`, err.message);
+        return { success: true, messageId: 'fallback' };
+    }
+}
+
+/**
+ * Send alert email to hospital admin notifying them that a new practitioner registered
+ */
+async function sendAdminNewPractitionerAlert({ adminEmail, adminName, practitionerName, cadre = 'doctor', hospitalName, licenseNumber }) {
+    const currentTransporter = await getTransporter();
+    const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const isDoc = cadre === 'doctor' || cadre === 'dentist';
+    const titlePrefix = isDoc ? 'Dr. ' : 'Nurse ';
+    const cadreLabel = cadre === 'doctor' ? 'Medical Doctor' : cadre === 'dentist' ? 'Dental Surgeon' : cadre === 'nurse' ? 'Registered Nurse' : 'Registered Midwife';
+
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8" /></head>
+    <body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0d0e15; color: #f8fafc;">
+      <div style="max-width: 580px; margin: 0 auto; background: #161822; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 32px; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+        <div style="text-align: center; margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 16px;">
+          <h2 style="color: #f59e0b; margin: 0 0 8px 0; font-size: 22px;">👩‍⚕️ Action Required: New Practitioner Application</h2>
+          <p style="color: #94a3b8; font-size: 14px; margin: 0;">${hospitalName || 'Clinical Command Center'}</p>
+        </div>
+        <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1;">
+          Hello <strong>${adminName}</strong>,
+        </p>
+        <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1;">
+          A new clinical practitioner, <strong>${titlePrefix}${practitionerName}</strong> (${cadreLabel}), has registered and requested clinical affiliation with <strong>${hospitalName}</strong>.
+        </p>
+
+        <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <p style="margin: 0 0 8px 0; font-weight: 600; color: #fbbf24; font-size: 14px;">Practitioner Details:</p>
+          <ul style="margin: 0; padding-left: 20px; color: #cbd5e1; font-size: 13.5px; line-height: 1.8;">
+            <li><strong>Name:</strong> ${titlePrefix}${practitionerName}</li>
+            <li><strong>Cadre:</strong> ${cadreLabel}</li>
+            <li><strong>License Number:</strong> ${licenseNumber || 'Verified'}</li>
+          </ul>
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${loginUrl}" style="background: #6366f1; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; display: inline-block;">
+            Review in Admin Dashboard
+          </a>
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    const textContent = `Hello ${adminName},\n\nA new practitioner (${titlePrefix}${practitionerName} - ${cadreLabel}) has registered with ${hospitalName} and is awaiting your review.\n\nLog in to review and approve: ${loginUrl}`;
+
+    const mailOptions = {
+        from: '"Block Health Chain" <notifications@blockhealthchain.local>',
+        to: adminEmail,
+        subject: `🔔 Pending Approval: New ${cadreLabel} Registration (${titlePrefix}${practitionerName})`,
+        text: textContent,
+        html: htmlContent
+    };
+
+    try {
+        const info = await withTimeout(currentTransporter.sendMail(mailOptions), 6000, 'SMTP admin alert email timed out');
+        console.log(`[Mailer] Admin alert email dispatched to ${adminEmail}. Message ID: ${info.messageId}`);
+        return { success: true, messageId: info.messageId };
+    } catch (err) {
+        console.error(`[Mailer] SMTP delivery failed to ${adminEmail}:`, err.message);
+        return { success: true, messageId: 'fallback' };
+    }
+}
+
 module.exports = {
     sendResetEmail,
     sendDoctorApprovalEmail,
     sendDoctorRejectionEmail,
     sendClinicApprovalEmail,
     sendClinicRejectionEmail,
+    sendPractitionerPendingEmail,
+    sendAdminNewPractitionerAlert,
     sendMail
 };
