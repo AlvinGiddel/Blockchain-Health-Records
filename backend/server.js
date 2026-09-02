@@ -148,31 +148,18 @@ let isMining = false;
  */
 async function syncBlockchainWithDatabase() {
     try {
-        const { rows: dbBlocks } = await db.query('SELECT * FROM blocks ORDER BY index ASC');
+        const { rows: dbBlocks } = await db.query('SELECT * FROM blocks ORDER BY organization_id, index ASC');
+        console.log(`Synchronized ${dbBlocks.length} multi-tenant blocks across all organizations.`);
         
-        // Data integrity check: verify indices are sequential and contiguous (0, 1, 2, 3...)
-        let isSequential = true;
-        for (let i = 0; i < dbBlocks.length; i++) {
-            if (parseInt(dbBlocks[i].index, 10) !== i) {
-                isSequential = false;
-                console.warn(`[INTEGRITY WARNING] Block index mismatch at row ${i}: Expected index ${i}, but found index ${dbBlocks[i].index}.`);
-            }
-        }
-        if (!isSequential) {
-            console.warn(`[INTEGRITY WARNING] Blockchain blocks table has gaps, duplicate indices, or non-sequential indexing!`);
-        }
+        // Load the primary ledger blocks into healthBlockchain.chain for backward-compatible in-memory access
+        const { rows: mamaLucyBlocks } = await db.query(`
+            SELECT * FROM blocks 
+            WHERE organization_id = 'a3409337-0a6e-4c23-bc11-4ffcbd8fc44d' 
+            ORDER BY index ASC;
+        `);
 
-        if (dbBlocks.length === 0) {
-            console.log('No blocks found in DB. Storing genesis block...');
-            const genesisBlock = healthBlockchain.chain[0];
-            
-            await db.query(
-                'INSERT INTO blocks (index, timestamp, records, previous_hash, nonce, hash) VALUES ($1, $2, $3, $4, $5, $6)',
-                [genesisBlock.index, genesisBlock.timestamp, JSON.stringify(genesisBlock.records), genesisBlock.previousHash, genesisBlock.nonce, genesisBlock.hash]
-            );
-        } else {
-            console.log(`Loading ${dbBlocks.length} blocks from PostgreSQL into memory...`);
-            healthBlockchain.chain = dbBlocks.map(dbBlock => {
+        if (mamaLucyBlocks.length > 0) {
+            healthBlockchain.chain = mamaLucyBlocks.map(dbBlock => {
                 const b = new (require('./blockchain').Block)(
                     dbBlock.index,
                     dbBlock.timestamp,
@@ -998,11 +985,11 @@ app.post('/api/admin/organizations/:id/status', async (req, res) => {
                 WHERE organization_id = $3;
             `, [status, updatedOrg.license_expires_at, id]);
 
-            // Audit logging
+            // Audit logging with full administrative details
             await client.query(`
-                INSERT INTO audit_logs (organization_id, event_type, details, timestamp)
-                VALUES ($1, 'license_status_update', $2, $3);
-            `, [id, `Organization status updated to "${status}". Expiry: ${updatedOrg.license_expires_at}. Modified by Super Admin.`, getKenyanTimestamp()]);
+                INSERT INTO audit_logs (organization_id, event_type, doctor_id, doctor_name, patient_id, patient_name, details, timestamp)
+                VALUES ($1, 'license_status_update', $2, 'Super Administrator', $2, 'Platform Governance', $3, $4);
+            `, [id, decoded.id, `Organization status updated to "${status}". Expiry: ${updatedOrg.license_expires_at}. Modified by Super Admin.`, getKenyanTimestamp()]);
 
             await client.query('COMMIT;');
 
@@ -2052,7 +2039,7 @@ app.get('/api/admin/stats', async (req, res) => {
             doctors: parseInt(dCount[0].count),
             patients: parseInt(paCount[0].count),
             admins: parseInt(admCount[0]?.count || 0),
-            isValid: healthBlockchain.isChainValid()
+            isValid: await validateMultiTenantChains()
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -2357,7 +2344,16 @@ app.post('/api/blockchain/mine', async (req, res) => {
 // Get all blocks
 app.get('/api/blockchain/blocks', async (req, res) => {
     try {
-        const { rows: blocks } = await db.query('SELECT id, index, timestamp, records, previous_hash as "previousHash", nonce, hash FROM blocks ORDER BY index ASC');
+        const orgId = req.headers['x-organization-id'] || req.query.orgId || null;
+        let query = 'SELECT b.id, b.organization_id as "organizationId", o.name as "organizationName", b.index, b.timestamp, b.records, b.previous_hash as "previousHash", b.nonce, b.hash FROM blocks b LEFT JOIN organizations o ON b.organization_id = o.id ';
+        const params = [];
+        if (orgId) {
+            query += 'WHERE b.organization_id = $1 ';
+            params.push(orgId);
+        }
+        query += 'ORDER BY b.organization_id, b.index ASC';
+
+        const { rows: blocks } = await db.query(query, params);
         const formattedBlocks = blocks.map(b => {
             let records = b.records;
             if (typeof records === 'string') {
@@ -2380,7 +2376,8 @@ app.get('/api/blockchain/blocks', async (req, res) => {
 // Validate chain
 app.get('/api/blockchain/validate', async (req, res) => {
     try {
-        const isValid = healthBlockchain.isChainValid();
+        const orgId = req.headers['x-organization-id'] || req.query.orgId || null;
+        const isValid = await validateMultiTenantChains(orgId);
         res.json({ isValid });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -2959,6 +2956,52 @@ app.post('/api/license/simulate', (req, res) => {
         res.status(500).json({ error: 'Failed to set license simulation.' });
     }
 });
+
+/**
+ * Validates cryptographic chain integrity across all multi-tenant hospital ledgers.
+ * Ensures each individual organization's chain starts with Genesis (index: 0, prev: '0')
+ * and maintains continuous SHA-256 hash linkage.
+ */
+async function validateMultiTenantChains(targetOrgId = null) {
+    try {
+        let query = `
+            SELECT organization_id, index, timestamp, records, previous_hash, nonce, hash 
+            FROM blocks 
+        `;
+        const params = [];
+        if (targetOrgId) {
+            query += ` WHERE organization_id = $1 `;
+            params.push(targetOrgId);
+        }
+        query += ` ORDER BY organization_id, index ASC;`;
+
+        const { rows: blocks } = await db.query(query, params);
+        if (blocks.length === 0) return true;
+
+        const orgMap = {};
+        for (const b of blocks) {
+            const orgId = b.organization_id || 'default';
+            if (!orgMap[orgId]) orgMap[orgId] = [];
+            orgMap[orgId].push(b);
+        }
+
+        for (const orgId in orgMap) {
+            const chain = orgMap[orgId];
+            if (parseInt(chain[0].index, 10) !== 0 || chain[0].previous_hash !== '0') {
+                return false;
+            }
+            for (let i = 1; i < chain.length; i++) {
+                if (chain[i].previous_hash !== chain[i - 1].hash) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    } catch (e) {
+        console.error('validateMultiTenantChains error:', e);
+        return false;
+    }
+}
 
 // 6.2 Get Master KMPDC Practitioners Register
 app.get('/api/kmpdc/practitioners', async (req, res) => {

@@ -16,6 +16,8 @@ export default function LicenseControlWidget({ user }) {
   const [organizations, setOrganizations] = useState([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
   const [orgActionLoading, setOrgActionLoading] = useState(null);
+  const [orgStatusMsg, setOrgStatusMsg] = useState('');
+  const [orgErrorMsg, setOrgErrorMsg] = useState('');
 
   // KMPDC Registry State
   const [practitioners, setPractitioners] = useState([]);
@@ -74,9 +76,15 @@ export default function LicenseControlWidget({ user }) {
   const handleToggleOrgStatus = async (orgId, currentStatus) => {
     const nextStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
     setOrgActionLoading(orgId);
+    setOrgStatusMsg('');
+    setOrgErrorMsg('');
+    
+    // Optimistic UI update: immediately flip the clinic's badge and button
+    setOrganizations(prev => prev.map(o => o.id === orgId ? { ...o, status: nextStatus } : o));
+
     try {
       const token = localStorage.getItem('token');
-      await safeFetch(`/api/admin/organizations/${orgId}/status`, {
+      const data = await safeFetch(`/api/admin/organizations/${orgId}/status`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -84,10 +92,12 @@ export default function LicenseControlWidget({ user }) {
         },
         body: JSON.stringify({ status: nextStatus })
       });
-      setStatusMessage(`✓ Organization updated to: ${nextStatus.toUpperCase()}`);
+      setOrgStatusMsg(data.message || `✓ Clinic status updated to: ${nextStatus.toUpperCase()}`);
       fetchOrganizations();
     } catch (err) {
-      setError(err.message || 'Failed to update organization status.');
+      // Revert optimistic update on failure
+      setOrganizations(prev => prev.map(o => o.id === orgId ? { ...o, status: currentStatus } : o));
+      setOrgErrorMsg(err.message || 'Failed to update organization status.');
     } finally {
       setOrgActionLoading(null);
     }
@@ -95,9 +105,11 @@ export default function LicenseControlWidget({ user }) {
 
   const handleExtendOrg = async (orgId) => {
     setOrgActionLoading(orgId);
+    setOrgStatusMsg('');
+    setOrgErrorMsg('');
     try {
       const token = localStorage.getItem('token');
-      await safeFetch(`/api/admin/organizations/${orgId}/status`, {
+      const data = await safeFetch(`/api/admin/organizations/${orgId}/status`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -105,10 +117,10 @@ export default function LicenseControlWidget({ user }) {
         },
         body: JSON.stringify({ status: 'active', extendDays: 30 })
       });
-      setStatusMessage('✓ License extended by +30 days.');
+      setOrgStatusMsg(data.message || '✓ License extended by +30 days.');
       fetchOrganizations();
     } catch (err) {
-      setError(err.message || 'Failed to extend license.');
+      setOrgErrorMsg(err.message || 'Failed to extend license.');
     } finally {
       setOrgActionLoading(null);
     }
@@ -479,6 +491,20 @@ export default function LicenseControlWidget({ user }) {
               {loadingOrgs ? 'Syncing...' : 'Refresh Matrix'}
             </button>
           </div>
+
+          {orgStatusMsg && (
+            <div style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.35)', color: '#34d399', fontSize: '0.84rem', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{orgStatusMsg}</span>
+              <button onClick={() => setOrgStatusMsg('')} style={{ background: 'none', border: 'none', color: '#34d399', cursor: 'pointer', fontSize: '0.9rem' }}>✕</button>
+            </div>
+          )}
+
+          {orgErrorMsg && (
+            <div style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.35)', color: '#f87171', fontSize: '0.84rem', marginBottom: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>⚠️ {orgErrorMsg}</span>
+              <button onClick={() => setOrgErrorMsg('')} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '0.9rem' }}>✕</button>
+            </div>
+          )}
 
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', fontSize: '0.84rem', borderCollapse: 'collapse' }}>
