@@ -442,8 +442,16 @@ export default function App() {
 
         <div className="sidebar-footer">
           <div className="sidebar-user">
-            <div className="user-avatar" title={`${user.name} (${user.role})`}>
-              {getInitials(user.name)}
+            <div 
+              className="user-avatar" 
+              title={`${user.name} (${user.role})`}
+              style={{ overflow: 'hidden', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              {user.profilePhoto ? (
+                <img src={user.profilePhoto} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                getInitials(user.name)
+              )}
             </div>
             <div className="user-info">
               <span className="user-name">{user.name}</span>

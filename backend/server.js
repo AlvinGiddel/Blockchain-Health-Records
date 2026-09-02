@@ -320,8 +320,19 @@ async function initKmpdcRegistry() {
     }
 }
 
+// Ensure profile_photo column exists on users table for universal avatar support
+async function initUserSchemaExtensions() {
+    try {
+        await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_photo TEXT DEFAULT NULL;');
+        console.log('[Schema] Users profile_photo column verified.');
+    } catch (err) {
+        console.warn('[Schema] Users profile_photo notice:', err.message);
+    }
+}
+
 // Initialize database synchronization, remote license checks, KMPDC registry & start background timers
 async function initDb() {
+    await initUserSchemaExtensions();
     await initKmpdcRegistry();
     await checkLicense();
     startLicenseCheckTimer();
@@ -659,6 +670,10 @@ app.post('/api/auth/login', async (req, res) => {
         }
 
         const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+        const doctorProfile = parseJsonIfNeeded(user.doctor_profile);
+        const patientProfile = parseJsonIfNeeded(user.patient_profile);
+        const profilePhoto = user.profile_photo || doctorProfile?.profilePhoto || patientProfile?.profilePhoto || null;
+
         res.json({
             token,
             user: {
@@ -667,8 +682,9 @@ app.post('/api/auth/login', async (req, res) => {
                 email: user.email,
                 role: user.role,
                 publicKey: user.public_key,
-                patientProfile: parseJsonIfNeeded(user.patient_profile),
-                doctorProfile: parseJsonIfNeeded(user.doctor_profile),
+                profilePhoto: profilePhoto,
+                patientProfile: patientProfile,
+                doctorProfile: doctorProfile,
                 isApproved: user.is_approved
             }
         });
@@ -682,7 +698,7 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/users/patients', async (req, res) => {
     try {
         const { rows: patients } = await db.query(
-            'SELECT id, name, email, role, public_key as "publicKey", patient_profile as "patientProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'patient\' ORDER BY created_at DESC'
+            'SELECT id, name, email, role, public_key as "publicKey", profile_photo as "profilePhoto", patient_profile as "patientProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'patient\' ORDER BY created_at DESC'
         );
         const formatted = patients.map(p => ({
             ...p,
@@ -698,7 +714,7 @@ app.get('/api/users/patients', async (req, res) => {
 app.get('/api/users/doctors', async (req, res) => {
     try {
         const { rows: doctors } = await db.query(
-            'SELECT id, name, email, role, public_key as "publicKey", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = true ORDER BY created_at DESC'
+            'SELECT id, name, email, role, public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = true ORDER BY created_at DESC'
         );
         const formatted = doctors.map(d => ({
             ...d,
@@ -714,7 +730,7 @@ app.get('/api/users/doctors', async (req, res) => {
 app.get('/api/admin/doctors/pending', async (req, res) => {
     try {
         const { rows: pendingDoctors } = await db.query(
-            'SELECT id, name, email, role, public_key as "publicKey", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = false AND is_rejected = false ORDER BY created_at DESC'
+            'SELECT id, name, email, role, public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = false AND is_rejected = false ORDER BY created_at DESC'
         );
         const formatted = pendingDoctors.map(d => ({
             ...d,
@@ -794,11 +810,11 @@ app.get('/api/admin/pending', async (req, res) => {
     }
 });
 
-// Get All Admins (Tenant and Super Admins)
+// Get All Registered Hospital Administrators (Super Admin Authority)
 app.get('/api/admin/all', async (req, res) => {
     try {
         const { rows: admins } = await db.query(
-            'SELECT id, name, email, role, is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role IN (\'admin\', \'super_admin\') ORDER BY created_at DESC'
+            'SELECT id, name, email, role, profile_photo as "profilePhoto", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role IN (\'admin\', \'super_admin\') ORDER BY created_at DESC'
         );
         res.json(admins);
     } catch (err) {
@@ -1017,6 +1033,60 @@ app.post('/api/auth/update-email', async (req, res) => {
     } catch (err) {
         console.error('Email update error:', err);
         res.status(500).json({ error: err.message || 'Failed to update email address.' });
+    }
+});
+
+// Universal Profile Photo Update (Available to all users: Patient, Doctor, Admin, Super Admin)
+app.post('/api/users/update-profile-photo', async (req, res) => {
+    try {
+        const { userId, profilePhoto } = req.body;
+        if (!userId) {
+            return res.status(400).json({ error: 'User ID is required.' });
+        }
+
+        const { rows: users } = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
+        if (users.length === 0) {
+            return res.status(404).json({ error: 'Account not found.' });
+        }
+        const user = users[0];
+
+        // Update profile_photo column
+        await db.query('UPDATE users SET profile_photo = $1 WHERE id = $2', [profilePhoto || null, userId]);
+
+        // If user is doctor, also sync with doctor_profile for backward compatibility
+        if (user.role === 'doctor') {
+            const currentDocProfile = parseJsonIfNeeded(user.doctor_profile) || {};
+            currentDocProfile.profilePhoto = profilePhoto || null;
+            await db.query('UPDATE users SET doctor_profile = $1 WHERE id = $2', [JSON.stringify(currentDocProfile), userId]);
+        }
+
+        // Return updated user object
+        const { rows: updatedRows } = await db.query(
+            'SELECT id, name, email, role, public_key as "publicKey", profile_photo as "profilePhoto", patient_profile as "patientProfile", doctor_profile as "doctorProfile", is_approved as "isApproved" FROM users WHERE id = $1',
+            [userId]
+        );
+        const updatedUser = updatedRows[0];
+
+        // Audit log
+        db.query(
+            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            ['profile_photo_update', user.id, user.name, user.id, 'System', `User ${user.name} (${user.role}) updated their profile picture.`]
+        ).catch(err => console.error('Failed to log profile photo update audit:', err));
+
+        res.json({
+            success: true,
+            message: profilePhoto ? 'Profile picture updated successfully!' : 'Profile picture removed.',
+            user: {
+                ...updatedUser,
+                profilePhoto: updatedUser.profilePhoto || null,
+                patientProfile: parseJsonIfNeeded(updatedUser.patientProfile),
+                doctorProfile: parseJsonIfNeeded(updatedUser.doctorProfile)
+            }
+        });
+    } catch (err) {
+        console.error('Profile photo update error:', err);
+        res.status(500).json({ error: 'Failed to update profile picture.' });
     }
 });
 

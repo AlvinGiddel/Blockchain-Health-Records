@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, Activity, Heart, ShieldCheck, AlertTriangle, Edit3, Save, X, Stethoscope, Briefcase, FileText, Lock } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { User, Mail, Phone, Activity, Heart, ShieldCheck, AlertTriangle, Edit3, Save, X, Stethoscope, Briefcase, FileText, Lock, Camera, Upload, Trash2 } from 'lucide-react';
 import { safeFetch } from '../utils/api';
+import { compressImage } from '../utils/imageUtils';
 
 export default function Profile({ user, onUpdateUser }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -24,6 +25,65 @@ export default function Profile({ user, onUpdateUser }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Photo management state
+  const photoInputRef = useRef(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoMsg, setPhotoMsg] = useState('');
+
+  const handlePhotoSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoUploading(true);
+    setPhotoMsg('');
+    try {
+      const compressedDataUrl = await compressImage(file, 320, 320, 0.85);
+      const data = await safeFetch('/api/users/update-profile-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id || user._id,
+          profilePhoto: compressedDataUrl
+        })
+      });
+      if (onUpdateUser && data.user) {
+        onUpdateUser(data.user);
+      }
+      setPhotoMsg('Profile picture updated successfully!');
+      setTimeout(() => setPhotoMsg(''), 3000);
+    } catch (err) {
+      setPhotoMsg(err.message || 'Failed to update photo.');
+      setTimeout(() => setPhotoMsg(''), 4000);
+    } finally {
+      setPhotoUploading(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!window.confirm('Are you sure you want to remove your profile picture?')) return;
+    setPhotoUploading(true);
+    try {
+      const data = await safeFetch('/api/users/update-profile-photo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id || user._id,
+          profilePhoto: null
+        })
+      });
+      if (onUpdateUser && data.user) {
+        onUpdateUser(data.user);
+      }
+      setPhotoMsg('Profile picture removed.');
+      setTimeout(() => setPhotoMsg(''), 3000);
+    } catch (err) {
+      setPhotoMsg(err.message || 'Failed to remove photo.');
+      setTimeout(() => setPhotoMsg(''), 4000);
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
 
   // Email update modal state
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -165,10 +225,96 @@ export default function Profile({ user, onUpdateUser }) {
       <div className="grid-3" style={{ gap: '24px', alignItems: 'start' }}>
         {/* Profile Card Summary */}
         <div className="glass-card" style={{ textAlign: 'center', padding: '32px 24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-            <div className="user-avatar" style={{ width: '96px', height: '96px', borderRadius: '50%', fontSize: '2.25rem' }}>
-              {getInitials(user.name)}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px' }}>
+            <div 
+              style={{ position: 'relative', width: '104px', height: '104px', cursor: 'pointer' }}
+              onClick={() => photoInputRef.current?.click()}
+              title="Click to change profile picture"
+            >
+              <div 
+                className="user-avatar" 
+                style={{ 
+                  width: '100%', 
+                  height: '100%', 
+                  borderRadius: '50%', 
+                  fontSize: '2.5rem', 
+                  overflow: 'hidden', 
+                  border: '3px solid var(--glass-border)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                  padding: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                {user.profilePhoto ? (
+                  <img src={user.profilePhoto} alt={user.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  getInitials(user.name)
+                )}
+              </div>
+              
+              {/* Camera Icon Overlay button */}
+              <div 
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  background: 'var(--color-primary)',
+                  color: '#fff',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+                  border: '2px solid var(--bg-card)'
+                }}
+                title="Upload new photo"
+              >
+                <Camera size={16} />
+              </div>
             </div>
+
+            <input 
+              type="file" 
+              ref={photoInputRef} 
+              style={{ display: 'none' }} 
+              accept="image/png, image/jpeg, image/webp" 
+              onChange={handlePhotoSelect} 
+            />
+
+            {/* Quick photo actions */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                onClick={() => photoInputRef.current?.click()}
+                disabled={photoUploading}
+              >
+                <Upload size={12} /> {photoUploading ? 'Uploading...' : 'Change Photo'}
+              </button>
+              {user.profilePhoto && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '4px 8px', fontSize: '0.75rem', color: 'var(--color-error)' }}
+                  onClick={handleRemovePhoto}
+                  disabled={photoUploading}
+                  title="Remove profile photo"
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
+
+            {photoMsg && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', marginTop: '8px', fontWeight: 600 }}>
+                {photoMsg}
+              </span>
+            )}
           </div>
           <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: '0 0 6px 0', color: 'var(--text-primary)' }}>{user.name}</h2>
           <span className="badge badge-success" style={{ textTransform: 'uppercase', padding: '4px 12px', fontSize: '0.75rem', letterSpacing: '0.5px' }}>
