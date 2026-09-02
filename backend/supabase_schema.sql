@@ -10,6 +10,19 @@ DROP TABLE IF EXISTS appointments CASCADE;
 DROP TABLE IF EXISTS blocks CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
+-- 0. Organizations Table (Multi-tenant SaaS Architecture)
+CREATE TABLE IF NOT EXISTS organizations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL UNIQUE,
+    slug VARCHAR(100) UNIQUE,
+    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'trial', 'disabled')),
+    license_expires_at TIMESTAMPTZ DEFAULT (NOW() + INTERVAL '30 days'),
+    max_doctors INTEGER DEFAULT 25,
+    max_patients INTEGER DEFAULT 1000,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 1. Users Table
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -19,6 +32,7 @@ CREATE TABLE users (
     role VARCHAR(50) NOT NULL CHECK (role IN ('patient', 'doctor', 'admin', 'super_admin')),
     public_key TEXT NOT NULL,
     private_key TEXT NOT NULL,
+    profile_photo TEXT DEFAULT NULL,
     patient_profile JSONB DEFAULT NULL,
     doctor_profile JSONB DEFAULT NULL,
     is_approved BOOLEAN DEFAULT true,
@@ -26,6 +40,17 @@ CREATE TABLE users (
     reset_password_token VARCHAR(255) DEFAULT NULL,
     reset_password_expires TIMESTAMP WITH TIME ZONE DEFAULT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 1b. Tenant Memberships Table (Multi-clinic patient access & doctor/admin scoping)
+CREATE TABLE IF NOT EXISTS tenant_memberships (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    role VARCHAR(50) NOT NULL CHECK (role IN ('patient', 'doctor', 'admin', 'super_admin')),
+    status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'pending')),
+    joined_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_user_organization UNIQUE (user_id, organization_id)
 );
 
 -- 2. Appointments Table
