@@ -51,25 +51,27 @@ export default function Login({ onLoginSuccess }) {
   const [profilePhoto, setProfilePhoto] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
-  const [kmpdcStatus, setKmpdcStatus] = useState({ verifying: false, verified: false, error: '', record: null });
+  const [cadre, setCadre] = useState('doctor');
+  const [councilStatus, setCouncilStatus] = useState({ verifying: false, verified: false, error: '', record: null, regulator: '' });
 
-  const checkKmpdcLicense = async (licVal, docName) => {
+  const checkPractitionerLicense = async (licVal, docName, currentCadre = cadre) => {
     if (!licVal || licVal.trim().length < 3) {
-      setKmpdcStatus({ verifying: false, verified: false, error: '', record: null });
+      setCouncilStatus({ verifying: false, verified: false, error: '', record: null, regulator: '' });
       return;
     }
 
-    setKmpdcStatus({ verifying: true, verified: false, error: '', record: null });
+    setCouncilStatus({ verifying: true, verified: false, error: '', record: null, regulator: '' });
 
     try {
-      const url = `/api/kmpdc/verify?license=${encodeURIComponent(licVal.trim())}${docName ? `&name=${encodeURIComponent(docName.trim())}` : ''}`;
+      const url = `/api/practitioner/verify?license=${encodeURIComponent(licVal.trim())}&cadre=${encodeURIComponent(currentCadre)}${docName ? `&name=${encodeURIComponent(docName.trim())}` : ''}`;
       const data = await safeFetch(url);
       if (data.valid) {
-        setKmpdcStatus({
+        setCouncilStatus({
           verifying: false,
           verified: true,
           error: '',
-          record: data.practitioner
+          record: data.practitioner,
+          regulator: data.regulator
         });
         if (data.practitioner?.specialization && !specialization) {
           setSpecialization(data.practitioner.specialization);
@@ -78,19 +80,21 @@ export default function Login({ onLoginSuccess }) {
           setHospital(data.practitioner.facility);
         }
       } else {
-        setKmpdcStatus({
+        setCouncilStatus({
           verifying: false,
           verified: false,
           error: data.error || 'License verification failed.',
-          record: null
+          record: null,
+          regulator: data.regulator || ''
         });
       }
     } catch (err) {
-      setKmpdcStatus({
+      setCouncilStatus({
         verifying: false,
         verified: false,
-        error: err.message || 'Failed to verify license with KMPDC registry.',
-        record: null
+        error: err.message || 'Failed to verify license with statutory registry.',
+        record: null,
+        regulator: ''
       });
     }
   };
@@ -241,7 +245,8 @@ export default function Login({ onLoginSuccess }) {
 
         body.organizationId = doctorOrgId === 'other' ? null : doctorOrgId;
         body.profile = {
-          specialization,
+          cadre,
+          specialization: specialization || (cadre === 'nurse' ? 'Registered Nursing' : cadre === 'midwife' ? 'Midwifery' : 'General Practice'),
           licenseNumber,
           hospital: selectedFacilityName,
           yearsOfExperience: parseInt(yearsOfExperience) || 0,
@@ -481,10 +486,10 @@ export default function Login({ onLoginSuccess }) {
                 <button
                   type="button"
                   className={`btn ${role === 'doctor' ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ flex: 1, minWidth: '110px' }}
+                  style={{ flex: 1, minWidth: '130px' }}
                   onClick={() => setRole('doctor')}
                 >
-                  <Stethoscope size={16} /> Doctor
+                  <Stethoscope size={16} /> Practitioner / Nurse
                 </button>
                 <button
                   type="button"
@@ -732,55 +737,105 @@ export default function Login({ onLoginSuccess }) {
                 {role === 'doctor' && (
                   <>
                     <h4 style={{ fontSize: '0.9rem', color: 'var(--color-primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Stethoscope size={16} /> Clinical Qualifications
+                      <Stethoscope size={16} /> Clinical Qualifications & Statutory Registration
                     </h4>
-                    <div className="form-group">
-                      <label htmlFor="specialization">Specialization</label>
-                      <input
-                        type="text"
-                        id="specialization"
-                        className="form-control"
-                        placeholder="e.g. Cardiologist / General Practitioner"
-                        required
-                        value={specialization}
-                        onChange={(e) => setSpecialization(e.target.value)}
-                      />
+
+                    {/* Cadre Selection */}
+                    <div className="form-group" style={{ marginBottom: '16px' }}>
+                      <label style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        Professional Cadre & Statutory Council <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', marginTop: '6px' }}>
+                        {[
+                          { id: 'doctor', label: '🩺 Medical Doctor', regulator: 'KMPDC' },
+                          { id: 'dentist', label: '🦷 Dental Surgeon', regulator: 'KMPDC' },
+                          { id: 'nurse', label: '💉 Registered Nurse', regulator: 'NCK' },
+                          { id: 'midwife', label: '👶 Registered Midwife', regulator: 'NCK' }
+                        ].map(item => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              setCadre(item.id);
+                              setCouncilStatus({ verifying: false, verified: false, error: '', record: null, regulator: '' });
+                              if (licenseNumber && licenseNumber.length >= 3) {
+                                checkPractitionerLicense(licenseNumber, name, item.id);
+                              }
+                            }}
+                            style={{
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              fontSize: '0.8rem',
+                              cursor: 'pointer',
+                              border: cadre === item.id ? '2px solid var(--color-primary)' : '1px solid var(--glass-border)',
+                              background: cadre === item.id ? 'rgba(99, 102, 241, 0.18)' : 'rgba(255, 255, 255, 0.03)',
+                              color: cadre === item.id ? 'var(--text-primary)' : 'var(--text-secondary)',
+                              fontWeight: cadre === item.id ? 600 : 400,
+                              textAlign: 'center',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <div>{item.label}</div>
+                            <small style={{ fontSize: '0.68rem', opacity: 0.8, color: cadre === item.id ? 'var(--color-accent)' : 'inherit' }}>
+                              ({item.regulator} Regulated)
+                            </small>
+                          </button>
+                        ))}
+                      </div>
                     </div>
+
                     <div className="form-group">
-                      <label htmlFor="license">Medical License Number (KMPDC Registered)</label>
+                      <label htmlFor="license">
+                        {cadre === 'nurse' || cadre === 'midwife'
+                          ? 'Nursing License / Index Number (NCK Registered)'
+                          : 'Medical License Number (KMPDC Registered)'}
+                      </label>
                       <input
                         type="text"
                         id="license"
                         className="form-control"
-                        placeholder="e.g. A12345 (Medical) or B10234 (Dental)"
+                        placeholder={cadre === 'nurse' || cadre === 'midwife' ? 'e.g. 594079 or KRCHN-12345 (NCK)' : 'e.g. A12345 (Medical) or B10234 (Dental)'}
                         required
                         value={licenseNumber}
-                        style={kmpdcStatus.error ? { borderColor: '#ef4444' } : (kmpdcStatus.verified ? { borderColor: '#10b981' } : {})}
+                        style={councilStatus.error ? { borderColor: '#ef4444' } : (councilStatus.verified ? { borderColor: '#10b981' } : {})}
                         onChange={(e) => {
                           setLicenseNumber(e.target.value);
-                          if (e.target.value.length >= 4) {
-                            checkKmpdcLicense(e.target.value, name);
+                          if (e.target.value.length >= 3) {
+                            checkPractitionerLicense(e.target.value, name, cadre);
                           } else {
-                            setKmpdcStatus({ verifying: false, verified: false, error: '', record: null });
+                            setCouncilStatus({ verifying: false, verified: false, error: '', record: null, regulator: '' });
                           }
                         }}
-                        onBlur={(e) => checkKmpdcLicense(e.target.value, name)}
+                        onBlur={(e) => checkPractitionerLicense(e.target.value, name, cadre)}
                       />
-                      {kmpdcStatus.verifying && (
+                      {councilStatus.verifying && (
                         <div style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '6px' }}>
-                          ⏳ Verifying license with KMPDC Council Register...
+                          ⏳ Verifying credentials with {cadre === 'nurse' || cadre === 'midwife' ? 'Nursing Council of Kenya (NCK)...' : 'KMPDC Council Register...'}
                         </div>
                       )}
-                      {kmpdcStatus.verified && kmpdcStatus.record && (
+                      {councilStatus.verified && councilStatus.record && (
                         <div style={{ color: '#10b981', fontSize: '0.82rem', marginTop: '6px', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '6px 10px', borderRadius: '6px' }}>
-                          ✅ <strong>Verified KMPDC {kmpdcStatus.record.cadre}</strong>: {kmpdcStatus.record.fullName} ({kmpdcStatus.record.specialization}) &bull; {kmpdcStatus.record.facility}
+                          ✅ <strong>Verified {councilStatus.regulator} {councilStatus.record.cadre || cadre}</strong>: {councilStatus.record.fullName} &bull; {councilStatus.record.facility || 'Certified'}
                         </div>
                       )}
-                      {kmpdcStatus.error && (
+                      {councilStatus.error && (
                         <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <AlertCircle size={14} /> {kmpdcStatus.error}
+                          <AlertCircle size={14} /> {councilStatus.error}
                         </div>
                       )}
+                    </div>
+
+                    <div className="form-group">
+                      <label htmlFor="specialization">Clinical Specialization / Department</label>
+                      <input
+                        type="text"
+                        id="specialization"
+                        className="form-control"
+                        placeholder={cadre === 'nurse' ? 'e.g. Critical Care / Paediatric Nursing' : cadre === 'midwife' ? 'e.g. Maternal & Neonatal Health' : 'e.g. Cardiologist / General Practitioner'}
+                        required
+                        value={specialization}
+                        onChange={(e) => setSpecialization(e.target.value)}
+                      />
                     </div>
                     <div className="form-group" style={{ marginBottom: '16px' }}>
                       <label htmlFor="doctorHospital" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>

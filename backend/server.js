@@ -13,6 +13,8 @@ const { tenantStorage } = db;
 const licenseGuard = require('./middleware/licenseGuard');
 const { checkLicense, startLicenseCheckTimer, getLicenseStatus } = require('./services/licenseCheck');
 const { verifyKmpdcLicense } = require('./services/kmpdcVerification');
+const { verifyNckLicense } = require('./services/nckVerification');
+const { verifyPractitioner, recordPractitionerAttestation } = require('./services/practitionerAttestation');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -455,6 +457,65 @@ app.get('/api/kmpdc/verify', async (req, res) => {
     }
 });
 
+// Real-time NCK Nurse / Midwife License Verification API
+app.get('/api/nck/verify', async (req, res) => {
+    try {
+        const { license, name, cadre = 'nurse' } = req.query;
+        if (!license) {
+            return res.status(400).json({ error: 'License query parameter is required (e.g. /api/nck/verify?license=594079&name=Mary+Kung''u)' });
+        }
+        const result = await verifyNckLicense(String(license), name ? String(name) : undefined, String(cadre));
+        if (!result.verified) {
+            return res.status(422).json({
+                valid: false,
+                error: result.error,
+                matchScore: result.matchScore || 0
+            });
+        }
+        res.json({
+            valid: true,
+            practitioner: result.record,
+            matchScore: result.matchScore
+        });
+    } catch (err) {
+        console.error('NCK verification route error:', err);
+        res.status(500).json({ error: 'NCK council verification query failed.' });
+    }
+});
+
+// Unified Practitioner Verification API (KMPDC + NCK based on cadre)
+app.get('/api/practitioner/verify', async (req, res) => {
+    try {
+        const { license, name, cadre = 'doctor' } = req.query;
+        if (!license) {
+            return res.status(400).json({ error: 'License query parameter is required' });
+        }
+        const result = await verifyPractitioner({ 
+            cadre: String(cadre), 
+            licenseNumber: String(license), 
+            practitionerName: name ? String(name) : undefined 
+        });
+        if (!result.verified) {
+            return res.status(422).json({
+                valid: false,
+                error: result.error,
+                regulator: result.regulator,
+                matchScore: result.matchScore || 0
+            });
+        }
+        res.json({
+            valid: true,
+            regulator: result.regulator,
+            cadre: result.cadre,
+            practitioner: result.record,
+            matchScore: result.matchScore
+        });
+    } catch (err) {
+        console.error('Practitioner verification route error:', err);
+        res.status(500).json({ error: 'Practitioner verification query failed.' });
+    }
+});
+
 // Register
 app.post('/api/auth/register', async (req, res) => {
     try {
@@ -559,38 +620,44 @@ app.post('/api/auth/register', async (req, res) => {
             }
         }
 
-        // 4. KMPDC Council Verification & Duplicate Check for Doctors
+        // 4. Council Verification & Duplicate Check for Practitioners (Doctors, Dentists, Nurses, Midwives)
+        let practitionerCheck = null;
         if (role === 'doctor') {
             const incomingLicense = (profile?.licenseNumber || '').trim();
+            const cadre = (profile?.cadre || 'doctor').toLowerCase();
             if (!incomingLicense) {
-                return res.status(400).json({ error: 'Registration rejected: A valid KMPDC Medical License Number (e.g. A12345) is required for doctor registration.' });
+                return res.status(400).json({ 
+                    error: `Registration rejected: A valid ${cadre === 'nurse' || cadre === 'midwife' ? 'NCK Nursing License / Registration Number' : 'KMPDC Medical License Number'} is required.` 
+                });
             }
 
-            // Perform Off-Chain KMPDC Council Verification against practitioner name
-            const kmpdcCheck = await verifyKmpdcLicense(incomingLicense, name);
-            if (!kmpdcCheck.verified) {
-                return res.status(422).json({ error: `KMPDC License Verification Failed: ${kmpdcCheck.error}` });
+            // Perform Off-Chain Statutory Council Verification (KMPDC or NCK) against practitioner name
+            practitionerCheck = await verifyPractitioner({ cadre, licenseNumber: incomingLicense, practitionerName: name });
+            if (!practitionerCheck.verified) {
+                return res.status(422).json({ error: `${practitionerCheck.regulator || 'Council'} License Verification Failed: ${practitionerCheck.error}` });
             }
 
-            // Attach verified council information to doctor profile
+            // Attach verified council information to practitioner profile
             if (profile) {
-                profile.licenseNumber = kmpdcCheck.record.licenseNumber;
-                profile.kmpdcVerified = true;
-                profile.kmpdcCadre = kmpdcCheck.record.cadre;
-                profile.kmpdcSpecialization = kmpdcCheck.record.specialization;
-                profile.kmpdcRetentionYear = kmpdcCheck.record.retentionYear;
-                profile.kmpdcFacility = kmpdcCheck.record.facility;
+                profile.cadre = practitionerCheck.cadre;
+                profile.regulator = practitionerCheck.regulator;
+                profile.licenseNumber = practitionerCheck.record.licenseNumber;
+                profile.councilVerified = true;
+                profile.councilStatus = practitionerCheck.record.status;
+                profile.facility = practitionerCheck.record.facility;
+                profile.lastVerifiedAt = practitionerCheck.record.lastVerifiedAt;
             }
 
             const isLicenseTaken = allUsers.some(u => {
                 if (u.role !== 'doctor') return false;
                 const dProf = parseProfile(u.doctor_profile);
                 const exLicense = (dProf.licenseNumber || '').toUpperCase().trim();
-                return exLicense && exLicense === incomingLicense.toUpperCase();
+                const exRegulator = (dProf.regulator || 'KMPDC').toUpperCase();
+                return exLicense && exLicense === incomingLicense.toUpperCase() && exRegulator === practitionerCheck.regulator;
             });
 
             if (isLicenseTaken) {
-                return res.status(400).json({ error: 'Registration rejected: A doctor with this medical license number is already registered in the system.' });
+                return res.status(400).json({ error: `Registration rejected: A practitioner with this ${practitionerCheck.regulator} license number is already registered in the system.` });
             }
         }
         
@@ -629,6 +696,19 @@ app.post('/api/auth/register', async (req, res) => {
                  isApprovedVal, createdAt]
             );
             user = insertedUsers[0];
+
+            // Record cryptographic practitioner attestation
+            if (role === 'doctor' && practitionerCheck && practitionerCheck.verified) {
+                await recordPractitionerAttestation({
+                    practitionerId: user.id,
+                    regulator: practitionerCheck.regulator,
+                    cadre: practitionerCheck.cadre,
+                    licenseNumber: practitionerCheck.record.licenseNumber,
+                    practitionerPublicKey: publicKey
+                }).catch(attestErr => {
+                    console.error('Failed to record practitioner attestation:', attestErr.message);
+                });
+            }
 
             if (role === 'patient' && targetOrg) {
                 // Link new patient to their selected initial hospital via tenant_memberships
