@@ -18,6 +18,14 @@ export default function Login({ onLoginSuccess }) {
   const [timeoutMessage, setTimeoutMessage] = useState(() => {
     return sessionStorage.getItem('sessionTimedOut') === 'true' ? 'your login session timed out please login again' : '';
   });
+  const [suspensionNotice, setSuspensionNotice] = useState(() => {
+    const notice = sessionStorage.getItem('suspensionNotice');
+    if (notice) {
+      sessionStorage.removeItem('suspensionNotice');
+      return notice;
+    }
+    return '';
+  });
 
   // Patient profile fields
   const [age, setAge] = useState('');
@@ -333,6 +341,13 @@ export default function Login({ onLoginSuccess }) {
             {isRegister ? 'Register as Patient or Healthcare Provider' : 'Enter your credentials to access health records'}
           </p>
         </div>
+
+        {suspensionNotice && (
+          <div className="badge-error" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px', borderRadius: '8px', marginBottom: '20px', width: '100%', fontSize: '0.9rem', backgroundColor: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#ef4444' }}>
+            <AlertCircle size={20} style={{ flexShrink: 0 }} />
+            <span>{suspensionNotice}</span>
+          </div>
+        )}
 
         {timeoutMessage && (
           <div className="badge-warning" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', borderRadius: '8px', marginBottom: '20px', width: '100%', fontSize: '0.9rem', backgroundColor: 'rgba(245, 158, 11, 0.15)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#f59e0b' }}>

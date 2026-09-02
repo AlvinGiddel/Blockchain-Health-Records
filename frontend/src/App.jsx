@@ -232,13 +232,24 @@ export default function App() {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     sessionStorage.removeItem('serverInstanceId');
-    if (options && options.isTimeout === true) {
+    if (options && options.isSuspended === true) {
+      sessionStorage.setItem('suspensionNotice', options.message || 'Your hospital facility has been suspended by platform administration.');
+    } else if (options && options.isTimeout === true) {
       sessionStorage.setItem('sessionTimedOut', 'true');
     } else {
       sessionStorage.removeItem('sessionTimedOut');
     }
     setActiveTab('dashboard');
   };
+
+  // Instant kill-switch listener: logs out users if their clinic is suspended
+  useEffect(() => {
+    const handleSuspended = (e) => {
+      handleLogout({ isSuspended: true, message: e.detail });
+    };
+    window.addEventListener('tenant-suspended', handleSuspended);
+    return () => window.removeEventListener('tenant-suspended', handleSuspended);
+  }, []);
 
   // Inactivity timeout logic to auto log out after inactivity
   useEffect(() => {

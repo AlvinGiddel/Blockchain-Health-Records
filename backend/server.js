@@ -708,11 +708,32 @@ app.post('/api/auth/login', async (req, res) => {
             }
         }
 
-        // Fetch organization name for doctors and admins
+        // Check organization license and suspension status for tenant staff (admins, doctors, nurses)
+        // Super Admin always bypasses to maintain platform governance and emergency recovery authority
         let organizationName = null;
-        if (user.organization_id) {
-            const { rows: orgRows } = await db.query('SELECT name FROM organizations WHERE id = $1', [user.organization_id]);
-            if (orgRows.length > 0) organizationName = orgRows[0].name;
+        if (user.role !== 'super_admin' && user.organization_id) {
+            const { rows: orgRows } = await db.query(
+                'SELECT id, name, status, license_expires_at FROM organizations WHERE id = $1',
+                [user.organization_id]
+            );
+            if (orgRows.length > 0) {
+                const org = orgRows[0];
+                organizationName = org.name;
+
+                // 1. Check if hospital facility is suspended or disabled
+                if (org.status === 'suspended' || org.status === 'disabled') {
+                    return res.status(403).json({
+                        error: `Access Denied: Your hospital facility ("${org.name}") has been suspended by platform administration. All access to this ledger is blocked.`
+                    });
+                }
+
+                // 2. Check if hospital license has expired
+                if (org.license_expires_at && new Date(org.license_expires_at) < new Date()) {
+                    return res.status(403).json({
+                        error: `Access Denied: Your hospital facility ("${org.name}") license expired on ${new Date(org.license_expires_at).toLocaleDateString()}. Please contact administration or renew your subscription.`
+                    });
+                }
+            }
         }
 
         // Fetch tenant memberships for multi-clinic patients

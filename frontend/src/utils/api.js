@@ -33,6 +33,12 @@ export async function parseResponseJson(response) {
       errorMsg = 'Service temporarily unavailable. Please contact your system provider.';
     }
 
+    if (response.status === 403 && typeof errorMsg === 'string' && (errorMsg.toLowerCase().includes('suspended') || errorMsg.toLowerCase().includes('expired'))) {
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('tenant-suspended', { detail: errorMsg }));
+      }
+    }
+
     throw new Error(errorMsg);
   }
 
