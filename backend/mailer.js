@@ -97,6 +97,47 @@ async function getTransporter() {
 }
 
 /**
+ * Unified email delivery helper:
+ * Tries the production Gmail API OAuth2 mailer (utils/mailer.js) first, which works
+ * reliably in serverless environments (Vercel) without SMTP port blocking.
+ * If Gmail OAuth2 credentials are not present or encounter an issue, it seamlessly
+ * falls back to custom SMTP or local sandbox / console mock.
+ */
+async function dispatchEmail({ to, subject, html, text }) {
+    // 1. Primary: Gmail API OAuth2 (Reliable on Vercel Serverless)
+    try {
+        const info = await sendMail({ to, subject, html, text });
+        console.log(`[Mailer] Email delivered via Gmail API OAuth2 to ${to}. Message ID: ${info.messageId}`);
+        return { success: true, messageId: info.messageId };
+    } catch (oauthErr) {
+        console.warn(`[Mailer] Gmail OAuth2 mailer skipped or error (${oauthErr.message}). Attempting SMTP fallback...`);
+    }
+
+    // 2. Secondary: SMTP / Sandbox fallback
+    try {
+        const currentTransporter = await getTransporter();
+        const fromAddr = process.env.EMAIL_USER && !process.env.EMAIL_USER.includes('your_email')
+            ? process.env.EMAIL_USER
+            : '"Blockchain Health Records" <notifications@blockhealthchain.local>';
+
+        const mailOptions = {
+            from: fromAddr,
+            to,
+            subject,
+            html,
+            text: text || (typeof html === 'string' ? html.replace(/<[^>]*>?/gm, ' ') : '')
+        };
+
+        const info = await withTimeout(currentTransporter.sendMail(mailOptions), 6000, 'SMTP dispatch timed out');
+        console.log(`[Mailer] Fallback email dispatched to ${to}. Message ID: ${info.messageId}`);
+        return { success: true, messageId: info.messageId };
+    } catch (fallbackErr) {
+        console.error(`[Mailer] All delivery methods failed for ${to}:`, fallbackErr.message);
+        return { success: false, error: fallbackErr.message };
+    }
+}
+
+/**
  * Send password reset email to the specified user
  * @param {string} email - Destination email
  * @param {string} name - User's full name
@@ -357,35 +398,12 @@ async function sendDoctorApprovalEmail(email, name) {
 
     const textContent = `Hello Dr. ${name},\n\nYour registration request as a Healthcare Provider on the Blockchain Health Records system has been approved by the administrator. You can now log in to access the system and manage patient dossiers.`;
 
-    const mailOptions = {
-        from: '"Blockchain Health Security Node" <security@blockhealthchain.local>',
+    return await dispatchEmail({
         to: email,
         subject: '🩺 Clinical Node Activated - Blockchain Health Records',
-        text: textContent,
-        html: htmlContent
-    };
-
-    try {
-        const info = await withTimeout(currentTransporter.sendMail(mailOptions), 6000, 'SMTP doctor approval mail delivery timed out after 6 seconds');
-        console.log(`[Mailer] Doctor approval mail dispatched to ${email}. Message ID: ${info.messageId}`);
-        
-        if (testAccount && !info.mockFallback) {
-            const etherealUrl = nodemailer.getTestMessageUrl(info);
-            console.log(`[Mailer Preview] Email received in sandbox inbox! View it at: ${etherealUrl}`);
-            return { success: true, messageId: info.messageId, previewUrl: etherealUrl };
-        }
-        return { success: true, messageId: info.messageId };
-    } catch (sendError) {
-        console.error(`[Mailer] SMTP delivery failed to ${email}. Error:`, sendError.message);
-        
-        console.log('\n--- CONSOLE FALLBACK DISPATCH (APPROVAL) ---');
-        console.log(`TO: ${mailOptions.to}`);
-        console.log(`SUBJECT: ${mailOptions.subject}`);
-        console.log(`BODY:\n${mailOptions.text}`);
-        console.log('--------------------------------------------\n');
-
-        return { success: true, messageId: 'console-fallback-id', previewUrl: null };
-    }
+        html: htmlContent,
+        text: textContent
+    });
 }
 
 /**
@@ -475,35 +493,12 @@ async function sendDoctorRejectionEmail(email, name) {
 
     const textContent = `Hello Dr. ${name},\n\nWe regret to inform you that your registration request as a Healthcare Provider on the Blockchain Health Records system has been rejected by the administrator.`;
 
-    const mailOptions = {
-        from: '"Blockchain Health Security Node" <security@blockhealthchain.local>',
+    return await dispatchEmail({
         to: email,
         subject: '❌ Clinical Node Rejected - Blockchain Health Records',
-        text: textContent,
-        html: htmlContent
-    };
-
-    try {
-        const info = await withTimeout(currentTransporter.sendMail(mailOptions), 6000, 'SMTP doctor rejection mail delivery timed out after 6 seconds');
-        console.log(`[Mailer] Doctor rejection mail dispatched to ${email}. Message ID: ${info.messageId}`);
-        
-        if (testAccount && !info.mockFallback) {
-            const etherealUrl = nodemailer.getTestMessageUrl(info);
-            console.log(`[Mailer Preview] Email received in sandbox inbox! View it at: ${etherealUrl}`);
-            return { success: true, messageId: info.messageId, previewUrl: etherealUrl };
-        }
-        return { success: true, messageId: info.messageId };
-    } catch (sendError) {
-        console.error(`[Mailer] SMTP delivery failed to ${email}. Error:`, sendError.message);
-        
-        console.log('\n--- CONSOLE FALLBACK DISPATCH (REJECTION) ---');
-        console.log(`TO: ${mailOptions.to}`);
-        console.log(`SUBJECT: ${mailOptions.subject}`);
-        console.log(`BODY:\n${mailOptions.text}`);
-        console.log('---------------------------------------------\n');
-
-        return { success: true, messageId: 'console-fallback-id', previewUrl: null };
-    }
+        html: htmlContent,
+        text: textContent
+    });
 }
 
 /**
@@ -552,22 +547,12 @@ async function sendClinicApprovalEmail({ email, adminName, clinicName }) {
 
     const textContent = `Hello ${adminName},\n\nYour clinic "${clinicName}" has been approved! Your 14-day trial has begun.\n\nLog in at: ${loginUrl}`;
 
-    const mailOptions = {
-        from: '"Block Health Chain" <notifications@blockhealthchain.local>',
+    return await dispatchEmail({
         to: email,
         subject: `🎉 Clinic Approved: ${clinicName} Trial Activated`,
-        text: textContent,
-        html: htmlContent
-    };
-
-    try {
-        const info = await withTimeout(currentTransporter.sendMail(mailOptions), 6000, 'SMTP clinic approval email timed out');
-        console.log(`[Mailer] Clinic approval email dispatched to ${email}. Message ID: ${info.messageId}`);
-        return { success: true, messageId: info.messageId };
-    } catch (err) {
-        console.error(`[Mailer] SMTP delivery failed to ${email}:`, err.message);
-        return { success: true, messageId: 'fallback' };
-    }
+        html: htmlContent,
+        text: textContent
+    });
 }
 
 /**
@@ -604,21 +589,12 @@ async function sendClinicRejectionEmail({ email, adminName, clinicName, reason }
     </html>
     `;
 
-    const mailOptions = {
-        from: '"Block Health Chain" <notifications@blockhealthchain.local>',
+    return await dispatchEmail({
         to: email,
         subject: `Notice Regarding Clinic Registration: ${clinicName}`,
-        text: `Hello ${adminName},\n\nWe are unable to approve registration for "${clinicName}" at this time.${reason ? ` Reason: ${reason}` : ''}`,
-        html: htmlContent
-    };
-
-    try {
-        const info = await withTimeout(currentTransporter.sendMail(mailOptions), 6000, 'SMTP clinic rejection email timed out');
-        return { success: true, messageId: info.messageId };
-    } catch (err) {
-        console.error(`[Mailer] SMTP delivery failed to ${email}:`, err.message);
-        return { success: true, messageId: 'fallback' };
-    }
+        html: htmlContent,
+        text: textContent
+    });
 }
 
 /**
@@ -673,22 +649,12 @@ async function sendPractitionerPendingEmail({ email, name, cadre = 'doctor', reg
 
     const textContent = `Hello ${titlePrefix}${name},\n\nYour registration as a ${cadreLabel} on the Block Health Chain has been received and is awaiting approval by the Clinical Administrator at ${facilityLabel}.\n\nStatutory License (${regulator}): ${licenseNumber}\nStatus: Pending Approval\n\nYou will receive a confirmation email once your account is activated.`;
 
-    const mailOptions = {
-        from: '"Block Health Chain" <notifications@blockhealthchain.local>',
+    return await dispatchEmail({
         to: email,
         subject: `⏳ Registration Received: ${cadreLabel} Application Pending Approval`,
-        text: textContent,
-        html: htmlContent
-    };
-
-    try {
-        const info = await withTimeout(currentTransporter.sendMail(mailOptions), 6000, 'SMTP practitioner pending email timed out');
-        console.log(`[Mailer] Practitioner pending acknowledgment email dispatched to ${email}. Message ID: ${info.messageId}`);
-        return { success: true, messageId: info.messageId };
-    } catch (err) {
-        console.error(`[Mailer] SMTP delivery failed to ${email}:`, err.message);
-        return { success: true, messageId: 'fallback' };
-    }
+        html: htmlContent,
+        text: textContent
+    });
 }
 
 /**
@@ -739,22 +705,12 @@ async function sendAdminNewPractitionerAlert({ adminEmail, adminName, practition
 
     const textContent = `Hello ${adminName},\n\nA new practitioner (${titlePrefix}${practitionerName} - ${cadreLabel}) has registered with ${hospitalName} and is awaiting your review.\n\nLog in to review and approve: ${loginUrl}`;
 
-    const mailOptions = {
-        from: '"Block Health Chain" <notifications@blockhealthchain.local>',
+    return await dispatchEmail({
         to: adminEmail,
         subject: `🔔 Pending Approval: New ${cadreLabel} Registration (${titlePrefix}${practitionerName})`,
-        text: textContent,
-        html: htmlContent
-    };
-
-    try {
-        const info = await withTimeout(currentTransporter.sendMail(mailOptions), 6000, 'SMTP admin alert email timed out');
-        console.log(`[Mailer] Admin alert email dispatched to ${adminEmail}. Message ID: ${info.messageId}`);
-        return { success: true, messageId: info.messageId };
-    } catch (err) {
-        console.error(`[Mailer] SMTP delivery failed to ${adminEmail}:`, err.message);
-        return { success: true, messageId: 'fallback' };
-    }
+        html: htmlContent,
+        text: textContent
+    });
 }
 
 module.exports = {
