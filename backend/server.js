@@ -794,6 +794,18 @@ app.get('/api/admin/pending', async (req, res) => {
     }
 });
 
+// Get All Admins (Tenant and Super Admins)
+app.get('/api/admin/all', async (req, res) => {
+    try {
+        const { rows: admins } = await db.query(
+            'SELECT id, name, email, role, is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role IN (\'admin\', \'super_admin\') ORDER BY created_at DESC'
+        );
+        res.json(admins);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Approve Pending Admin
 app.post('/api/admin/approve/:id', async (req, res) => {
     try {

@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { 
   Database, ShieldAlert, ShieldCheck, UserCheck, RefreshCw, 
   Layers, Users, Zap, Terminal, Check, X, Stethoscope, 
-  User, Search, UserCog, Activity, Lock, Cpu, Server, CheckCircle2
+  User, Search, UserCog, Activity, Lock, Cpu, Server, CheckCircle2,
+  ChevronRight, ArrowUpRight, Shield, Clock, Hash
 } from 'lucide-react';
 import LicenseControlWidget from './LicenseControlWidget';
 import { getApiUrl } from '../utils/api';
@@ -22,6 +23,7 @@ export default function AdminPanel({ user }) {
   const [recovering, setRecovering] = useState(false);
   const [dbPatients, setDbPatients] = useState([]);
   const [dbDoctors, setDbDoctors] = useState([]);
+  const [allAdmins, setAllAdmins] = useState([]);
   
   // Custom states for admin approval workflow & ledger explorations
   const [pendingAdmins, setPendingAdmins] = useState([]);
@@ -32,6 +34,10 @@ export default function AdminPanel({ user }) {
   const [toast, setToast] = useState(null); // { message, type }
   const [isInitialFetched, setIsInitialFetched] = useState(false);
   const [mining, setMining] = useState(false);
+
+  // Interactive Metric Card Modal State: 'admins' | 'doctors' | 'patients' | 'blocks' | 'consensus' | null
+  const [activeMetricModal, setActiveMetricModal] = useState(null);
+  const [modalSearchQuery, setModalSearchQuery] = useState('');
 
   // Search state for Node Directory & Registry Control
   const [nodeSearchQuery, setNodeSearchQuery] = useState('');
@@ -119,6 +125,11 @@ export default function AdminPanel({ user }) {
       const resPending = await fetch(getApiUrl('/api/admin/pending'));
       const pendingData = resPending.ok ? await resPending.json() : [];
 
+      // Fetch all admins
+      const resAllAdmins = await fetch(getApiUrl('/api/admin/all'));
+      const allAdminsData = resAllAdmins.ok ? await resAllAdmins.json() : [];
+      setAllAdmins(allAdminsData.length > 0 ? allAdminsData : [{ id: user.id || user._id, name: user.name, email: user.email, role: user.role, isApproved: true, createdAt: new Date() }]);
+
       // Fetch pending doctor requests
       const resPendingDocs = await fetch(getApiUrl('/api/admin/doctors/pending'));
       const pendingDocsData = resPendingDocs.ok ? await resPendingDocs.json() : [];
@@ -162,7 +173,7 @@ export default function AdminPanel({ user }) {
           mempool: statsData.mempool,
           doctors: statsData.doctors,
           patients: statsData.patients,
-          admins: statsData.admins || (pendingData.length + 1),
+          admins: allAdminsData.length > 0 ? allAdminsData.length : (statsData.admins || (pendingData.length + 1)),
           isValid: statsData.isValid
         });
       }
@@ -480,7 +491,7 @@ export default function AdminPanel({ user }) {
         )}
       </div>
 
-      {/* SaaS Platform Tenancy & Infrastructure Metrics */}
+      {/* SaaS Platform Tenancy & Infrastructure Metrics (Clickable Cards) */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -488,59 +499,114 @@ export default function AdminPanel({ user }) {
         marginBottom: '28px'
       }}>
         {/* Tenant Administrators Card */}
-        <div className="glass-card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <UserCog size={24} color="#f59e0b" />
+        <div 
+          className="glass-card stats-card-clickable" 
+          onClick={() => { setActiveMetricModal('admins'); setModalSearchQuery(''); }}
+          style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', transition: 'all 0.25s ease', border: '1px solid rgba(245, 158, 11, 0.25)' }}
+          title="Click to inspect Tenant Administrators"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <UserCog size={24} color="#f59e0b" />
+            </div>
+            <div>
+              <h4 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{stats.admins}</h4>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '2px 0 0 0' }}>Tenant Admins</p>
+            </div>
           </div>
-          <div>
-            <h4 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{stats.admins}</h4>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '2px 0 0 0' }}>Tenant Admins</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: '#f59e0b', fontWeight: 600, borderTop: '1px solid var(--glass-border)', paddingTop: '8px' }}>
+            <span>Manage Admins</span>
+            <ChevronRight size={13} />
           </div>
         </div>
 
         {/* Clinical Practitioner Nodes Card */}
-        <div className="glass-card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ background: 'rgba(99, 102, 241, 0.12)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Stethoscope size={24} color="var(--color-primary)" />
+        <div 
+          className="glass-card stats-card-clickable" 
+          onClick={() => { setActiveMetricModal('doctors'); setModalSearchQuery(''); }}
+          style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', transition: 'all 0.25s ease', border: '1px solid rgba(99, 102, 241, 0.25)' }}
+          title="Click to inspect Licensed Practitioners"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ background: 'rgba(99, 102, 241, 0.12)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Stethoscope size={24} color="var(--color-primary)" />
+            </div>
+            <div>
+              <h4 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{stats.doctors}</h4>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '2px 0 0 0' }}>Licensed Practitioners</p>
+            </div>
           </div>
-          <div>
-            <h4 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{stats.doctors}</h4>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '2px 0 0 0' }}>Licensed Practitioners</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--color-primary)', fontWeight: 600, borderTop: '1px solid var(--glass-border)', paddingTop: '8px' }}>
+            <span>Inspect Nodes</span>
+            <ChevronRight size={13} />
           </div>
         </div>
 
         {/* Registered Patient Identities Card */}
-        <div className="glass-card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Users size={24} color="#10b981" />
+        <div 
+          className="glass-card stats-card-clickable" 
+          onClick={() => { setActiveMetricModal('patients'); setModalSearchQuery(''); }}
+          style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', transition: 'all 0.25s ease', border: '1px solid rgba(16, 185, 129, 0.25)' }}
+          title="Click to inspect Patient Identities"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Users size={24} color="#10b981" />
+            </div>
+            <div>
+              <h4 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{stats.patients}</h4>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '2px 0 0 0' }}>Patient Identities</p>
+            </div>
           </div>
-          <div>
-            <h4 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{stats.patients}</h4>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '2px 0 0 0' }}>Patient Identities</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: '#10b981', fontWeight: 600, borderTop: '1px solid var(--glass-border)', paddingTop: '8px' }}>
+            <span>Browse Accounts</span>
+            <ChevronRight size={13} />
           </div>
         </div>
 
         {/* Chain Height Card */}
-        <div className="glass-card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ background: 'rgba(139, 92, 246, 0.12)', border: '1px solid rgba(139, 92, 246, 0.3)', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Layers size={24} color="#8b5cf6" />
+        <div 
+          className="glass-card stats-card-clickable" 
+          onClick={() => { setActiveMetricModal('blocks'); setModalSearchQuery(''); }}
+          style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', transition: 'all 0.25s ease', border: '1px solid rgba(139, 92, 246, 0.25)' }}
+          title="Click to inspect Mined Blocks"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ background: 'rgba(139, 92, 246, 0.12)', border: '1px solid rgba(139, 92, 246, 0.3)', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Layers size={24} color="#8b5cf6" />
+            </div>
+            <div>
+              <h4 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{stats.blocks}</h4>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '2px 0 0 0' }}>Mined Blocks (Height)</p>
+            </div>
           </div>
-          <div>
-            <h4 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{stats.blocks}</h4>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '2px 0 0 0' }}>Mined Blocks (Height)</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: '#8b5cf6', fontWeight: 600, borderTop: '1px solid var(--glass-border)', paddingTop: '8px' }}>
+            <span>View Chain State</span>
+            <ChevronRight size={13} />
           </div>
         </div>
 
         {/* Consensus Health Card */}
-        <div className="glass-card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <div style={{ background: stats.isValid ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)', border: stats.isValid ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Cpu size={24} color={stats.isValid ? '#10b981' : '#ef4444'} />
+        <div 
+          className="glass-card stats-card-clickable" 
+          onClick={() => { setActiveMetricModal('consensus'); setModalSearchQuery(''); }}
+          style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', transition: 'all 0.25s ease', border: stats.isValid ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(239, 68, 68, 0.25)' }}
+          title="Click to inspect POW Consensus & Quorum State"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ background: stats.isValid ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)', border: stats.isValid ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Cpu size={24} color={stats.isValid ? '#10b981' : '#ef4444'} />
+            </div>
+            <div>
+              <h4 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: stats.isValid ? '#10b981' : '#ef4444' }}>
+                {stats.isValid ? 'POW Quorum' : 'Tampered'}
+              </h4>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '2px 0 0 0' }}>Consensus State</p>
+            </div>
           </div>
-          <div>
-            <h4 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: stats.isValid ? '#10b981' : '#ef4444' }}>
-              {stats.isValid ? 'POW Quorum' : 'Tampered'}
-            </h4>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '2px 0 0 0' }}>Consensus State</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: stats.isValid ? '#10b981' : '#ef4444', fontWeight: 600, borderTop: '1px solid var(--glass-border)', paddingTop: '8px' }}>
+            <span>Quorum Diagnostics</span>
+            <ChevronRight size={13} />
           </div>
         </div>
       </div>
@@ -972,6 +1038,417 @@ export default function AdminPanel({ user }) {
           ))}
         </div>
       </div>
+
+      {/* Interactive Metric Detail Modals */}
+      {activeMetricModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999,
+          backdropFilter: 'blur(8px)',
+          padding: '20px'
+        }}>
+          <div className="glass-card" style={{
+            width: '100%',
+            maxWidth: '900px',
+            border: '1px solid var(--glass-border)',
+            boxShadow: '0 0 35px rgba(0, 0, 0, 0.5)',
+            padding: '28px',
+            background: 'rgba(15, 15, 25, 0.98)',
+            maxHeight: '85vh',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  background: activeMetricModal === 'admins' ? 'rgba(245, 158, 11, 0.15)' :
+                              activeMetricModal === 'doctors' ? 'rgba(99, 102, 241, 0.15)' :
+                              activeMetricModal === 'patients' ? 'rgba(16, 185, 129, 0.15)' :
+                              activeMetricModal === 'blocks' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                  padding: '10px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--glass-border)'
+                }}>
+                  {activeMetricModal === 'admins' && <UserCog size={22} color="#f59e0b" />}
+                  {activeMetricModal === 'doctors' && <Stethoscope size={22} color="var(--color-primary)" />}
+                  {activeMetricModal === 'patients' && <Users size={22} color="#10b981" />}
+                  {activeMetricModal === 'blocks' && <Layers size={22} color="#8b5cf6" />}
+                  {activeMetricModal === 'consensus' && <Cpu size={22} color="#10b981" />}
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                    {activeMetricModal === 'admins' && 'Tenant Administrators & Governance Matrix'}
+                    {activeMetricModal === 'doctors' && 'Licensed Clinical Node Operators'}
+                    {activeMetricModal === 'patients' && 'Registered Patient Identities (Ledger Directory)'}
+                    {activeMetricModal === 'blocks' && 'Blockchain Ledger Height & Block Snapshots'}
+                    {activeMetricModal === 'consensus' && 'Cryptographic Consensus & Quorum State'}
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    {activeMetricModal === 'admins' && `Total Administrators: ${allAdmins.length} (${pendingAdmins.length} pending review)`}
+                    {activeMetricModal === 'doctors' && `Total Verified Practitioners: ${dbDoctors.length} nodes`}
+                    {activeMetricModal === 'patients' && `Total Patient Keys: ${dbPatients.length} accounts`}
+                    {activeMetricModal === 'blocks' && `Mined Chain Height: ${blocks.length} blocks in continuous sequence`}
+                    {activeMetricModal === 'consensus' && 'Proof-of-Work Quorum & Tamper-Verification Architecture'}
+                  </span>
+                </div>
+              </div>
+              <button 
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}
+                onClick={() => setActiveMetricModal(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{ flex: 1, overflowY: 'auto', marginBottom: '16px', paddingRight: '4px' }}>
+              
+              {/* 1. Admins Modal */}
+              {activeMetricModal === 'admins' && (
+                <div>
+                  <div style={{ position: 'relative', marginBottom: '16px' }}>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Filter administrators by name or email..."
+                      value={modalSearchQuery}
+                      onChange={(e) => setModalSearchQuery(e.target.value)}
+                      style={{ paddingLeft: '32px', fontSize: '0.85rem' }}
+                    />
+                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  </div>
+
+                  <div className="table-container">
+                    <table className="custom-table" style={{ fontSize: '0.8rem' }}>
+                      <thead>
+                        <tr>
+                          <th>Admin Name</th>
+                          <th>Email</th>
+                          <th>Role Tier</th>
+                          <th>Status</th>
+                          <th>Registered</th>
+                          <th style={{ textAlign: 'right' }}>Authority</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allAdmins
+                          .filter(a => {
+                            if (!modalSearchQuery.trim()) return true;
+                            const q = modalSearchQuery.toLowerCase();
+                            return (a.name || '').toLowerCase().includes(q) || (a.email || '').toLowerCase().includes(q);
+                          })
+                          .map(adm => {
+                            const isPending = adm.isApproved === false;
+                            return (
+                              <tr key={adm.id || adm._id}>
+                                <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{adm.name}</td>
+                                <td>{adm.email}</td>
+                                <td>
+                                  <span className={`badge ${adm.role === 'super_admin' ? 'badge-primary' : 'badge-warning'}`} style={{ fontSize: '0.7rem' }}>
+                                    {adm.role === 'super_admin' ? 'Root Super Admin' : 'Tenant Admin'}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className={`badge ${isPending ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: '0.7rem' }}>
+                                    {isPending ? 'Pending Approval' : 'Active & Authorized'}
+                                  </span>
+                                </td>
+                                <td>{new Date(adm.createdAt || Date.now()).toLocaleDateString()}</td>
+                                <td style={{ textAlign: 'right' }}>
+                                  {isPending ? (
+                                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                      <button
+                                        className="btn btn-primary"
+                                        style={{ padding: '4px 8px', fontSize: '0.75rem', background: '#10b981', border: 'none' }}
+                                        onClick={() => handleApproveAdmin(adm.id || adm._id, adm.name)}
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        className="btn btn-danger"
+                                        style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                        onClick={() => handleRejectAdmin(adm.id || adm._id, adm.name)}
+                                      >
+                                        Reject
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Authorized</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* 2. Doctors Modal */}
+              {activeMetricModal === 'doctors' && (
+                <div>
+                  <div style={{ position: 'relative', marginBottom: '16px' }}>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Search practitioners by name, specialization, hospital, license..."
+                      value={modalSearchQuery}
+                      onChange={(e) => setModalSearchQuery(e.target.value)}
+                      style={{ paddingLeft: '32px', fontSize: '0.85rem' }}
+                    />
+                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  </div>
+
+                  <div className="table-container">
+                    <table className="custom-table" style={{ fontSize: '0.8rem' }}>
+                      <thead>
+                        <tr>
+                          <th>Practitioner</th>
+                          <th>Email</th>
+                          <th>Specialization</th>
+                          <th>License Number</th>
+                          <th>Hospital Facility</th>
+                          <th style={{ textAlign: 'right' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dbDoctors
+                          .filter(doc => {
+                            if (!modalSearchQuery.trim()) return true;
+                            const q = modalSearchQuery.toLowerCase();
+                            return (doc.name || '').toLowerCase().includes(q) || (doc.email || '').toLowerCase().includes(q) || (doc.doctorProfile?.specialization || '').toLowerCase().includes(q) || (doc.doctorProfile?.hospital || '').toLowerCase().includes(q) || (doc.doctorProfile?.licenseNumber || '').toLowerCase().includes(q);
+                          })
+                          .map(doc => (
+                            <tr key={doc.id || doc._id}>
+                              <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Dr. {doc.name}</td>
+                              <td>{doc.email}</td>
+                              <td>{doc.doctorProfile?.specialization || 'General Practice'}</td>
+                              <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{doc.doctorProfile?.licenseNumber || 'N/A'}</td>
+                              <td>{doc.doctorProfile?.hospital || 'N/A'}</td>
+                              <td style={{ textAlign: 'right' }}>
+                                <button
+                                  className="btn btn-danger"
+                                  style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                  onClick={() => {
+                                    setActiveMetricModal(null);
+                                    setDeleteTarget({ id: doc.id || doc._id, name: `Dr. ${doc.name}`, role: 'Doctor' });
+                                  }}
+                                >
+                                  Revoke Node
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. Patients Modal */}
+              {activeMetricModal === 'patients' && (
+                <div>
+                  <div style={{ position: 'relative', marginBottom: '16px' }}>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Search patient identities by name or email..."
+                      value={modalSearchQuery}
+                      onChange={(e) => setModalSearchQuery(e.target.value)}
+                      style={{ paddingLeft: '32px', fontSize: '0.85rem' }}
+                    />
+                    <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  </div>
+
+                  <div className="table-container">
+                    <table className="custom-table" style={{ fontSize: '0.8rem' }}>
+                      <thead>
+                        <tr>
+                          <th>Patient Name</th>
+                          <th>Email Address</th>
+                          <th>Key ID Status</th>
+                          <th>Registered Date</th>
+                          <th style={{ textAlign: 'right' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dbPatients
+                          .filter(pat => {
+                            if (!modalSearchQuery.trim()) return true;
+                            const q = modalSearchQuery.toLowerCase();
+                            return (pat.name || '').toLowerCase().includes(q) || (pat.email || '').toLowerCase().includes(q);
+                          })
+                          .map(pat => (
+                            <tr key={pat.id || pat._id}>
+                              <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{pat.name}</td>
+                              <td>{pat.email}</td>
+                              <td>
+                                <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>
+                                  RSA-2048 Seeded
+                                </span>
+                              </td>
+                              <td>{new Date(pat.createdAt || Date.now()).toLocaleDateString()}</td>
+                              <td style={{ textAlign: 'right' }}>
+                                <button
+                                  className="btn btn-danger"
+                                  style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                  onClick={() => {
+                                    setActiveMetricModal(null);
+                                    setDeleteTarget({ id: pat.id || pat._id, name: pat.name, role: 'Patient' });
+                                  }}
+                                >
+                                  Purge Account
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* 4. Blocks Modal */}
+              {activeMetricModal === 'blocks' && (
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Chain Height</span>
+                      <strong style={{ display: 'block', fontSize: '1.2rem', color: 'var(--color-primary)' }}>{blocks.length}</strong>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Consensus Hash</span>
+                      <strong style={{ display: 'block', fontSize: '1.2rem', color: '#10b981' }}>SHA-256</strong>
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Mempool Buffer</span>
+                      <strong style={{ display: 'block', fontSize: '1.2rem', color: '#8b5cf6' }}>{mempoolRecords.length} pending</strong>
+                    </div>
+                  </div>
+
+                  <div className="table-container">
+                    <table className="custom-table" style={{ fontSize: '0.8rem' }}>
+                      <thead>
+                        <tr>
+                          <th>Block Index</th>
+                          <th>Mined Date</th>
+                          <th>Nonce</th>
+                          <th>Encapsulated Tx</th>
+                          <th>Current Block Hash</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {blocks.map(b => (
+                          <tr key={b.index}>
+                            <td>
+                              <span className="badge badge-primary" style={{ fontSize: '0.75rem' }}>Block #{b.index}</span>
+                            </td>
+                            <td>{new Date(b.timestamp).toLocaleString()}</td>
+                            <td style={{ fontFamily: 'monospace' }}>{b.nonce}</td>
+                            <td>{b.records?.length || 0} transactions</td>
+                            <td style={{ fontFamily: 'monospace', color: '#10b981', fontSize: '0.75rem' }}>
+                              {b.hash.substring(0, 18)}...
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* 5. Consensus Modal */}
+              {activeMetricModal === 'consensus' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{
+                    padding: '16px',
+                    borderRadius: '10px',
+                    background: stats.isValid ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                    border: stats.isValid ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(239, 68, 68, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '14px'
+                  }}>
+                    {stats.isValid ? <ShieldCheck size={32} color="#10b981" /> : <ShieldAlert size={32} color="#ef4444" />}
+                    <div>
+                      <strong style={{ fontSize: '1.05rem', color: stats.isValid ? '#10b981' : '#ef4444' }}>
+                        {stats.isValid ? 'Consensus Status: 100% In Quorum (Chain Valid)' : 'Consensus Status: Tamper Detected (Hash Mismatch)'}
+                      </strong>
+                      <p style={{ margin: '3px 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                        {stats.isValid 
+                          ? 'Every PostgreSQL medical record snapshot matches the recursive SHA-256 block hash tree across all tenant nodes.'
+                          : 'A discrepancy was found between database contents and mined block hashes. Trigger self-healing repair below.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid-2" style={{ gap: '14px' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '14px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', display: 'block', marginBottom: '4px' }}>Consensus Protocol</span>
+                      <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Proof of Work (SHA-256)</strong>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Difficulty: 2 leading hex zeros with autonomous nonce searching</p>
+                    </div>
+                    
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '14px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', display: 'block', marginBottom: '4px' }}>Autonomous Auto-Miner</span>
+                      <strong style={{ fontSize: '0.95rem', color: '#8b5cf6' }}>Active & Mutex-Protected</strong>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Trigger threshold: 10 transactions or 60,000ms periodic fallback</p>
+                    </div>
+
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '14px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', display: 'block', marginBottom: '4px' }}>Mempool Unmined Queue</span>
+                      <strong style={{ fontSize: '0.95rem', color: 'var(--color-accent)' }}>{mempoolRecords.length} pending state changes</strong>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Awaiting threshold seal into the next mined block</p>
+                    </div>
+
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '14px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', display: 'block', marginBottom: '4px' }}>Self-Healing Integrity Engine</span>
+                      <strong style={{ fontSize: '0.95rem', color: '#10b981' }}>Standby & Ready</strong>
+                      <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Can restore corrupt database tables from valid block logs</p>
+                    </div>
+                  </div>
+
+                  {!stats.isValid && (
+                    <button
+                      className="btn btn-primary"
+                      style={{ width: '100%', padding: '12px', background: '#ef4444', borderColor: '#ef4444' }}
+                      disabled={recovering}
+                      onClick={() => {
+                        handleRestoreDatabase();
+                        setActiveMetricModal(null);
+                      }}
+                    >
+                      {recovering ? 'Repairing Database State...' : 'Trigger Cryptographic Self-Healing Repair'}
+                    </button>
+                  )}
+                </div>
+              )}
+
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid var(--glass-border)', paddingTop: '16px' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setActiveMetricModal(null)}
+                style={{ minWidth: '110px' }}
+              >
+                Close View
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteTarget && (
