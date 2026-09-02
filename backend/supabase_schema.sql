@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS organizations (
 -- 1. Users Table
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL, -- Scoped for doctors and admins; NULL for multi-clinic patients
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
@@ -56,6 +57,7 @@ CREATE TABLE IF NOT EXISTS tenant_memberships (
 -- 2. Appointments Table
 CREATE TABLE appointments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     patient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     doctor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     patient_name VARCHAR(255) NOT NULL,
@@ -70,6 +72,7 @@ CREATE TABLE appointments (
 -- 3. Records Table
 CREATE TABLE records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
     patient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     doctor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     doctor_name VARCHAR(255) NOT NULL,
@@ -90,20 +93,23 @@ CREATE TABLE records (
     timestamp VARCHAR(100) NOT NULL
 );
 
--- 4. Blocks Table
+-- 4. Blocks Table (Isolated per-organization blockchain ledger)
 CREATE TABLE blocks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    index INTEGER UNIQUE NOT NULL,
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    index INTEGER NOT NULL,
     timestamp VARCHAR(100) NOT NULL,
     records JSONB DEFAULT '[]'::jsonb,
     previous_hash VARCHAR(255) NOT NULL,
     nonce BIGINT NOT NULL,
-    hash VARCHAR(255) UNIQUE NOT NULL
+    hash VARCHAR(255) NOT NULL,
+    CONSTRAINT uq_blocks_org_index UNIQUE (organization_id, index)
 );
 
 -- 5. Audit Logs Table
 CREATE TABLE audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL,
     event_type VARCHAR(100) NOT NULL,
     patient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     patient_name VARCHAR(255),
