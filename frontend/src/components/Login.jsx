@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Lock, Mail, User, Activity, AlertCircle, Heart, Stethoscope, ArrowLeft, KeyRound, Eye, EyeOff } from 'lucide-react';
+import { Shield, Lock, Mail, User, Activity, AlertCircle, Heart, Stethoscope, ArrowLeft, KeyRound, Eye, EyeOff, Building2 } from 'lucide-react';
 import logoSvg from '../assets/logo.svg';
 import { safeFetch } from '../utils/api';
 
@@ -7,6 +7,7 @@ export default function Login({ onLoginSuccess }) {
   const [isRegister, setIsRegister] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [role, setRole] = useState('patient');
+  const [clinicName, setClinicName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -145,6 +146,35 @@ export default function Login({ onLoginSuccess }) {
       setError(phoneError);
       setLoading(false);
       return;
+    }
+
+    if (isRegister && role === 'clinic') {
+      if (!clinicName.trim()) {
+        setError('Please enter your hospital or clinic name.');
+        setLoading(false);
+        return;
+      }
+      try {
+        const data = await safeFetch('/api/auth/register-clinic', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            organizationName: clinicName.trim(),
+            adminName: name.trim(),
+            email: email.toLowerCase().trim(),
+            password
+          })
+        });
+
+        if (data.token) {
+          onLoginSuccess(data);
+          return;
+        }
+      } catch (err) {
+        setError(err.message || 'Failed to register clinic.');
+        setLoading(false);
+        return;
+      }
     }
 
     const url = isRegister ? '/api/auth/register' : '/api/auth/login';
@@ -328,12 +358,12 @@ export default function Login({ onLoginSuccess }) {
         <form onSubmit={handleSubmit}>
           {isRegister && (
             <div className="form-group" style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'flex', gap: '8px' }}>Role Selection</label>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+              <label style={{ display: 'flex', gap: '8px' }}>Registration Type</label>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   className={`btn ${role === 'patient' ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, minWidth: '110px' }}
                   onClick={() => setRole('patient')}
                 >
                   <Heart size={16} /> Patient
@@ -341,12 +371,42 @@ export default function Login({ onLoginSuccess }) {
                 <button
                   type="button"
                   className={`btn ${role === 'doctor' ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, minWidth: '110px' }}
                   onClick={() => setRole('doctor')}
                 >
                   <Stethoscope size={16} /> Doctor
                 </button>
+                <button
+                  type="button"
+                  className={`btn ${role === 'clinic' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ flex: 1, minWidth: '140px' }}
+                  onClick={() => setRole('clinic')}
+                >
+                  <Building2 size={16} /> Clinic / Hospital
+                </button>
               </div>
+            </div>
+          )}
+
+          {isRegister && role === 'clinic' && (
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label htmlFor="clinicName">Hospital / Clinic Name</label>
+              <div style={{ position: 'relative' }}>
+                <Building2 size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  id="clinicName"
+                  className="form-control"
+                  style={{ paddingLeft: '36px', width: '100%' }}
+                  placeholder="e.g. Sunrise Medical Centre"
+                  required
+                  value={clinicName}
+                  onChange={(e) => setClinicName(e.target.value)}
+                />
+              </div>
+              <span style={{ fontSize: '0.78rem', color: 'var(--color-primary)', marginTop: '4px', display: 'block' }}>
+                ✓ Includes instant 14-day trial & dedicated isolated blockchain ledger.
+              </span>
             </div>
           )}
 
@@ -354,7 +414,7 @@ export default function Login({ onLoginSuccess }) {
             <div>
               {isRegister && (
                 <div className="form-group">
-                  <label htmlFor="name">Full Name</label>
+                  <label htmlFor="name">{role === 'clinic' ? 'Admin Full Name' : 'Full Name'}</label>
                   <div style={{ position: 'relative' }}>
                     <User size={16} style={{ position: 'absolute', left: '12px', top: '13px', color: 'var(--text-muted)' }} />
                     <input
@@ -362,7 +422,7 @@ export default function Login({ onLoginSuccess }) {
                       id="name"
                       className="form-control"
                       style={{ paddingLeft: '36px', width: '100%' }}
-                      placeholder="e.g. Jane Doe"
+                      placeholder={role === 'clinic' ? 'e.g. Dr. John Doe (Lead Admin)' : 'e.g. Jane Doe'}
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}

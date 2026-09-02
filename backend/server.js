@@ -9,6 +9,7 @@ const { Blockchain, generateKeyPair, signRecord, getKenyanTimestamp } = require(
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 const db = require('./db');
+const { tenantStorage } = db;
 const licenseGuard = require('./middleware/licenseGuard');
 const { checkLicense, startLicenseCheckTimer, getLicenseStatus } = require('./services/licenseCheck');
 const { verifyKmpdcLicense } = require('./services/kmpdcVerification');
@@ -21,12 +22,38 @@ const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-organization-id'],
     maxAge: 86400 // Cache CORS preflight for 24h
 }));
 app.use(express.json());
 
-// Remote Licensing Guard: Enforces active license state across all API routes (except whitelisted auth & diagnostics)
+// Multi-Tenant Context Middleware: Automatically sets RLS session variables on all DB queries
+app.use((req, res, next) => {
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    let context = null;
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7).trim();
+        try {
+            const decoded = jwt.verify(token, JWT_SECRET);
+            req.user = decoded;
+            context = {
+                userId: decoded.id,
+                role: decoded.role,
+                orgId: req.headers['x-organization-id'] || decoded.organization_id || ''
+            };
+        } catch (err) {
+            // Token expired or invalid
+        }
+    }
+
+    if (context) {
+        tenantStorage.run(context, () => next());
+    } else {
+        next();
+    }
+});
+
+// Remote Licensing Guard: Enforces active per-organization license state
 app.use(licenseGuard);
 
 // Unique identifier for the current server run session (re-generated on every server start)
@@ -669,7 +696,32 @@ app.post('/api/auth/login', async (req, res) => {
             }
         }
 
-        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+        // Fetch organization name for doctors and admins
+        let organizationName = null;
+        if (user.organization_id) {
+            const { rows: orgRows } = await db.query('SELECT name FROM organizations WHERE id = $1', [user.organization_id]);
+            if (orgRows.length > 0) organizationName = orgRows[0].name;
+        }
+
+        // Fetch tenant memberships for multi-clinic patients
+        let memberships = [];
+        if (user.role === 'patient') {
+            const { rows: memRows } = await db.query(`
+                SELECT tm.organization_id as "organizationId", o.name as "organizationName", tm.role, tm.status
+                FROM tenant_memberships tm
+                JOIN organizations o ON tm.organization_id = o.id
+                WHERE tm.user_id = $1 AND tm.status = 'active';
+            `, [user.id]);
+            memberships = memRows;
+        }
+
+        const token = jwt.sign({ 
+            id: user.id, 
+            role: user.role,
+            organization_id: user.organization_id || null,
+            organizationName: organizationName || null
+        }, JWT_SECRET, { expiresIn: '1d' });
+
         const doctorProfile = parseJsonIfNeeded(user.doctor_profile);
         const patientProfile = parseJsonIfNeeded(user.patient_profile);
         const profilePhoto = user.profile_photo || doctorProfile?.profilePhoto || patientProfile?.profilePhoto || null;
@@ -681,6 +733,9 @@ app.post('/api/auth/login', async (req, res) => {
                 name: user.name,
                 email: user.email,
                 role: user.role,
+                organizationId: user.organization_id || null,
+                organizationName: organizationName || null,
+                memberships: memberships,
                 publicKey: user.public_key,
                 profilePhoto: profilePhoto,
                 patientProfile: patientProfile,
@@ -691,6 +746,280 @@ app.post('/api/auth/login', async (req, res) => {
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ error: 'Login failed.' });
+    }
+});
+
+// ==================== STAGE 5: CLINIC SELF-SERVE ONBOARDING ====================
+app.post('/api/auth/register-clinic', async (req, res) => {
+    const client = await db.pool.connect();
+    try {
+        const { organizationName, adminName, email, password } = req.body || {};
+
+        if (!organizationName || !adminName || !email || !password) {
+            return res.status(400).json({ error: 'Please provide all required fields: organizationName, adminName, email, and password.' });
+        }
+
+        const cleanOrgName = organizationName.trim();
+        const cleanAdminName = adminName.trim();
+        const cleanEmail = email.toLowerCase().trim();
+
+        if (cleanOrgName.length < 3) {
+            return res.status(400).json({ error: 'Organization name must be at least 3 characters long.' });
+        }
+
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+        }
+
+        // 1. Check if organization name already exists
+        const { rows: existingOrgs } = await client.query(
+            'SELECT id FROM organizations WHERE LOWER(name) = LOWER($1);',
+            [cleanOrgName]
+        );
+        if (existingOrgs.length > 0) {
+            return res.status(400).json({ error: 'A hospital or clinic with this name is already registered.' });
+        }
+
+        // 2. Check if admin email already exists
+        const { rows: existingUsers } = await client.query(
+            'SELECT id FROM users WHERE email = $1;',
+            [cleanEmail]
+        );
+        if (existingUsers.length > 0) {
+            return res.status(400).json({ error: 'An account with this email address already exists.' });
+        }
+
+        // Generate organization slug
+        const baseSlug = cleanOrgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const slug = `${baseSlug}-${crypto.randomBytes(3).toString('hex')}`;
+
+        // Generate RSA keypair for the admin
+        const { publicKey, privateKey } = generateKeyPair();
+
+        // Hash Password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        await client.query('BEGIN;');
+
+        // 3. Insert into organizations (defaults to 'trial' with 14-day validity)
+        const trialExpiry = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+        const { rows: insertedOrgs } = await client.query(`
+            INSERT INTO organizations (name, slug, status, license_expires_at)
+            VALUES ($1, $2, 'trial', $3)
+            RETURNING *;
+        `, [cleanOrgName, slug, trialExpiry]);
+        const newOrg = insertedOrgs[0];
+
+        // 4. Insert into users as admin scoped to new organization_id
+        const createdAt = getKenyanTimestamp();
+        const { rows: insertedUsers } = await client.query(`
+            INSERT INTO users (organization_id, name, email, password, role, public_key, private_key, is_approved, is_rejected, created_at)
+            VALUES ($1, $2, $3, $4, 'admin', $5, $6, true, false, $7)
+            RETURNING *;
+        `, [newOrg.id, cleanAdminName, cleanEmail, hashedPassword, publicKey, privateKey, createdAt]);
+        const newAdmin = insertedUsers[0];
+
+        // 5. Insert into tenant_memberships
+        await client.query(`
+            INSERT INTO tenant_memberships (user_id, organization_id, role, status)
+            VALUES ($1, $2, 'admin', 'active');
+        `, [newAdmin.id, newOrg.id]);
+
+        // 6. Seed isolated Genesis block for this new clinic
+        const genesisTimestamp = getKenyanTimestamp();
+        const genesisRecords = [{
+            txType: 'medical',
+            message: `Genesis Block: ${cleanOrgName} Ledger Initialized`,
+            doctor: cleanAdminName
+        }];
+        const genesisPrevHash = '0';
+        let nonce = 0;
+        let genesisHash = '';
+
+        while (true) {
+            const dataStr = JSON.stringify(genesisRecords);
+            genesisHash = crypto.createHash('sha256').update(0 + genesisTimestamp + dataStr + genesisPrevHash + nonce).digest('hex');
+            if (genesisHash.startsWith('00')) break;
+            nonce++;
+        }
+
+        await client.query(`
+            INSERT INTO blocks (organization_id, index, timestamp, records, previous_hash, nonce, hash)
+            VALUES ($1, $2, $3, $4, $5, $6, $7);
+        `, [newOrg.id, 0, genesisTimestamp, JSON.stringify(genesisRecords), genesisPrevHash, nonce.toString(), genesisHash]);
+
+        // 7. Insert row in licenses
+        await client.query(`
+            INSERT INTO licenses (organization_id, client_id, status, expires_at, updated_at)
+            VALUES ($1, $2, 'trial', $3, NOW());
+        `, [newOrg.id, cleanOrgName, trialExpiry]);
+
+        // 8. Log audit trail
+        await client.query(`
+            INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp)
+            VALUES ($1, 'clinic_registration', $2, $3, $2, $3, $4, $5);
+        `, [newOrg.id, newAdmin.id, cleanAdminName, `New clinic "${cleanOrgName}" onboarded with 14-day trial. Primary admin: ${cleanAdminName}.`, createdAt]);
+
+        await client.query('COMMIT;');
+
+        const token = jwt.sign({
+            id: newAdmin.id,
+            role: 'admin',
+            organization_id: newOrg.id,
+            organizationName: newOrg.name
+        }, JWT_SECRET, { expiresIn: '1d' });
+
+        res.status(201).json({
+            success: true,
+            message: `Clinic "${cleanOrgName}" registered successfully! 14-day trial activated.`,
+            token,
+            user: {
+                id: newAdmin.id,
+                name: newAdmin.name,
+                email: newAdmin.email,
+                role: 'admin',
+                organizationId: newOrg.id,
+                organizationName: newOrg.name,
+                publicKey: newAdmin.public_key,
+                isApproved: true
+            },
+            organization: {
+                id: newOrg.id,
+                name: newOrg.name,
+                slug: newOrg.slug,
+                status: newOrg.status,
+                licenseExpiresAt: newOrg.license_expires_at
+            }
+        });
+
+    } catch (err) {
+        await client.query('ROLLBACK;').catch(() => {});
+        console.error('Error during clinic registration:', err);
+        res.status(500).json({ error: err.message || 'Failed to register clinic.' });
+    } finally {
+        client.release();
+    }
+});
+
+// ==================== STAGE 6: SUPER ADMIN MULTI-TENANT MANAGEMENT ====================
+
+// List all organizations with metrics
+app.get('/api/admin/organizations', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Authentication token required.' });
+        }
+        const decoded = jwt.verify(authHeader.substring(7).trim(), JWT_SECRET);
+        if (decoded.role !== 'super_admin') {
+            return res.status(403).json({ error: 'Access restricted to Super Administrators only.' });
+        }
+
+        const { rows: orgs } = await db.query(`
+            SELECT 
+                o.id,
+                o.name,
+                o.slug,
+                o.status,
+                o.license_expires_at as "licenseExpiresAt",
+                o.max_doctors as "maxDoctors",
+                o.max_patients as "maxPatients",
+                o.created_at as "createdAt",
+                COUNT(DISTINCT CASE WHEN tm.role = 'doctor' THEN tm.user_id END) as "doctorCount",
+                COUNT(DISTINCT CASE WHEN tm.role = 'patient' THEN tm.user_id END) as "patientCount",
+                COUNT(DISTINCT a.id) as "appointmentCount",
+                COUNT(DISTINCT r.id) as "recordCount",
+                COALESCE(MAX(b.index), 0) as "blockHeight"
+            FROM organizations o
+            LEFT JOIN tenant_memberships tm ON o.id = tm.organization_id
+            LEFT JOIN appointments a ON o.id = a.organization_id
+            LEFT JOIN records r ON o.id = r.organization_id
+            LEFT JOIN blocks b ON o.id = b.organization_id
+            GROUP BY o.id
+            ORDER BY o.name ASC;
+        `);
+
+        res.json({ success: true, organizations: orgs });
+    } catch (err) {
+        console.error('Error fetching organizations for super admin:', err);
+        res.status(500).json({ error: err.message || 'Failed to fetch organizations.' });
+    }
+});
+
+// Update an organization's license status or extend trial
+app.post('/api/admin/organizations/:id/status', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Authentication token required.' });
+        }
+        const decoded = jwt.verify(authHeader.substring(7).trim(), JWT_SECRET);
+        if (decoded.role !== 'super_admin') {
+            return res.status(403).json({ error: 'Access restricted to Super Administrators only.' });
+        }
+
+        const { id } = req.params;
+        const { status, extendDays } = req.body || {};
+
+        if (!status || !['active', 'suspended', 'trial', 'disabled'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status. Must be active, suspended, trial, or disabled.' });
+        }
+
+        const client = await db.pool.connect();
+        try {
+            await client.query('BEGIN;');
+
+            let updateQuery = `
+                UPDATE organizations 
+                SET status = $1, updated_at = NOW()
+            `;
+            const params = [status, id];
+
+            if (extendDays && typeof extendDays === 'number' && extendDays > 0) {
+                updateQuery += `, license_expires_at = NOW() + INTERVAL '${parseInt(extendDays)} days'`;
+            }
+
+            updateQuery += ` WHERE id = $2 RETURNING *;`;
+
+            const { rows: updatedOrgs } = await client.query(updateQuery, params);
+            if (updatedOrgs.length === 0) {
+                await client.query('ROLLBACK;');
+                return res.status(404).json({ error: 'Organization not found.' });
+            }
+            const updatedOrg = updatedOrgs[0];
+
+            // Also synchronize licenses table
+            await client.query(`
+                UPDATE licenses 
+                SET status = $1, 
+                    expires_at = $2,
+                    updated_at = NOW()
+                WHERE organization_id = $3;
+            `, [status, updatedOrg.license_expires_at, id]);
+
+            // Audit logging
+            await client.query(`
+                INSERT INTO audit_logs (organization_id, event_type, details, timestamp)
+                VALUES ($1, 'license_status_update', $2, $3);
+            `, [id, `Organization status updated to "${status}". Expiry: ${updatedOrg.license_expires_at}. Modified by Super Admin.`, getKenyanTimestamp()]);
+
+            await client.query('COMMIT;');
+
+            res.json({
+                success: true,
+                message: `Organization "${updatedOrg.name}" updated to status: ${status}.`,
+                organization: updatedOrg
+            });
+        } catch (err) {
+            await client.query('ROLLBACK;');
+            throw err;
+        } finally {
+            client.release();
+        }
+    } catch (err) {
+        console.error('Error updating organization status:', err);
+        res.status(500).json({ error: err.message || 'Failed to update organization status.' });
     }
 });
 

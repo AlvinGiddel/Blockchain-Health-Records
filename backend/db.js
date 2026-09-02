@@ -1,5 +1,6 @@
 const path = require('path');
 const { Pool } = require('pg');
+const { AsyncLocalStorage } = require('async_hooks');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 // Set default process timezone to East Africa Time (EAT - Kenya)
@@ -35,13 +36,49 @@ pool.on('error', (err) => {
     console.error('Unexpected error on idle database client:', err);
 });
 
+// Tenant Context AsyncLocalStorage for automatic Row-Level Security (RLS) session variable propagation
+const tenantStorage = new AsyncLocalStorage();
+
 module.exports = {
-    query: (text, params) => {
+    query: async (text, params) => {
+        const store = tenantStorage.getStore();
+        if (store && (store.userId || store.orgId || store.role)) {
+            const client = await pool.connect();
+            try {
+                await client.query('BEGIN;');
+                
+                if (store.role === 'super_admin') {
+                    await client.query("SELECT set_config('app.user_role', 'super_admin', true);");
+                    await client.query("SELECT set_config('app.current_user_id', $1, true);", [String(store.userId || '')]);
+                    await client.query("SELECT set_config('app.current_org_id', $1, true);", [String(store.orgId || '')]);
+                } else {
+                    await client.query('SET LOCAL ROLE authenticated;');
+                    await client.query("SELECT set_config('app.user_role', $1, true);", [String(store.role || '')]);
+                    await client.query("SELECT set_config('app.current_user_id', $1, true);", [String(store.userId || '')]);
+                    await client.query("SELECT set_config('app.current_org_id', $1, true);", [String(store.orgId || '')]);
+                }
+
+                if (process.env.DEBUG === 'true') {
+                    const logText = text.replace(/\s+/g, ' ').trim();
+                    console.log(`[RLS Scoped Query] [Role: ${store.role}, Org: ${store.orgId}] Executing: ${logText}`);
+                }
+                const result = await client.query(text, params);
+                await client.query('COMMIT;');
+                return result;
+            } catch (err) {
+                await client.query('ROLLBACK;').catch(() => {});
+                throw err;
+            } finally {
+                client.release();
+            }
+        }
+
         if (process.env.DEBUG === 'true') {
             const logText = text.replace(/\s+/g, ' ').trim();
             console.log(`[SQL Query] Executing: ${logText}`);
         }
         return pool.query(text, params);
     },
-    pool
+    pool,
+    tenantStorage
 };

@@ -1,58 +1,94 @@
 /**
- * License Enforcement Middleware (Kill-Switch Guard)
+ * Per-Organization License Enforcement Middleware (Multi-Tenant Kill-Switch Guard)
  * 
- * Intercepts incoming API traffic. If license status is 'disabled',
- * blocks all requests with HTTP 403 unless authenticated as Super Admin.
+ * Inspects the requesting user's organization_id in PostgreSQL.
+ * Allows Super Admin bypass.
+ * Blocks suspended or expired clinic organizations individually with HTTP 403,
+ * without affecting any other clinic on the platform.
  */
 
 const jwt = require('jsonwebtoken');
-const { getLicenseStatus } = require('../services/licenseCheck');
+const db = require('../db');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
 
-// Whitelisted public & diagnostic path prefixes
+// Whitelisted public, onboarding, & diagnostic path prefixes
 const EXEMPT_PATHS = [
     '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/register-clinic',
+    '/api/auth/forgot-password',
+    '/api/auth/reset-password',
     '/api/license/status',
     '/api/health',
     '/health',
     '/'
 ];
 
-function licenseGuard(req, res, next) {
-    // 1. Always allow explicitly exempted endpoints
+async function licenseGuard(req, res, next) {
     const path = req.path;
     if (EXEMPT_PATHS.some(exempt => path === exempt || (exempt !== '/' && path.startsWith(exempt)))) {
         return next();
     }
 
-    const { status } = getLicenseStatus();
-
-    // 2. If license is active, allow all normal traffic
-    if (status === 'active') {
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
         return next();
     }
 
-    // 3. If license is disabled, check if request is authenticated as Super Admin
-    const authHeader = req.headers.authorization || req.headers.Authorization;
-    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
-        const token = authHeader.substring(7).trim();
-        try {
-            const decoded = jwt.verify(token, JWT_SECRET);
-            if (decoded && decoded.role === 'super_admin') {
-                // Super Admin bypass: allow diagnostic and recovery actions
-                req.user = decoded;
-                return next();
-            }
-        } catch (jwtErr) {
-            // Token is invalid/expired
-        }
+    const token = authHeader.substring(7).trim();
+    let decoded;
+    try {
+        decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+    } catch (jwtErr) {
+        return res.status(401).json({ error: 'Invalid or expired authentication token.' });
     }
 
-    // 4. Block all non-super-admin requests with generic 403
-    return res.status(403).json({
-        error: 'License inactive. Contact your provider.'
-    });
+    // 1. Super Admin always bypasses license locks to maintain global administrative authority
+    if (decoded.role === 'super_admin') {
+        return next();
+    }
+
+    // 2. Identify the target organization
+    const targetOrgId = req.headers['x-organization-id'] || decoded.organization_id;
+    if (!targetOrgId) {
+        // Patients browsing their universal health passport without a specific clinic header
+        return next();
+    }
+
+    try {
+        // Per-organization license status query in PostgreSQL
+        const { rows } = await db.query(
+            'SELECT id, name, status, license_expires_at FROM organizations WHERE id = $1;',
+            [targetOrgId]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Organization not found.' });
+        }
+
+        const org = rows[0];
+
+        // If specific organization is suspended/disabled by Super Admin
+        if (org.status === 'suspended' || org.status === 'disabled') {
+            return res.status(403).json({
+                error: `Access Denied: ${org.name}'s license is suspended by platform administration.`
+            });
+        }
+
+        // If organization license has expired
+        if (org.license_expires_at && new Date(org.license_expires_at) < new Date()) {
+            return res.status(403).json({
+                error: `Access Denied: ${org.name}'s subscription expired on ${new Date(org.license_expires_at).toLocaleDateString()}. Please renew your organization license.`
+            });
+        }
+
+        next();
+    } catch (dbErr) {
+        console.error('License guard organization check error:', dbErr.message);
+        next();
+    }
 }
 
 module.exports = licenseGuard;

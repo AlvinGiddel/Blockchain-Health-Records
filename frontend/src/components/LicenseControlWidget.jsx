@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, Server, RefreshCw, AlertTriangle, CheckCircle, Clock, Lock, Key, Plus, Stethoscope, UserCheck, X, Activity, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Shield, Server, RefreshCw, AlertTriangle, CheckCircle, Clock, Lock, Key, Plus, Stethoscope, UserCheck, X, Activity, ToggleLeft, ToggleRight, Building2, Ban, Check } from 'lucide-react';
 import { safeFetch } from '../utils/api';
 
 export default function LicenseControlWidget({ user }) {
@@ -11,6 +11,11 @@ export default function LicenseControlWidget({ user }) {
 
   // Active Interactive Card Modal State: 'license' | 'security' | 'schedule' | 'kmpdc' | null
   const [activeModal, setActiveModal] = useState(null);
+
+  // Multi-Tenant Organizations State
+  const [organizations, setOrganizations] = useState([]);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
+  const [orgActionLoading, setOrgActionLoading] = useState(null);
 
   // KMPDC Registry State
   const [practitioners, setPractitioners] = useState([]);
@@ -43,6 +48,69 @@ export default function LicenseControlWidget({ user }) {
       setError(err.message || 'Failed to fetch license authority status.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchOrganizations = async () => {
+    if (user?.role !== 'super_admin') return;
+    setLoadingOrgs(true);
+    try {
+      const token = localStorage.getItem('token');
+      const data = await safeFetch('/api/admin/organizations', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (data.organizations) {
+        setOrganizations(data.organizations);
+      }
+    } catch (err) {
+      console.error('Failed to fetch organizations:', err);
+    } finally {
+      setLoadingOrgs(false);
+    }
+  };
+
+  const handleToggleOrgStatus = async (orgId, currentStatus) => {
+    const nextStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
+    setOrgActionLoading(orgId);
+    try {
+      const token = localStorage.getItem('token');
+      await safeFetch(`/api/admin/organizations/${orgId}/status`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: nextStatus })
+      });
+      setStatusMessage(`✓ Organization updated to: ${nextStatus.toUpperCase()}`);
+      fetchOrganizations();
+    } catch (err) {
+      setError(err.message || 'Failed to update organization status.');
+    } finally {
+      setOrgActionLoading(null);
+    }
+  };
+
+  const handleExtendOrg = async (orgId) => {
+    setOrgActionLoading(orgId);
+    try {
+      const token = localStorage.getItem('token');
+      await safeFetch(`/api/admin/organizations/${orgId}/status`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'active', extendDays: 30 })
+      });
+      setStatusMessage('✓ License extended by +30 days.');
+      fetchOrganizations();
+    } catch (err) {
+      setError(err.message || 'Failed to extend license.');
+    } finally {
+      setOrgActionLoading(null);
     }
   };
 
@@ -146,11 +214,10 @@ export default function LicenseControlWidget({ user }) {
   };
 
   useEffect(() => {
-    if (user?.role === 'super_admin') {
-      fetchLicenseStatus();
-      fetchPractitioners();
-    }
-  }, [user]);
+    fetchLicenseStatus();
+    fetchPractitioners();
+    fetchOrganizations();
+  }, []);
 
   if (user?.role !== 'super_admin') {
     return null;
@@ -341,7 +408,7 @@ export default function LicenseControlWidget({ user }) {
       </div>
 
       {/* Master KMPDC Practitioners Table Preview */}
-      <div style={{ padding: '16px', borderRadius: '10px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)' }}>
+      <div style={{ padding: '16px', borderRadius: '10px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)', marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Stethoscope size={18} color="var(--color-primary)" />
@@ -383,6 +450,123 @@ export default function LicenseControlWidget({ user }) {
           </table>
         </div>
       </div>
+
+      {/* Multi-Tenant Organizations & Per-Clinic Kill-Switch Control Center (Super Admin Only) */}
+      {user?.role === 'super_admin' && (
+        <div style={{ padding: '20px', borderRadius: '10px', background: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ background: 'rgba(99, 102, 241, 0.2)', padding: '6px', borderRadius: '8px' }}>
+                <Building2 size={20} color="var(--color-primary)" />
+              </div>
+              <div>
+                <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)' }}>
+                  Multi-Tenant Hospital Ledgers & Kill-Switch Matrix ({organizations.length} Clinics)
+                </h4>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  Manage tenant licenses and kill-switch states independently without cross-tenant disruption
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={fetchOrganizations}
+              disabled={loadingOrgs}
+              style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <RefreshCw size={14} className={loadingOrgs ? 'rotate-spin' : ''} />
+              {loadingOrgs ? 'Syncing...' : 'Refresh Matrix'}
+            </button>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: '0.84rem', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-secondary)', textAlign: 'left' }}>
+                  <th style={{ padding: '10px 8px' }}>Hospital / Clinic</th>
+                  <th style={{ padding: '10px 8px' }}>License Status</th>
+                  <th style={{ padding: '10px 8px' }}>Expiration Date</th>
+                  <th style={{ padding: '10px 8px' }}>Doctors</th>
+                  <th style={{ padding: '10px 8px' }}>Patients</th>
+                  <th style={{ padding: '10px 8px' }}>Ledger Height</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'right' }}>Kill-Switch Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {organizations.map(org => {
+                  const isOrgSuspended = org.status === 'suspended' || org.status === 'disabled';
+                  const isExpired = org.licenseExpiresAt && new Date(org.licenseExpiresAt) < new Date();
+                  const isBusy = orgActionLoading === org.id;
+
+                  return (
+                    <tr key={org.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '10px 8px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>{org.name}</span>
+                          {org.slug && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>({org.slug})</span>}
+                        </div>
+                      </td>
+                      <td style={{ padding: '10px 8px' }}>
+                        <span
+                          className={`badge ${isOrgSuspended ? 'badge-error' : (org.status === 'trial' ? 'badge-warning' : 'badge-success')}`}
+                          style={{ textTransform: 'uppercase', fontSize: '0.72rem', padding: '3px 8px' }}
+                        >
+                          {isOrgSuspended ? 'SUSPENDED' : (isExpired ? 'EXPIRED' : org.status.toUpperCase())}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 8px', color: isExpired ? 'var(--color-error)' : 'var(--text-secondary)' }}>
+                        {org.licenseExpiresAt ? new Date(org.licenseExpiresAt).toLocaleDateString() : 'Perpetual'}
+                      </td>
+                      <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{org.doctorCount || 0}</td>
+                      <td style={{ padding: '10px 8px', color: 'var(--text-secondary)' }}>{org.patientCount || 0}</td>
+                      <td style={{ padding: '10px 8px', fontFamily: 'monospace', color: 'var(--color-primary)' }}>
+                        Block #{org.blockHeight || 0}
+                      </td>
+                      <td style={{ padding: '10px 8px', textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={() => handleExtendOrg(org.id)}
+                            disabled={isBusy}
+                            style={{ fontSize: '0.75rem', padding: '4px 8px' }}
+                            title="Extend license by 30 days"
+                          >
+                            +30 Days
+                          </button>
+                          
+                          {isOrgSuspended ? (
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              onClick={() => handleToggleOrgStatus(org.id, org.status)}
+                              disabled={isBusy}
+                              style={{ fontSize: '0.75rem', padding: '4px 10px', background: '#10b981', borderColor: '#10b981' }}
+                            >
+                              <Check size={12} /> Reactivate
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              onClick={() => handleToggleOrgStatus(org.id, org.status)}
+                              disabled={isBusy}
+                              style={{ fontSize: '0.75rem', padding: '4px 10px', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.4)' }}
+                            >
+                              <Ban size={12} /> Suspend
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* MODAL 1: Interactive License & Kill-Switch Controller */}
       {activeModal === 'license' && (
