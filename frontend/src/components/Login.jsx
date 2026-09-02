@@ -27,6 +27,8 @@ export default function Login({ onLoginSuccess }) {
     }
   });
   const [patientOrgId, setPatientOrgId] = useState('');
+  const [doctorOrgId, setDoctorOrgId] = useState('');
+  const [customHospitalName, setCustomHospitalName] = useState('');
   const [activeOrganizations, setActiveOrganizations] = useState([]);
 
   React.useEffect(() => {
@@ -222,10 +224,26 @@ export default function Login({ onLoginSuccess }) {
           phone
         };
       } else if (role === 'doctor') {
+        if (!doctorOrgId) {
+          setError('Please select your affiliated hospital facility or select "Facility not listed".');
+          setLoading(false);
+          return;
+        }
+        if (doctorOrgId === 'other' && !customHospitalName.trim()) {
+          setError('Please enter the name of your healthcare facility.');
+          setLoading(false);
+          return;
+        }
+
+        const selectedFacilityName = doctorOrgId === 'other'
+          ? customHospitalName.trim()
+          : (activeOrganizations.find(o => o.id === doctorOrgId)?.name || hospital);
+
+        body.organizationId = doctorOrgId === 'other' ? null : doctorOrgId;
         body.profile = {
           specialization,
           licenseNumber,
-          hospital,
+          hospital: selectedFacilityName,
           yearsOfExperience: parseInt(yearsOfExperience) || 0,
           profilePhoto,
           phone
@@ -764,18 +782,64 @@ export default function Login({ onLoginSuccess }) {
                         </div>
                       )}
                     </div>
-                    <div className="form-group">
-                      <label htmlFor="hospital">Affiliated Hospital</label>
-                      <input
-                        type="text"
-                        id="hospital"
+                    <div className="form-group" style={{ marginBottom: '16px' }}>
+                      <label htmlFor="doctorHospital" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                        <Building2 size={16} color="var(--color-primary)" />
+                        Affiliated Hospital / Healthcare Facility <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <select
+                        id="doctorHospital"
                         className="form-control"
-                        placeholder="e.g. Princeton-Plainsboro"
+                        value={doctorOrgId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setDoctorOrgId(val);
+                          if (val && val !== 'other') {
+                            const found = activeOrganizations.find(o => o.id === val);
+                            if (found) setHospital(found.name);
+                          } else if (val === 'other') {
+                            setHospital(customHospitalName);
+                          } else {
+                            setHospital('');
+                          }
+                        }}
                         required
-                        value={hospital}
-                        onChange={(e) => setHospital(e.target.value)}
-                      />
+                        style={{ width: '100%', borderColor: 'rgba(99, 102, 241, 0.4)' }}
+                      >
+                        <option value="">-- Choose Hospital Facility --</option>
+                        {activeOrganizations.map(org => (
+                          <option key={org.id} value={org.id}>
+                            🏥 {org.name}
+                          </option>
+                        ))}
+                        <option value="other">➕ My facility is not in the system (Other / External Clinic)</option>
+                      </select>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                        {doctorOrgId && doctorOrgId !== 'other'
+                          ? `Your registration will be routed directly to the Clinical Administrator at ${hospital || 'this facility'} for review.`
+                          : doctorOrgId === 'other'
+                          ? 'Your registration will be submitted to Platform Administration for institutional credentialing.'
+                          : 'Select which hospital or clinic facility you are practicing at.'}
+                      </span>
                     </div>
+
+                    {doctorOrgId === 'other' && (
+                      <div className="form-group" style={{ marginBottom: '16px' }}>
+                        <label htmlFor="customHospital">Specify Healthcare Facility Name <span style={{ color: '#ef4444' }}>*</span></label>
+                        <input
+                          type="text"
+                          id="customHospital"
+                          className="form-control"
+                          placeholder="e.g. Nairobi Specialty Care Center"
+                          required
+                          value={customHospitalName}
+                          onChange={(e) => {
+                            setCustomHospitalName(e.target.value);
+                            setHospital(e.target.value);
+                          }}
+                        />
+                      </div>
+                    )}
                     <div className="form-group">
                       <label htmlFor="yearsOfExperience">Years of Experience</label>
                       <input

@@ -59,8 +59,8 @@ async function licenseGuard(req, res, next) {
     }
 
     try {
-        // Per-organization license status query in PostgreSQL
-        const { rows } = await db.query(
+        // Per-organization license status query in PostgreSQL (bypasses RLS to ensure accurate system status checks)
+        const { rows } = await db.pool.query(
             'SELECT id, name, status, license_expires_at FROM organizations WHERE id = $1;',
             [targetOrgId]
         );
@@ -87,8 +87,8 @@ async function licenseGuard(req, res, next) {
 
         // 3. Auto-transition: if trial expiration has passed, update status to 'expired'
         if (org.status === 'trial' && org.license_expires_at && new Date(org.license_expires_at) < new Date()) {
-            await db.query("UPDATE organizations SET status = 'expired', updated_at = NOW() WHERE id = $1;", [targetOrgId]);
-            await db.query("UPDATE licenses SET status = 'expired', updated_at = NOW() WHERE organization_id = $1;", [targetOrgId]);
+            await db.pool.query("UPDATE organizations SET status = 'expired', updated_at = NOW() WHERE id = $1;", [targetOrgId]);
+            await db.pool.query("UPDATE licenses SET status = 'expired', updated_at = NOW() WHERE organization_id = $1;", [targetOrgId]);
             org.status = 'expired';
         }
 

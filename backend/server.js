@@ -478,6 +478,16 @@ app.post('/api/auth/register', async (req, res) => {
                 return res.status(400).json({ error: 'Invalid or inactive hospital facility selected.' });
             }
             targetOrg = orgCheck[0];
+        } else if (role === 'doctor') {
+            if (organizationId) {
+                const { rows: orgCheck } = await db.query(
+                    "SELECT id, name FROM organizations WHERE id = $1 AND status IN ('active', 'trial') AND LOWER(name) NOT LIKE '%unassigned%'",
+                    [organizationId]
+                );
+                if (orgCheck.length > 0) {
+                    targetOrg = orgCheck[0];
+                }
+            }
         }
         
         // 1. Check if email already exists
@@ -609,10 +619,11 @@ app.post('/api/auth/register', async (req, res) => {
         try {
             await client.query('BEGIN;');
 
+            const assignedOrgId = (role === 'doctor' && targetOrg) ? targetOrg.id : null;
             const { rows: insertedUsers } = await client.query(
                 `INSERT INTO users (name, email, password, role, organization_id, public_key, private_key, patient_profile, doctor_profile, is_approved, created_at) 
-                 VALUES ($1, $2, $3, $4, NULL, $5, $6, $7, $8, $9, $10) RETURNING *`,
-                [name, email.toLowerCase().trim(), hashedPassword, role, publicKey, privateKey, 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+                [name, email.toLowerCase().trim(), hashedPassword, role, assignedOrgId, publicKey, privateKey, 
                  patientProfile ? JSON.stringify(patientProfile) : null, 
                  doctorProfile ? JSON.stringify(doctorProfile) : null, 
                  isApprovedVal, createdAt]
@@ -639,6 +650,19 @@ app.post('/api/auth/register', async (req, res) => {
                     `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
                      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
                     [targetOrg.id, 'patient_registration', user.id, user.name, user.id, 'System', `New patient registered and affiliated with ${targetOrg.name}.`, createdAt]
+                );
+            } else if (role === 'doctor' && targetOrg) {
+                // Link doctor to their selected facility via tenant_memberships with pending approval status
+                await client.query(`
+                    INSERT INTO tenant_memberships (user_id, organization_id, role, status, joined_at)
+                    VALUES ($1, $2, 'doctor', 'pending', $3)
+                    ON CONFLICT (user_id, organization_id) DO UPDATE SET status = 'pending';
+                `, [user.id, targetOrg.id, createdAt]);
+
+                await client.query(
+                    `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                    [targetOrg.id, 'doctor_registration_request', user.id, user.name, user.id, 'System', `Dr. ${user.name} (${user.email}) requested clinical node affiliation with ${targetOrg.name}. Pending administrative approval.`, createdAt]
                 );
             }
 
@@ -1460,6 +1484,12 @@ app.post('/api/admin/doctors/approve/:id', async (req, res) => {
         }
         const updatedDoctor = updatedDoctors[0];
 
+        // Activate membership for doctor in tenant_memberships
+        await db.query(
+            "UPDATE tenant_memberships SET status = 'active' WHERE user_id = $1 AND role = 'doctor'",
+            [doctorId]
+        );
+
         // Log doctor approval in audit trail (in background)
         logAuditEvent('doctor_approve', updatedDoctor.id, updatedDoctor.name, updatedDoctor.id, 'System Admin', `Doctor registration request for Dr. ${updatedDoctor.name} (${updatedDoctor.email}) approved.`);
 
@@ -1487,6 +1517,12 @@ app.post('/api/admin/doctors/reject/:id', async (req, res) => {
             return res.status(404).json({ error: 'Doctor registration request not found.' });
         }
         const updatedDoctor = updatedDoctors[0];
+
+        // Disable membership for doctor in tenant_memberships
+        await db.query(
+            "UPDATE tenant_memberships SET status = 'disabled' WHERE user_id = $1 AND role = 'doctor'",
+            [doctorId]
+        );
 
         // Log doctor rejection in audit trail (in background)
         logAuditEvent('doctor_reject', updatedDoctor.id, updatedDoctor.name, updatedDoctor.id, 'System Admin', `Doctor registration request for Dr. ${updatedDoctor.name} (${updatedDoctor.email}) rejected.`);
