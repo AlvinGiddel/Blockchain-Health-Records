@@ -13,8 +13,6 @@ export default function Login({ onLoginSuccess }) {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [developerLink, setDeveloperLink] = useState('');
-  const [previewUrl, setPreviewUrl] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [timeoutMessage, setTimeoutMessage] = useState(() => {
     return sessionStorage.getItem('sessionTimedOut') === 'true' ? 'your login session timed out please login again' : '';
@@ -112,8 +110,6 @@ export default function Login({ onLoginSuccess }) {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
-    setDeveloperLink('');
-    setPreviewUrl('');
     setLoading(true);
 
     try {
@@ -124,12 +120,6 @@ export default function Login({ onLoginSuccess }) {
       });
 
       setSuccessMessage(data.message);
-      if (data.resetUrl) {
-        setDeveloperLink(data.resetUrl);
-      }
-      if (data.previewUrl) {
-        setPreviewUrl(data.previewUrl);
-      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -279,27 +269,6 @@ export default function Login({ onLoginSuccess }) {
             </button>
           </form>
 
-          {/* Developer Link Preview */}
-          {developerLink && (
-            <div style={{ marginTop: '20px', padding: '16px', background: 'rgba(99, 102, 241, 0.08)', border: '1px dashed rgba(99, 102, 241, 0.3)', borderRadius: '10px', fontSize: '0.85rem' }}>
-              <p style={{ color: 'var(--color-accent)', fontWeight: '600', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                🔧 Developer Testing Sandbox
-              </p>
-              <p style={{ marginBottom: '8px', color: 'var(--text-secondary)' }}>You can click the link below to reset the password immediately without checking an email client:</p>
-              <a href={developerLink} className="btn btn-primary" style={{ display: 'block', textDecoration: 'none', padding: '8px 12px', borderRadius: '6px', textAlign: 'center', fontSize: '0.85rem', marginBottom: '8px', border: '1px solid rgba(99,102,241,0.5)' }}>
-                Reset Link (Direct Access)
-              </a>
-              {previewUrl && (
-                <div style={{ marginTop: '12px' }}>
-                  <p style={{ marginBottom: '8px', color: 'var(--text-secondary)' }}>View fully formatted HTML mail sandbox:</p>
-                  <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="btn btn-secondary" style={{ display: 'block', textDecoration: 'none', padding: '8px 12px', borderRadius: '6px', textAlign: 'center', fontSize: '0.85rem' }}>
-                    Open Ethereal Mail Inbox 📥
-                  </a>
-                </div>
-              )}
-            </div>
-          )}
-
           <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.9rem', borderTop: '1px solid var(--glass-border)', paddingTop: '16px' }}>
             <button
               type="button"
@@ -310,8 +279,6 @@ export default function Login({ onLoginSuccess }) {
                 setSuccessMessage('');
                 setTimeoutMessage('');
                 sessionStorage.removeItem('sessionTimedOut');
-                setDeveloperLink('');
-                setPreviewUrl('');
               }}
             >
               <ArrowLeft size={16} /> Back to Login

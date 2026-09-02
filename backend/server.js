@@ -1069,12 +1069,9 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         res.json({
             success: true,
             emailSent: isEmailDelivered,
-            mailError: mailResult?.error || null,
             message: isEmailDelivered
-                ? 'A password reset link has been dispatched to your Gmail inbox!'
-                : `Password reset link generated. (Email delivery notice: ${mailResult?.error || 'Email could not be delivered to inbox'}).`,
-            resetUrl: resetUrl,
-            previewUrl: mailResult?.previewUrl || null
+                ? 'A password reset link has been dispatched to your email address.'
+                : `Password reset link could not be sent. Please check your email configuration or try again later.`
         });
     } catch (err) {
         console.error('Forgot password error:', err);
