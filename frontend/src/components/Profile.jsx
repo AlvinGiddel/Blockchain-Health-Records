@@ -25,6 +25,62 @@ export default function Profile({ user, onUpdateUser }) {
   const [successMsg, setSuccessMsg] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // Email update modal state
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailPassword, setEmailPassword] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [emailSuccess, setEmailSuccess] = useState('');
+  const [emailLoading, setEmailLoading] = useState(false);
+
+  const handleUpdateEmail = async (e) => {
+    e.preventDefault();
+    setEmailError('');
+    setEmailSuccess('');
+
+    const cleanNewEmail = newEmail.toLowerCase().trim();
+    if (!cleanNewEmail) {
+      setEmailError('Please enter a new email address.');
+      return;
+    }
+
+    if (cleanNewEmail === (user.email || '').toLowerCase().trim()) {
+      setEmailError('New email must be different from your current email address.');
+      return;
+    }
+
+    setEmailLoading(true);
+    try {
+      const data = await safeFetch('/api/auth/update-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id || user._id,
+          newEmail: cleanNewEmail,
+          currentPassword: emailPassword
+        })
+      });
+
+      setEmailSuccess(data.message || 'Email address updated successfully!');
+      setNewEmail('');
+      setEmailPassword('');
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+      }
+      if (onUpdateUser && data.user) {
+        onUpdateUser(data.user);
+      }
+      setTimeout(() => {
+        setShowEmailModal(false);
+        setEmailSuccess('');
+      }, 1400);
+    } catch (err) {
+      setEmailError(err.message || 'Failed to update email address.');
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
   // Sync edits when user updates
   useEffect(() => {
     setEditName(user.name || '');
@@ -120,9 +176,26 @@ export default function Profile({ user, onUpdateUser }) {
           </span>
           
           <div style={{ marginTop: '24px', borderTop: '1px solid var(--glass-border)', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left', fontSize: '0.85rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
-              <Mail size={16} />
-              <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{user.email}</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', color: 'var(--text-secondary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                <Mail size={16} style={{ flexShrink: 0 }} />
+                <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{user.email}</span>
+              </div>
+              <button 
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowEmailModal(true);
+                  setEmailError('');
+                  setEmailSuccess('');
+                  setNewEmail('');
+                  setEmailPassword('');
+                }}
+                style={{ padding: '2px 8px', fontSize: '0.72rem', flexShrink: 0 }}
+                title="Change account email"
+              >
+                Change
+              </button>
             </div>
             {(user.patientProfile?.phone || user.doctorProfile?.phone) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
@@ -464,6 +537,109 @@ export default function Profile({ user, onUpdateUser }) {
         </div>
       </div>
 
+
+      {/* Change Email Modal */}
+      {showEmailModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 1000,
+            padding: '20px'
+          }}
+          onClick={() => setShowEmailModal(false)}
+        >
+          <div 
+            className="glass-card" 
+            style={{ width: '100%', maxWidth: '440px', padding: '28px', border: '1px solid var(--glass-border)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
+                <Mail size={20} /> Update Email Address
+              </h3>
+              <button 
+                type="button" 
+                onClick={() => setShowEmailModal(false)}
+                className="btn btn-secondary"
+                style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
+              Enter your new email address and current password to verify your identity.
+            </p>
+
+            <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--glass-border)', padding: '10px 14px', borderRadius: '8px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Current:</span>
+              <strong style={{ color: 'var(--color-primary)', fontFamily: 'monospace' }}>{user.email}</strong>
+            </div>
+
+            {emailError && (
+              <div className="badge-error" style={{ padding: '8px 12px', borderRadius: '6px', marginBottom: '12px', fontSize: '0.85rem' }}>
+                {emailError}
+              </div>
+            )}
+            {emailSuccess && (
+              <div className="badge-success" style={{ padding: '8px 12px', borderRadius: '6px', marginBottom: '12px', fontSize: '0.85rem', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
+                {emailSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateEmail}>
+              <div className="form-group" style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem' }}>New Email Address</label>
+                <input
+                  type="email"
+                  className="form-control"
+                  required
+                  placeholder="e.g. new.email@example.com"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '0.85rem' }}>Current Password</label>
+                <input
+                  type="password"
+                  className="form-control"
+                  required
+                  placeholder="Enter your current password"
+                  value={emailPassword}
+                  onChange={(e) => setEmailPassword(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ flex: 1, padding: '10px' }}
+                  onClick={() => setShowEmailModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{ flex: 1, padding: '10px' }}
+                  disabled={emailLoading}
+                >
+                  {emailLoading ? 'Updating...' : 'Save Email'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -320,7 +320,7 @@ export default function App() {
       case 'profile':
         return <Profile user={user} onUpdateUser={handleUpdateUser} />;
       case 'settings':
-        return <Settings user={user} />;
+        return <Settings user={user} onUpdateUser={handleUpdateUser} />;
       default:
         if (user.role === 'admin' || user.role === 'super_admin') {
           return <AdminPanel user={user} />;

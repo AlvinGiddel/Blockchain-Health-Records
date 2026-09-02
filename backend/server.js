@@ -946,6 +946,80 @@ app.post('/api/auth/change-password', async (req, res) => {
     }
 });
 
+// Update Account Email Address (Available to all roles: Patient, Doctor, Admin, Super Admin)
+app.post('/api/auth/update-email', async (req, res) => {
+    try {
+        const { userId, newEmail, currentPassword } = req.body;
+
+        if (!userId || !newEmail || !currentPassword) {
+            return res.status(400).json({ error: 'User ID, new email address, and current password are required.' });
+        }
+
+        const cleanEmail = newEmail.toLowerCase().trim();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(cleanEmail)) {
+            return res.status(400).json({ error: 'Please provide a valid email address.' });
+        }
+
+        // 1. Locate user in database
+        const { rows: users } = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
+        if (users.length === 0) {
+            return res.status(404).json({ error: 'Account not found.' });
+        }
+        const user = users[0];
+
+        // 2. Prevent setting to the exact same email
+        if (user.email.toLowerCase() === cleanEmail) {
+            return res.status(400).json({ error: 'New email address must be different from your current email.' });
+        }
+
+        // 3. Ensure new email is not already taken by another user
+        const { rows: existing } = await db.query('SELECT id FROM users WHERE LOWER(email) = $1 AND id != $2', [cleanEmail, userId]);
+        if (existing.length > 0) {
+            return res.status(400).json({ error: 'This email address is already registered to another account.' });
+        }
+
+        // 4. Verify user password for security
+        const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+        if (!isPasswordValid) {
+            return res.status(400).json({ error: 'Incorrect password. Verification failed.' });
+        }
+
+        // 5. Update user email
+        const { rows: updatedRows } = await db.query(
+            'UPDATE users SET email = $1 WHERE id = $2 RETURNING id, name, email, role, public_key as "publicKey", patient_profile as "patientProfile", doctor_profile as "doctorProfile", is_approved as "isApproved"',
+            [cleanEmail, userId]
+        );
+        const updatedUser = updatedRows[0];
+
+        // 6. Generate fresh session token
+        const token = jwt.sign({ id: updatedUser.id, role: updatedUser.role }, JWT_SECRET, { expiresIn: '1d' });
+
+        // 7. Log immutable audit trail
+        db.query(
+            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            ['email_update', user.id, user.name, user.id, 'System Security', `User ${user.name} (${user.role}) changed email from ${user.email} to ${cleanEmail}.`]
+        ).catch(err => console.error('Failed to log email change audit:', err));
+
+        console.log(`[ACCOUNT] Email updated for user ${user.name} (${user.id}): ${user.email} -> ${cleanEmail}`);
+
+        res.json({
+            success: true,
+            message: 'Email address updated successfully!',
+            token,
+            user: {
+                ...updatedUser,
+                patientProfile: parseJsonIfNeeded(updatedUser.patientProfile),
+                doctorProfile: parseJsonIfNeeded(updatedUser.doctorProfile)
+            }
+        });
+    } catch (err) {
+        console.error('Email update error:', err);
+        res.status(500).json({ error: err.message || 'Failed to update email address.' });
+    }
+});
+
 // Forgot Password Request
 app.post('/api/auth/forgot-password', async (req, res) => {
     try {
