@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User, Activity, AlertTriangle, ShieldCheck, Phone, Clipboard, CheckCircle, Clock, Calendar, Check, X, BookOpen, FileText, Copy, Lock, Database, Globe, Search, QrCode, ShieldAlert, KeyRound } from 'lucide-react';
+import { User, Activity, AlertTriangle, ShieldCheck, Phone, Clipboard, CheckCircle, Clock, Calendar, Check, X, BookOpen, FileText, Copy, Lock, Database, Globe, Search, QrCode, ShieldAlert, KeyRound, Building2 } from 'lucide-react';
 import BreakGlassModal from './BreakGlassModal';
 import QRHealthPassport from './QRHealthPassport';
 import RecordVerificationPortal from './RecordVerificationPortal';
@@ -29,6 +29,13 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
   const [copiedKey, setCopiedKey] = useState(false);
 
   // Appointment Form States (Patient)
+  const [activeOrganizations, setActiveOrganizations] = useState([]);
+  const [selectedHospitalId, setSelectedHospitalId] = useState(() => {
+    if (user.memberships && user.memberships.length > 0) {
+      return user.memberships[0].organizationId;
+    }
+    return '';
+  });
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
   const [appointmentDate, setAppointmentDate] = useState('');
   const [appointmentTime, setAppointmentTime] = useState('');
@@ -79,6 +86,24 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
     }
   };
 
+  const fetchOrganizations = async () => {
+    try {
+      const data = await safeFetch('/api/organizations/active');
+      if (Array.isArray(data)) {
+        setActiveOrganizations(data);
+        setSelectedHospitalId(prev => {
+          if (prev) return prev;
+          if (user.memberships && user.memberships.length > 0) {
+            return user.memberships[0].organizationId;
+          }
+          return data[0]?.id || '';
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load active hospitals:', err);
+    }
+  };
+
   useEffect(() => {
     if (user.role === 'doctor') {
       fetchPatients();
@@ -90,12 +115,20 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
       setAvailStart(user.doctorProfile?.availability?.workingHoursStart || '08:00');
       setAvailEnd(user.doctorProfile?.availability?.workingHoursEnd || '17:00');
     } else if (user.role === 'patient') {
-      fetchDoctors();
+      fetchOrganizations();
       fetchAppointments();
       fetchPatientRecords();
     }
     fetchStats();
   }, [user]);
+
+  // When patient chooses a hospital, load only that hospital's doctors
+  useEffect(() => {
+    if (user.role === 'patient' && selectedHospitalId) {
+      fetchDoctors(selectedHospitalId);
+      setSelectedDoctorId('');
+    }
+  }, [selectedHospitalId]);
 
   // Helper to format 24h time string to 12h AM/PM format
   const formatTime12h = (timeStr) => {
@@ -244,14 +277,13 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
     }
   };
 
-  const fetchDoctors = async () => {
+  const fetchDoctors = async (orgId) => {
     try {
       setLoading(true);
-      const res = await fetch(getApiUrl('/api/users/doctors'));
-      if (res.ok) {
-        const data = await res.json();
-        setDoctors(data);
-      }
+      const targetOrg = orgId || selectedHospitalId;
+      const url = targetOrg ? `/api/users/doctors?orgId=${targetOrg}` : '/api/users/doctors';
+      const data = await safeFetch(url);
+      setDoctors(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching doctors:', err);
     } finally {
@@ -262,11 +294,8 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
   const fetchAppointments = async () => {
     try {
       const uId = user.id || user._id;
-      const res = await fetch(getApiUrl(`/api/appointments?requesterId=${uId}&requesterRole=${user.role}`));
-      if (res.ok) {
-        const data = await res.json();
-        setAppointments(data);
-      }
+      const data = await safeFetch(`/api/appointments?requesterId=${uId}&requesterRole=${user.role}`);
+      setAppointments(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching appointments:', err);
     }
@@ -277,6 +306,11 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
     setApptError('');
     setApptSuccess('');
 
+    if (!selectedHospitalId) {
+      setApptError('Please select a healthcare facility.');
+      return;
+    }
+
     if (!selectedDoctorId) {
       setApptError('Please select a doctor.');
       return;
@@ -284,7 +318,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
     try {
       setSubmittingAppt(true);
-      const res = await fetch(getApiUrl('/api/appointments'), {
+      const data = await safeFetch('/api/appointments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -292,18 +326,30 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
           date: appointmentDate,
           time: appointmentTime,
           reason: appointmentReason,
-          patientId: user.id || user._id
+          patientId: user.id || user._id,
+          organizationId: selectedHospitalId
         })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to submit appointment request.');
 
-      setApptSuccess('Appointment request submitted successfully! It is currently waiting for approval from the doctor.');
+      const selectedOrg = activeOrganizations.find(o => o.id === selectedHospitalId);
+      const facilityName = selectedOrg?.name || 'the healthcare facility';
+      setApptSuccess(`Appointment request submitted to ${facilityName}! Your patient profile is active with this clinic.`);
       setSelectedDoctorId('');
       setAppointmentDate('');
       setAppointmentTime('');
       setAppointmentReason('');
       fetchAppointments();
+
+      // Automatically update local memberships if this was a new hospital visit
+      if (selectedHospitalId && !user.memberships?.some(m => m.organizationId === selectedHospitalId)) {
+        const updatedMemberships = [
+          ...(user.memberships || []),
+          { organizationId: selectedHospitalId, organizationName: facilityName, role: 'patient', status: 'active' }
+        ];
+        const updatedUser = { ...user, memberships: updatedMemberships };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        if (onUpdateUser) onUpdateUser(updatedUser);
+      }
     } catch (err) {
       setApptError(err.message);
     } finally {
@@ -485,7 +531,14 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                   const next = upcoming[0];
                   return (
                     <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
-                      <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Dr. {next.doctorName}</strong>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                        <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Dr. {next.doctorName}</strong>
+                        {next.organizationName && (
+                          <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: 'var(--color-primary)', fontSize: '0.72rem', padding: '2px 6px' }}>
+                            🏥 {next.organizationName}
+                          </span>
+                        )}
+                      </div>
                       <p style={{ margin: '4px 0 0 0', color: 'var(--color-accent)', fontSize: '0.85rem', fontWeight: 500 }}>
                         {next.date} at {next.time}
                       </p>
@@ -570,6 +623,48 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                   </div>
                 )}
                 <form onSubmit={handleBookAppointment}>
+                  {/* Hospital Facility Selector */}
+                  <div className="form-group" style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                      <Building2 size={16} color="var(--color-primary)" />
+                      Select Hospital / Healthcare Facility
+                    </label>
+                    <select
+                      className="form-control"
+                      value={selectedHospitalId}
+                      onChange={(e) => setSelectedHospitalId(e.target.value)}
+                      required
+                      style={{ width: '100%', borderColor: 'rgba(99, 102, 241, 0.4)' }}
+                    >
+                      <option value="">-- Choose Hospital Facility --</option>
+                      {activeOrganizations.map(org => {
+                        const isMember = (user.memberships || []).some(m => m.organizationId === org.id);
+                        return (
+                          <option key={org.id} value={org.id}>
+                            🏥 {org.name} {isMember ? '✓ (My Registered Clinic)' : '• (New Visit)'}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    {selectedHospitalId && (() => {
+                      const isMember = (user.memberships || []).some(m => m.organizationId === selectedHospitalId);
+                      const selectedOrg = activeOrganizations.find(o => o.id === selectedHospitalId);
+                      return (
+                        <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
+                          {isMember ? (
+                            <span className="badge badge-success" style={{ padding: '2px 8px' }}>
+                              ✓ Active Clinic Membership
+                            </span>
+                          ) : (
+                            <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: 'var(--color-accent)', padding: '2px 8px' }}>
+                              🆕 Multi-Clinic Pass: First visit will automatically affiliate you to {selectedOrg?.name || 'this hospital'}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
                   <div className="form-group" style={{ marginBottom: '12px' }}>
                     <label>Select Healthcare Provider (Doctor)</label>
                     <select
@@ -577,8 +672,15 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                       value={selectedDoctorId}
                       onChange={(e) => setSelectedDoctorId(e.target.value)}
                       required
+                      disabled={!selectedHospitalId || doctors.length === 0}
                     >
-                      <option value="">-- Select Doctor --</option>
+                      <option value="">
+                        {!selectedHospitalId 
+                          ? '-- Please select a hospital first --'
+                          : doctors.length === 0 
+                            ? '-- No doctors currently registered at this hospital --' 
+                            : '-- Select Doctor --'}
+                      </option>
                       {doctors.map(doc => (
                         <option key={doc._id || doc.id} value={doc._id || doc.id}>
                           Dr. {doc.name} ({doc.doctorProfile?.specialization || 'General Practitioner'})

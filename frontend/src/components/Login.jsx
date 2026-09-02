@@ -24,8 +24,15 @@ export default function Login({ onLoginSuccess }) {
       sessionStorage.removeItem('suspensionNotice');
       return notice;
     }
-    return '';
   });
+  const [patientOrgId, setPatientOrgId] = useState('');
+  const [activeOrganizations, setActiveOrganizations] = useState([]);
+
+  React.useEffect(() => {
+    safeFetch('/api/organizations/active')
+      .then(data => setActiveOrganizations(Array.isArray(data) ? data : []))
+      .catch(err => console.error('Failed to load active hospitals:', err));
+  }, []);
 
   // Patient profile fields
   const [age, setAge] = useState('');
@@ -194,6 +201,12 @@ export default function Login({ onLoginSuccess }) {
       body.role = role;
 
       if (role === 'patient') {
+        if (!patientOrgId) {
+          setError('Please select your hospital or clinic facility to register.');
+          setLoading(false);
+          return;
+        }
+        body.organizationId = patientOrgId;
         body.profile = {
           age: parseInt(age),
           gender,
@@ -535,6 +548,31 @@ export default function Login({ onLoginSuccess }) {
               <div className="login-register-details">
                 {role === 'patient' && (
                   <>
+                    <div className="form-group" style={{ marginBottom: '16px' }}>
+                      <label htmlFor="patientHospital" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                        <Building2 size={16} color="var(--color-primary)" />
+                        Select Your Hospital / Healthcare Facility <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <select
+                        id="patientHospital"
+                        className="form-control"
+                        value={patientOrgId}
+                        onChange={(e) => setPatientOrgId(e.target.value)}
+                        required
+                        style={{ width: '100%', borderColor: 'rgba(99, 102, 241, 0.4)' }}
+                      >
+                        <option value="">-- Choose Hospital Facility --</option>
+                        {activeOrganizations.map(org => (
+                          <option key={org.id} value={org.id}>
+                            🏥 {org.name}
+                          </option>
+                        ))}
+                      </select>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                        Your universal identity works across all hospitals. This establishes your first clinic relationship.
+                      </span>
+                    </div>
+
                     <h4 style={{ fontSize: '0.9rem', color: 'var(--color-primary)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <Activity size={16} /> Patient Health Vitals
                     </h4>

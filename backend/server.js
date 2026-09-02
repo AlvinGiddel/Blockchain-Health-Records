@@ -458,10 +458,26 @@ app.get('/api/kmpdc/verify', async (req, res) => {
 // Register
 app.post('/api/auth/register', async (req, res) => {
     try {
-        const { name, email, password, role, profile } = req.body;
+        const { name, email, password, role, profile, organizationId } = req.body;
         
         if (role === 'admin' || role === 'super_admin' || !['patient', 'doctor'].includes(role)) {
             return res.status(400).json({ error: 'Registration as Administrator or Super Administrator is not allowed.' });
+        }
+
+        // Validate hospital facility selection for patients
+        let targetOrg = null;
+        if (role === 'patient') {
+            if (!organizationId) {
+                return res.status(400).json({ error: 'Please select your hospital or clinic facility to complete registration.' });
+            }
+            const { rows: orgCheck } = await db.query(
+                "SELECT id, name FROM organizations WHERE id = $1 AND status IN ('active', 'trial') AND LOWER(name) NOT LIKE '%unassigned%'",
+                [organizationId]
+            );
+            if (orgCheck.length === 0) {
+                return res.status(400).json({ error: 'Invalid or inactive hospital facility selected.' });
+            }
+            targetOrg = orgCheck[0];
         }
         
         // 1. Check if email already exists
@@ -585,15 +601,54 @@ app.post('/api/auth/register', async (req, res) => {
         const doctorProfile = role === 'doctor' ? profile : null;
 
         const createdAt = getKenyanTimestamp();
-        const { rows: insertedUsers } = await db.query(
-            `INSERT INTO users (name, email, password, role, public_key, private_key, patient_profile, doctor_profile, is_approved, created_at) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
-            [name, email.toLowerCase().trim(), hashedPassword, role, publicKey, privateKey, 
-             patientProfile ? JSON.stringify(patientProfile) : null, 
-             doctorProfile ? JSON.stringify(doctorProfile) : null, 
-             isApprovedVal, createdAt]
-        );
-        const user = insertedUsers[0];
+        
+        // Execute atomic creation of user record and hospital tenant membership
+        const client = await db.pool.connect();
+        let user;
+        let memberships = [];
+        try {
+            await client.query('BEGIN;');
+
+            const { rows: insertedUsers } = await client.query(
+                `INSERT INTO users (name, email, password, role, organization_id, public_key, private_key, patient_profile, doctor_profile, is_approved, created_at) 
+                 VALUES ($1, $2, $3, $4, NULL, $5, $6, $7, $8, $9, $10) RETURNING *`,
+                [name, email.toLowerCase().trim(), hashedPassword, role, publicKey, privateKey, 
+                 patientProfile ? JSON.stringify(patientProfile) : null, 
+                 doctorProfile ? JSON.stringify(doctorProfile) : null, 
+                 isApprovedVal, createdAt]
+            );
+            user = insertedUsers[0];
+
+            if (role === 'patient' && targetOrg) {
+                // Link new patient to their selected initial hospital via tenant_memberships
+                await client.query(`
+                    INSERT INTO tenant_memberships (user_id, organization_id, role, status, joined_at)
+                    VALUES ($1, $2, 'patient', 'active', $3)
+                    ON CONFLICT (user_id, organization_id) DO UPDATE SET status = 'active';
+                `, [user.id, targetOrg.id, createdAt]);
+
+                memberships = [{
+                    organizationId: targetOrg.id,
+                    organizationName: targetOrg.name,
+                    role: 'patient',
+                    status: 'active'
+                }];
+
+                // Audit log for patient registration and facility enrollment
+                await client.query(
+                    `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                    [targetOrg.id, 'patient_registration', user.id, user.name, user.id, 'System', `New patient registered and affiliated with ${targetOrg.name}.`, createdAt]
+                );
+            }
+
+            await client.query('COMMIT;');
+        } catch (txErr) {
+            await client.query('ROLLBACK;');
+            throw txErr;
+        } finally {
+            client.release();
+        }
 
         if (role === 'doctor' && !isApprovedVal) {
             // Log doctor registration request event in audit trail (in background)
@@ -615,7 +670,13 @@ app.post('/api/auth/register', async (req, res) => {
             });
         }
         
-        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ 
+            id: user.id, 
+            role: user.role,
+            organization_id: user.organization_id || null,
+            organizationName: targetOrg ? targetOrg.name : null
+        }, JWT_SECRET, { expiresIn: '1d' });
+
         res.status(201).json({
             token,
             user: {
@@ -626,7 +687,8 @@ app.post('/api/auth/register', async (req, res) => {
                 publicKey: user.public_key,
                 patientProfile: parseJsonIfNeeded(user.patient_profile),
                 doctorProfile: parseJsonIfNeeded(user.doctor_profile),
-                isApproved: user.is_approved
+                isApproved: user.is_approved,
+                memberships: memberships
             }
         });
     } catch (error) {
@@ -937,6 +999,23 @@ app.post('/api/auth/register-clinic', async (req, res) => {
 
 // ==================== STAGE 6: SUPER ADMIN MULTI-TENANT MANAGEMENT ====================
 
+// Public list of active healthcare facilities (for patient registration and multi-clinic bookings)
+app.get('/api/organizations/active', async (req, res) => {
+    try {
+        const { rows: orgs } = await db.query(`
+            SELECT id, name, status 
+            FROM organizations 
+            WHERE status IN ('active', 'trial') 
+              AND LOWER(name) NOT LIKE '%unassigned%'
+            ORDER BY name ASC;
+        `);
+        res.json(orgs);
+    } catch (err) {
+        console.error('Error fetching active organizations:', err);
+        res.status(500).json({ error: 'Failed to fetch active hospital facilities.' });
+    }
+});
+
 // List all organizations with metrics
 app.get('/api/admin/organizations', async (req, res) => {
     try {
@@ -1094,14 +1173,32 @@ app.get('/api/users/patients', async (req, res) => {
 app.get('/api/users/doctors', async (req, res) => {
     try {
         const { currentUser, isSuperAdmin, targetOrgId } = getRequesterOrgScope(req);
+        const requestedOrgId = req.query.orgId || req.query.organizationId;
 
         let query;
         let params = [];
         if (targetOrgId) {
-            query = 'SELECT id, name, email, role, public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE organization_id = $1 AND role = \'doctor\' AND is_approved = true ORDER BY created_at DESC;';
+            // Clinic Admin or Doctor strictly restricted to their own facility
+            query = 'SELECT id, name, email, role, organization_id as "organizationId", public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE organization_id = $1 AND role = \'doctor\' AND is_approved = true ORDER BY created_at DESC;';
             params = [targetOrgId];
+        } else if (requestedOrgId) {
+            // Patient or Super Admin explicitly querying doctors for a specific hospital
+            query = 'SELECT id, name, email, role, organization_id as "organizationId", public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE organization_id = $1 AND role = \'doctor\' AND is_approved = true ORDER BY created_at DESC;';
+            params = [requestedOrgId];
         } else if (isSuperAdmin) {
-            query = 'SELECT id, name, email, role, public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = true ORDER BY created_at DESC;';
+            query = 'SELECT id, name, email, role, organization_id as "organizationId", public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = true ORDER BY created_at DESC;';
+        } else if (currentUser && currentUser.role === 'patient') {
+            // Patient without query parameter: default to their first active membership facility
+            const { rows: mems } = await db.query(
+                "SELECT organization_id FROM tenant_memberships WHERE user_id = $1 AND status = 'active' ORDER BY joined_at ASC LIMIT 1",
+                [currentUser.id]
+            );
+            if (mems.length > 0) {
+                query = 'SELECT id, name, email, role, organization_id as "organizationId", public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE organization_id = $1 AND role = \'doctor\' AND is_approved = true ORDER BY created_at DESC;';
+                params = [mems[0].organization_id];
+            } else {
+                return res.json([]);
+            }
         } else {
             return res.status(401).json({ error: 'Authentication required to list doctors.' });
         }
@@ -1871,7 +1968,7 @@ app.put('/api/users/doctor/availability', async (req, res) => {
 // Request a new appointment
 app.post('/api/appointments', async (req, res) => {
     try {
-        const { doctorId, date, time, reason, patientId } = req.body;
+        const { doctorId, date, time, reason, patientId, organizationId } = req.body;
         const [patientsRes, doctorsRes] = await Promise.all([
             db.query('SELECT * FROM users WHERE id = $1', [patientId]),
             db.query('SELECT * FROM users WHERE id = $1', [doctorId])
@@ -1954,19 +2051,32 @@ app.post('/api/appointments', async (req, res) => {
             });
         }
         
+        // Determine target hospital facility
+        const targetOrgId = organizationId || doctor.organization_id;
+
+        // Auto-enroll patient into the hospital facility via tenant_memberships (Requirement 2)
+        if (targetOrgId) {
+            await db.query(`
+                INSERT INTO tenant_memberships (user_id, organization_id, role, status, joined_at)
+                VALUES ($1, $2, 'patient', 'active', NOW())
+                ON CONFLICT (user_id, organization_id)
+                DO UPDATE SET status = 'active';
+            `, [patientId, targetOrgId]);
+        }
+        
         const createdAt = getKenyanTimestamp();
         const { rows: appointments } = await db.query(
-            `INSERT INTO appointments (patient_id, doctor_id, patient_name, doctor_name, date, time, reason, status, created_at) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-            [patientId, doctorId, patient.name, doctor.name, date, time, reason, 'Pending', createdAt]
+            `INSERT INTO appointments (patient_id, doctor_id, patient_name, doctor_name, date, time, reason, status, created_at, organization_id) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+            [patientId, doctorId, patient.name, doctor.name, date, time, reason, 'Pending', createdAt, targetOrgId]
         );
         const appointment = appointments[0];
 
-        // Audit Log Entry (in background)
+        // Audit Log Entry with organization context
         db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            ['appointment_request', patientId, patient.name, doctorId, doctor.name, `Patient ${patient.name} requested an appointment with Dr. ${doctor.name} on ${date} at ${time}.`, createdAt]
+            `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [targetOrgId, 'appointment_request', patientId, patient.name, doctorId, doctor.name, `Patient ${patient.name} requested an appointment with Dr. ${doctor.name} on ${date} at ${time}.`, createdAt]
         ).catch(err => console.error('Failed to log appointment request audit:', err));
 
         const responseAppointment = {
@@ -1979,7 +2089,8 @@ app.post('/api/appointments', async (req, res) => {
             time: appointment.time,
             reason: appointment.reason,
             status: appointment.status,
-            createdAt: appointment.created_at
+            createdAt: appointment.created_at,
+            organizationId: appointment.organization_id
         };
 
         res.status(201).json({ success: true, message: 'Appointment request submitted successfully!', appointment: responseAppointment });
@@ -1992,20 +2103,32 @@ app.post('/api/appointments', async (req, res) => {
 app.get('/api/appointments', async (req, res) => {
     try {
         const { requesterId, requesterRole } = req.query;
-        let query = 'SELECT id, patient_id as "patientId", doctor_id as "doctorId", patient_name as "patientName", doctor_name as "doctorName", date, time, reason, status, created_at as "createdAt" FROM appointments';
+        let query = `
+            SELECT a.id, a.patient_id as "patientId", a.doctor_id as "doctorId", a.patient_name as "patientName", 
+                   a.doctor_name as "doctorName", a.date, a.time, a.reason, a.status, a.created_at as "createdAt",
+                   a.organization_id as "organizationId", o.name as "organizationName"
+            FROM appointments a
+            LEFT JOIN organizations o ON a.organization_id = o.id
+        `;
         let params = [];
         
         if (requesterRole === 'patient') {
-            query += ' WHERE patient_id = $1';
+            query += ' WHERE a.patient_id = $1';
             params.push(requesterId);
         } else if (requesterRole === 'doctor') {
-            query += ' WHERE doctor_id = $1';
+            query += ' WHERE a.doctor_id = $1';
             params.push(requesterId);
-        } else if (requesterRole !== 'admin') {
+        } else if (requesterRole === 'admin') {
+            const { targetOrgId } = getRequesterOrgScope(req);
+            if (targetOrgId) {
+                query += ' WHERE a.organization_id = $1';
+                params.push(targetOrgId);
+            }
+        } else {
             return res.status(403).json({ error: 'Invalid requester role.' });
         }
         
-        query += ' ORDER BY created_at DESC';
+        query += ' ORDER BY a.created_at DESC';
         const { rows: appointments } = await db.query(query, params);
         res.json(appointments);
     } catch (err) {
