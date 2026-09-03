@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Database, ShieldAlert, ShieldCheck, UserCheck, RefreshCw, 
-  Layers, Users, Zap, Terminal, Check, X, Stethoscope, 
+import {
+  Database, ShieldAlert, ShieldCheck, UserCheck, RefreshCw,
+  Layers, Users, Zap, Terminal, Check, X, Stethoscope,
   User, Search, UserCog, Activity, Lock, Cpu, Server, CheckCircle2,
   ChevronRight, ArrowUpRight, Shield, Clock, Hash, Building2, Plus,
   CheckCircle, XCircle
@@ -18,14 +18,14 @@ export default function SuperAdminPanel({ user }) {
     admins: 1,
     isValid: true
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const [dbPatients, setDbPatients] = useState([]);
   const [dbDoctors, setDbDoctors] = useState([]);
   const [allAdmins, setAllAdmins] = useState([]);
-  
+
   // Custom states for admin approval workflow & ledger explorations
   const [pendingClinics, setPendingClinics] = useState([]);
   const [clinicActionLoading, setClinicActionLoading] = useState(null);
@@ -91,7 +91,7 @@ export default function SuperAdminPanel({ user }) {
     // Poll backend state and node updates every 4 seconds for snappy live updates
     const interval = setInterval(() => {
       fetchAdminData(true);
-      
+
       // Periodic network pings for live infrastructure monitoring
       const pingMsgs = [
         'P2P Peer Ping: Tenant Gateway responded in 32ms',
@@ -130,7 +130,7 @@ export default function SuperAdminPanel({ user }) {
   const fetchAdminData = async (isBackground = false) => {
     try {
       if (!isBackground) setLoading(true);
-      
+
       // Parallelize all endpoint requests concurrently with Promise.all for instant sub-second response
       const [
         statsData,
@@ -260,14 +260,14 @@ export default function SuperAdminPanel({ user }) {
   const handleRestoreDatabase = async () => {
     setRecovering(true);
     setLogs(prev => [...prev, '[RECOVERY] Initializing Cryptographic Ledger Repair sequence...']);
-    
+
     try {
       const res = await fetch(getApiUrl('/api/blockchain/recover'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
       await res.json();
-      
+
       setTimeout(() => {
         setRecovering(false);
         setLogs(prev => [...prev, '[RECOVERY] All database indexes verified. Ledger synchronization success. Integrity restored.']);
@@ -290,23 +290,23 @@ export default function SuperAdminPanel({ user }) {
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.error || 'Mining failed.');
       }
-      
+
       setToast({
         message: `Success: Block #${data.block.index} successfully mined! Hash: ${data.block.hash.substring(0, 24)}...`,
         type: 'success'
       });
-      
+
       setLogs(prev => [
         ...prev,
         `[${new Date().toLocaleTimeString()}] [MINER] Proof of Work success! Block #${data.block.index} sealed.`,
         `[${new Date().toLocaleTimeString()}] [MINER] Hash: ${data.block.hash}`,
         `[${new Date().toLocaleTimeString()}] [MINER] Chain height: ${data.block.index + 1}`
       ]);
-      
+
       fetchAdminData();
     } catch (err) {
       console.error(err);
@@ -326,7 +326,7 @@ export default function SuperAdminPanel({ user }) {
         method: 'DELETE'
       });
       const data = await res.json();
-      
+
       if (res.ok) {
         setToast({
           message: `User ${userName} (${userRole}) removed from database.`,
@@ -350,7 +350,7 @@ export default function SuperAdminPanel({ user }) {
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await res.json();
-      
+
       if (res.ok) {
         setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Tenant Admin "${userName}" registration approved.`]);
         setToast({
@@ -374,7 +374,7 @@ export default function SuperAdminPanel({ user }) {
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await res.json();
-      
+
       if (res.ok) {
         setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Tenant Admin request for "${userName}" rejected.`]);
         setToast({
@@ -447,7 +447,7 @@ export default function SuperAdminPanel({ user }) {
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await res.json();
-      
+
       if (res.ok) {
         setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Clinical Practitioner "Dr. ${userName}" verified and approved.`]);
         setToast({
@@ -471,7 +471,7 @@ export default function SuperAdminPanel({ user }) {
         headers: { 'Content-Type': 'application/json' }
       });
       const data = await res.json();
-      
+
       if (res.ok) {
         setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Practitioner request for "Dr. ${userName}" rejected.`]);
         setToast({
@@ -573,7 +573,7 @@ export default function SuperAdminPanel({ user }) {
                 )}
               </h3>
               <p style={{ margin: '3px 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                Review institutional registration requests before activating isolated blockchain ledgers and 14-day trials.
+                Review institutional registration requests before activating isolated blockchain ledgers and 7-day trials.
               </p>
             </div>
           </div>
@@ -712,8 +712,8 @@ export default function SuperAdminPanel({ user }) {
         marginBottom: '28px'
       }}>
         {/* Tenant Administrators Card */}
-        <div 
-          className="glass-card stats-card-clickable" 
+        <div
+          className="glass-card stats-card-clickable"
           onClick={() => { setActiveMetricModal('admins'); setModalSearchQuery(''); }}
           style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', transition: 'all 0.25s ease', border: '1px solid rgba(245, 158, 11, 0.25)' }}
           title="Click to inspect Tenant Administrators"
@@ -734,8 +734,8 @@ export default function SuperAdminPanel({ user }) {
         </div>
 
         {/* Clinical Practitioner Nodes Card */}
-        <div 
-          className="glass-card stats-card-clickable" 
+        <div
+          className="glass-card stats-card-clickable"
           onClick={() => { setActiveMetricModal('doctors'); setModalSearchQuery(''); }}
           style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', transition: 'all 0.25s ease', border: '1px solid rgba(99, 102, 241, 0.25)' }}
           title="Click to inspect Licensed Practitioners"
@@ -756,8 +756,8 @@ export default function SuperAdminPanel({ user }) {
         </div>
 
         {/* Registered Patient Identities Card */}
-        <div 
-          className="glass-card stats-card-clickable" 
+        <div
+          className="glass-card stats-card-clickable"
           onClick={() => { setActiveMetricModal('patients'); setModalSearchQuery(''); }}
           style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', transition: 'all 0.25s ease', border: '1px solid rgba(16, 185, 129, 0.25)' }}
           title="Click to inspect Patient Identities"
@@ -778,8 +778,8 @@ export default function SuperAdminPanel({ user }) {
         </div>
 
         {/* Chain Height Card */}
-        <div 
-          className="glass-card stats-card-clickable" 
+        <div
+          className="glass-card stats-card-clickable"
           onClick={() => { setActiveMetricModal('blocks'); setModalSearchQuery(''); }}
           style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', transition: 'all 0.25s ease', border: '1px solid rgba(139, 92, 246, 0.25)' }}
           title="Click to inspect Mined Blocks"
@@ -800,8 +800,8 @@ export default function SuperAdminPanel({ user }) {
         </div>
 
         {/* Consensus Health Card */}
-        <div 
-          className="glass-card stats-card-clickable" 
+        <div
+          className="glass-card stats-card-clickable"
           onClick={() => { setActiveMetricModal('consensus'); setModalSearchQuery(''); }}
           style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', transition: 'all 0.25s ease', border: stats.isValid ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(239, 68, 68, 0.25)' }}
           title="Click to inspect POW Consensus & Quorum State"
@@ -859,7 +859,7 @@ export default function SuperAdminPanel({ user }) {
                 type="button"
                 className="btn btn-secondary"
                 style={{ height: '34px', padding: '0 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
-                onClick={() => {}}
+                onClick={() => { }}
               >
                 <Search size={13} /> Search
               </button>
@@ -889,30 +889,30 @@ export default function SuperAdminPanel({ user }) {
                     );
                   })
                   .map(adm => (
-                  <tr key={adm.id || adm._id}>
-                    <td style={{ fontWeight: 600 }}>{adm.name}</td>
-                    <td>{adm.email}</td>
-                    <td>{new Date(adm.createdAt || Date.now()).toLocaleDateString()}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button
-                          className="btn btn-primary"
-                          style={{ padding: '6px 12px', fontSize: '0.8rem', background: '#10b981', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          onClick={() => handleApproveAdmin(adm.id || adm._id, adm.name)}
-                        >
-                          <Check size={14} /> Authorize Admin
-                        </button>
-                        <button
-                          className="btn btn-danger"
-                          style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          onClick={() => handleRejectAdmin(adm.id || adm._id, adm.name)}
-                        >
-                          <X size={14} /> Reject
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                    <tr key={adm.id || adm._id}>
+                      <td style={{ fontWeight: 600 }}>{adm.name}</td>
+                      <td>{adm.email}</td>
+                      <td>{new Date(adm.createdAt || Date.now()).toLocaleDateString()}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          <button
+                            className="btn btn-primary"
+                            style={{ padding: '6px 12px', fontSize: '0.8rem', background: '#10b981', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            onClick={() => handleApproveAdmin(adm.id || adm._id, adm.name)}
+                          >
+                            <Check size={14} /> Authorize Admin
+                          </button>
+                          <button
+                            className="btn btn-danger"
+                            style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            onClick={() => handleRejectAdmin(adm.id || adm._id, adm.name)}
+                          >
+                            <X size={14} /> Reject
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -926,7 +926,7 @@ export default function SuperAdminPanel({ user }) {
             <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
               <Stethoscope size={20} color="var(--color-primary)" /> Pending Clinical Practitioner Approvals ({pendingDoctors.length})
             </h3>
-            
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, justifyContent: 'flex-end', minWidth: '280px' }}>
               {/* Pending Doctors Search Input & Button */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', maxWidth: '340px', width: '100%', position: 'relative' }}>
@@ -955,7 +955,7 @@ export default function SuperAdminPanel({ user }) {
                   type="button"
                   className="btn btn-secondary"
                   style={{ height: '34px', padding: '0 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
-                  onClick={() => {}}
+                  onClick={() => { }}
                 >
                   <Search size={13} /> Search
                 </button>
@@ -1004,33 +1004,33 @@ export default function SuperAdminPanel({ user }) {
                     );
                   })
                   .map(doc => (
-                  <tr key={doc.id || doc._id}>
-                    <td style={{ fontWeight: 600 }}>Dr. {doc.name}</td>
-                    <td>{doc.email}</td>
-                    <td>{doc.doctorProfile?.specialization || 'General Practice'}</td>
-                    <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{doc.doctorProfile?.licenseNumber || 'N/A'}</td>
-                    <td>{doc.doctorProfile?.hospital || 'N/A'}</td>
-                    <td>{new Date(doc.createdAt || Date.now()).toLocaleDateString()}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button
-                          className="btn btn-primary"
-                          style={{ padding: '6px 12px', fontSize: '0.8rem', background: '#10b981', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          onClick={() => handleApproveDoctor(doc.id || doc._id, doc.name)}
-                        >
-                          <Check size={14} /> Approve Node
-                        </button>
-                        <button
-                          className="btn btn-danger"
-                          style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          onClick={() => handleRejectDoctor(doc.id || doc._id, doc.name)}
-                        >
-                          <X size={14} /> Reject
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                    <tr key={doc.id || doc._id}>
+                      <td style={{ fontWeight: 600 }}>Dr. {doc.name}</td>
+                      <td>{doc.email}</td>
+                      <td>{doc.doctorProfile?.specialization || 'General Practice'}</td>
+                      <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{doc.doctorProfile?.licenseNumber || 'N/A'}</td>
+                      <td>{doc.doctorProfile?.hospital || 'N/A'}</td>
+                      <td>{new Date(doc.createdAt || Date.now()).toLocaleDateString()}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          <button
+                            className="btn btn-primary"
+                            style={{ padding: '6px 12px', fontSize: '0.8rem', background: '#10b981', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            onClick={() => handleApproveDoctor(doc.id || doc._id, doc.name)}
+                          >
+                            <Check size={14} /> Approve Node
+                          </button>
+                          <button
+                            className="btn btn-danger"
+                            style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            onClick={() => handleRejectDoctor(doc.id || doc._id, doc.name)}
+                          >
+                            <X size={14} /> Reject
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -1039,7 +1039,7 @@ export default function SuperAdminPanel({ user }) {
 
       {/* Main Two-Column Layout: Network Node Directory & Live Console */}
       <div className="grid-admin-main" style={{ marginBottom: '28px' }}>
-        
+
         {/* Left Column: Network Node Directory & Global Identity Governance */}
         <div className="glass-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
@@ -1079,7 +1079,7 @@ export default function SuperAdminPanel({ user }) {
                 type="button"
                 className="btn btn-primary"
                 style={{ height: '36px', padding: '0 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
-                onClick={() => {}}
+                onClick={() => { }}
               >
                 <Search size={13} /> Search
               </button>
@@ -1125,7 +1125,7 @@ export default function SuperAdminPanel({ user }) {
               <Users size={16} /> Patient Identities ({filteredPatients.length})
             </button>
           </div>
-          
+
           {/* Active Tab: Clinical Node Operators */}
           {activeDirectoryTab === 'doctors' && (
             <div>
@@ -1150,31 +1150,31 @@ export default function SuperAdminPanel({ user }) {
                       {filteredDoctors.map(doc => {
                         const isDocOrgSuspended = doc.organizationStatus === 'suspended' || doc.organizationStatus === 'disabled';
                         return (
-                        <tr key={doc.id || doc._id}>
-                          <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Dr. {doc.name}</td>
-                          <td>{doc.email}</td>
-                          <td>{doc.doctorProfile?.specialization || 'General Practice'}</td>
-                          <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{doc.doctorProfile?.licenseNumber || 'N/A'}</td>
-                          <td>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span>{doc.organizationName || doc.doctorProfile?.hospital || 'N/A'}</span>
-                              {isDocOrgSuspended && (
-                                <span className="badge badge-error" style={{ fontSize: '0.65rem', padding: '1px 5px' }}>
-                                  SUSPENDED
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td style={{ textAlign: 'right' }}>
-                            <button
-                              className="btn btn-danger"
-                              style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                              onClick={() => setDeleteTarget({ id: doc.id || doc._id, name: `Dr. ${doc.name}`, role: 'Doctor' })}
-                            >
-                              Revoke Node
-                            </button>
-                          </td>
-                        </tr>
+                          <tr key={doc.id || doc._id}>
+                            <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Dr. {doc.name}</td>
+                            <td>{doc.email}</td>
+                            <td>{doc.doctorProfile?.specialization || 'General Practice'}</td>
+                            <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{doc.doctorProfile?.licenseNumber || 'N/A'}</td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>{doc.organizationName || doc.doctorProfile?.hospital || 'N/A'}</span>
+                                {isDocOrgSuspended && (
+                                  <span className="badge badge-error" style={{ fontSize: '0.65rem', padding: '1px 5px' }}>
+                                    SUSPENDED
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              <button
+                                className="btn btn-danger"
+                                style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                onClick={() => setDeleteTarget({ id: doc.id || doc._id, name: `Dr. ${doc.name}`, role: 'Doctor' })}
+                              >
+                                Revoke Node
+                              </button>
+                            </td>
+                          </tr>
                         );
                       })}
                     </tbody>
@@ -1237,7 +1237,7 @@ export default function SuperAdminPanel({ user }) {
               LIVE
             </span>
           </div>
-          
+
           <div style={{ flex: 1, minHeight: '340px', background: '#000', border: '1px solid #111', borderRadius: '8px', padding: '16px', fontFamily: 'monospace', fontSize: '0.75rem', color: '#10b981', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {logs.map((log, index) => (
               <div key={index} style={{ borderLeft: '2px solid rgba(16, 185, 129, 0.3)', paddingLeft: '8px', wordBreak: 'break-all' }}>
@@ -1411,9 +1411,9 @@ export default function SuperAdminPanel({ user }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{
                   background: activeMetricModal === 'admins' ? 'rgba(245, 158, 11, 0.15)' :
-                              activeMetricModal === 'doctors' ? 'rgba(99, 102, 241, 0.15)' :
-                              activeMetricModal === 'patients' ? 'rgba(16, 185, 129, 0.15)' :
-                              activeMetricModal === 'blocks' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                    activeMetricModal === 'doctors' ? 'rgba(99, 102, 241, 0.15)' :
+                      activeMetricModal === 'patients' ? 'rgba(16, 185, 129, 0.15)' :
+                        activeMetricModal === 'blocks' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)',
                   padding: '10px',
                   borderRadius: '10px',
                   border: '1px solid var(--glass-border)'
@@ -1441,7 +1441,7 @@ export default function SuperAdminPanel({ user }) {
                   </span>
                 </div>
               </div>
-              <button 
+              <button
                 style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}
                 onClick={() => setActiveMetricModal(null)}
               >
@@ -1451,7 +1451,7 @@ export default function SuperAdminPanel({ user }) {
 
             {/* Modal Content */}
             <div style={{ flex: 1, overflowY: 'auto', marginBottom: '16px', paddingRight: '4px' }}>
-              
+
               {/* 1. Admins Modal */}
               {activeMetricModal === 'admins' && (
                 <div>
@@ -1583,9 +1583,9 @@ export default function SuperAdminPanel({ user }) {
                           .filter(a => {
                             if (!modalSearchQuery.trim()) return true;
                             const q = modalSearchQuery.toLowerCase();
-                            return (a.name || '').toLowerCase().includes(q) || 
-                                   (a.email || '').toLowerCase().includes(q) ||
-                                   (a.organizationName || '').toLowerCase().includes(q);
+                            return (a.name || '').toLowerCase().includes(q) ||
+                              (a.email || '').toLowerCase().includes(q) ||
+                              (a.organizationName || '').toLowerCase().includes(q);
                           })
                           .map(adm => {
                             const isPending = adm.isApproved === false;
@@ -1597,9 +1597,9 @@ export default function SuperAdminPanel({ user }) {
                                 <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{adm.name}</td>
                                 <td>{adm.email}</td>
                                 <td>
-                                  <span style={{ 
-                                    display: 'inline-flex', 
-                                    alignItems: 'center', 
+                                  <span style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
                                     gap: '6px',
                                     padding: '4px 10px',
                                     borderRadius: '6px',
@@ -1707,34 +1707,34 @@ export default function SuperAdminPanel({ user }) {
                           .map(doc => {
                             const isDocOrgSuspended = doc.organizationStatus === 'suspended' || doc.organizationStatus === 'disabled';
                             return (
-                            <tr key={doc.id || doc._id}>
-                              <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Dr. {doc.name}</td>
-                              <td>{doc.email}</td>
-                              <td>{doc.doctorProfile?.specialization || 'General Practice'}</td>
-                              <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{doc.doctorProfile?.licenseNumber || 'N/A'}</td>
-                              <td>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span>{doc.organizationName || doc.doctorProfile?.hospital || 'N/A'}</span>
-                                  {isDocOrgSuspended && (
-                                    <span className="badge badge-error" style={{ fontSize: '0.65rem', padding: '1px 5px' }}>
-                                      SUSPENDED
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td style={{ textAlign: 'right' }}>
-                                <button
-                                  className="btn btn-danger"
-                                  style={{ padding: '4px 8px', fontSize: '0.75rem' }}
-                                  onClick={() => {
-                                    setActiveMetricModal(null);
-                                    setDeleteTarget({ id: doc.id || doc._id, name: `Dr. ${doc.name}`, role: 'Doctor' });
-                                  }}
-                                >
-                                  Revoke Node
-                                </button>
-                              </td>
-                            </tr>
+                              <tr key={doc.id || doc._id}>
+                                <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Dr. {doc.name}</td>
+                                <td>{doc.email}</td>
+                                <td>{doc.doctorProfile?.specialization || 'General Practice'}</td>
+                                <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{doc.doctorProfile?.licenseNumber || 'N/A'}</td>
+                                <td>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span>{doc.organizationName || doc.doctorProfile?.hospital || 'N/A'}</span>
+                                    {isDocOrgSuspended && (
+                                      <span className="badge badge-error" style={{ fontSize: '0.65rem', padding: '1px 5px' }}>
+                                        SUSPENDED
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <button
+                                    className="btn btn-danger"
+                                    style={{ padding: '4px 8px', fontSize: '0.75rem' }}
+                                    onClick={() => {
+                                      setActiveMetricModal(null);
+                                      setDeleteTarget({ id: doc.id || doc._id, name: `Dr. ${doc.name}`, role: 'Doctor' });
+                                    }}
+                                  >
+                                    Revoke Node
+                                  </button>
+                                </td>
+                              </tr>
                             );
                           })}
                       </tbody>
@@ -1873,7 +1873,7 @@ export default function SuperAdminPanel({ user }) {
                         {stats.isValid ? 'Consensus Status: 100% In Quorum (Chain Valid)' : 'Consensus Status: Tamper Detected (Hash Mismatch)'}
                       </strong>
                       <p style={{ margin: '3px 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-                        {stats.isValid 
+                        {stats.isValid
                           ? 'Every PostgreSQL medical record snapshot matches the recursive SHA-256 block hash tree across all tenant nodes.'
                           : 'A discrepancy was found between database contents and mined block hashes. Trigger self-healing repair below.'}
                       </p>
@@ -1886,7 +1886,7 @@ export default function SuperAdminPanel({ user }) {
                       <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Proof of Work (SHA-256)</strong>
                       <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Difficulty: 2 leading hex zeros with autonomous nonce searching</p>
                     </div>
-                    
+
                     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '14px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', display: 'block', marginBottom: '4px' }}>Autonomous Auto-Miner</span>
                       <strong style={{ fontSize: '0.95rem', color: '#8b5cf6' }}>Active & Mutex-Protected</strong>
