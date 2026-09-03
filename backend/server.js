@@ -1283,7 +1283,7 @@ app.get('/api/admin/organizations/pending', async (req, res) => {
     }
 });
 
-// Approve a pending clinic registration (activates 14-day trial)
+// Approve a pending clinic registration (activates 7-day trial)
 app.post('/api/admin/organizations/:id/approve', async (req, res) => {
     const client = await db.pool.connect();
     try {

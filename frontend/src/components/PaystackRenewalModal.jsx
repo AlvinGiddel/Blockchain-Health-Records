@@ -33,7 +33,7 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
   const [plans, setPlans] = useState([
     { id: 'plan_1m', name: 'Standard Monthly Renewal', days: 30, amountKES: 20000, popular: true },
     { id: 'plan_3m', name: 'Quarterly Clinic Plan', days: 90, amountKES: 54000, popular: false },
-    { id: 'plan_1y', name: 'Annual Enterprise Health License', days: 365, amountKES: 192000, popular: false }
+    { id: 'plan_1y', name: 'Annual Medical License', days: 365, amountKES: 192000, popular: false }
   ]);
   const [selectedPlanId, setSelectedPlanId] = useState('plan_1m');
   const [loading, setLoading] = useState(false);
