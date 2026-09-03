@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Blockchain Health Records",
+    "slug": "blockchain-health-records",
+    "scheme": "bhc",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.blockchainhealth.records",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow Blockchain Health Records to access your camera to scan and cryptographically verify patient QR Health Passports.",
+        "NSFaceIDUsageDescription": "Allow Blockchain Health Records to use Face ID for fast and secure login."
+      }
+    },
+    "android": {
+      "package": "com.blockchainhealth.records",
+      "permissions": [
+        "CAMERA",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
+      ]
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Blockchain Health Records to access your camera to scan and cryptographically verify patient QR Health Passports."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Blockchain Health Records to use Face ID for fast and secure login."
+        }
+      ]
+    ]
+  }
+}
