@@ -1147,13 +1147,24 @@ export default function SuperAdminPanel({ user }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredDoctors.map(doc => (
+                      {filteredDoctors.map(doc => {
+                        const isDocOrgSuspended = doc.organizationStatus === 'suspended' || doc.organizationStatus === 'disabled';
+                        return (
                         <tr key={doc.id || doc._id}>
                           <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Dr. {doc.name}</td>
                           <td>{doc.email}</td>
                           <td>{doc.doctorProfile?.specialization || 'General Practice'}</td>
                           <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{doc.doctorProfile?.licenseNumber || 'N/A'}</td>
-                          <td>{doc.doctorProfile?.hospital || 'N/A'}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>{doc.organizationName || doc.doctorProfile?.hospital || 'N/A'}</span>
+                              {isDocOrgSuspended && (
+                                <span className="badge badge-error" style={{ fontSize: '0.65rem', padding: '1px 5px' }}>
+                                  SUSPENDED
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td style={{ textAlign: 'right' }}>
                             <button
                               className="btn btn-danger"
@@ -1164,7 +1175,8 @@ export default function SuperAdminPanel({ user }) {
                             </button>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -1578,6 +1590,8 @@ export default function SuperAdminPanel({ user }) {
                           .map(adm => {
                             const isPending = adm.isApproved === false;
                             const isSuper = adm.role === 'super_admin';
+                            const isOrgSuspended = !isSuper && (adm.organizationStatus === 'suspended' || adm.organizationStatus === 'disabled');
+                            const isOrgExpired = !isSuper && adm.licenseExpiresAt && new Date(adm.licenseExpiresAt) < new Date();
                             return (
                               <tr key={adm.id || adm._id}>
                                 <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{adm.name}</td>
@@ -1589,14 +1603,15 @@ export default function SuperAdminPanel({ user }) {
                                     gap: '6px',
                                     padding: '4px 10px',
                                     borderRadius: '6px',
-                                    background: isSuper ? 'rgba(59, 130, 246, 0.12)' : 'rgba(16, 185, 129, 0.12)',
-                                    color: isSuper ? '#60a5fa' : '#34d399',
+                                    background: isSuper ? 'rgba(59, 130, 246, 0.12)' : (isOrgSuspended ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)'),
+                                    color: isSuper ? '#60a5fa' : (isOrgSuspended ? '#f87171' : '#34d399'),
                                     fontWeight: 600,
                                     fontSize: '0.75rem',
-                                    border: isSuper ? '1px solid rgba(59, 130, 246, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)'
+                                    border: isSuper ? '1px solid rgba(59, 130, 246, 0.3)' : (isOrgSuspended ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)')
                                   }}>
                                     <Building2 size={13} />
                                     {adm.organizationName || (isSuper ? 'Global Platform Governance' : 'Unassigned Facility')}
+                                    {isOrgSuspended && <span style={{ fontSize: '0.65rem', marginLeft: '4px', textTransform: 'uppercase', color: '#f87171' }}>• SUSPENDED</span>}
                                   </span>
                                 </td>
                                 <td>
@@ -1605,9 +1620,21 @@ export default function SuperAdminPanel({ user }) {
                                   </span>
                                 </td>
                                 <td>
-                                  <span className={`badge ${isPending ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: '0.7rem' }}>
-                                    {isPending ? 'Pending Approval' : 'Active & Authorized'}
-                                  </span>
+                                  {isSuper ? (
+                                    <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>Platform Active</span>
+                                  ) : isOrgSuspended ? (
+                                    <span className="badge badge-error" style={{ fontSize: '0.7rem', padding: '3px 8px', background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.35)' }}>
+                                      ⛔ Facility Suspended
+                                    </span>
+                                  ) : isOrgExpired ? (
+                                    <span className="badge badge-warning" style={{ fontSize: '0.7rem', padding: '3px 8px', background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.35)' }}>
+                                      ⚠️ License Expired
+                                    </span>
+                                  ) : isPending ? (
+                                    <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>Pending Approval</span>
+                                  ) : (
+                                    <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>Active & Authorized</span>
+                                  )}
                                 </td>
                                 <td>{new Date(adm.createdAt || Date.now()).toLocaleDateString()}</td>
                                 <td style={{ textAlign: 'right' }}>
@@ -1628,6 +1655,8 @@ export default function SuperAdminPanel({ user }) {
                                         Reject
                                       </button>
                                     </div>
+                                  ) : isOrgSuspended ? (
+                                    <span style={{ fontSize: '0.75rem', color: '#f87171', fontWeight: 600 }}>Access Blocked</span>
                                   ) : (
                                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Authorized</span>
                                   )}
@@ -1675,13 +1704,24 @@ export default function SuperAdminPanel({ user }) {
                             const q = modalSearchQuery.toLowerCase();
                             return (doc.name || '').toLowerCase().includes(q) || (doc.email || '').toLowerCase().includes(q) || (doc.doctorProfile?.specialization || '').toLowerCase().includes(q) || (doc.doctorProfile?.hospital || '').toLowerCase().includes(q) || (doc.doctorProfile?.licenseNumber || '').toLowerCase().includes(q);
                           })
-                          .map(doc => (
+                          .map(doc => {
+                            const isDocOrgSuspended = doc.organizationStatus === 'suspended' || doc.organizationStatus === 'disabled';
+                            return (
                             <tr key={doc.id || doc._id}>
                               <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Dr. {doc.name}</td>
                               <td>{doc.email}</td>
                               <td>{doc.doctorProfile?.specialization || 'General Practice'}</td>
                               <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{doc.doctorProfile?.licenseNumber || 'N/A'}</td>
-                              <td>{doc.doctorProfile?.hospital || 'N/A'}</td>
+                              <td>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span>{doc.organizationName || doc.doctorProfile?.hospital || 'N/A'}</span>
+                                  {isDocOrgSuspended && (
+                                    <span className="badge badge-error" style={{ fontSize: '0.65rem', padding: '1px 5px' }}>
+                                      SUSPENDED
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
                               <td style={{ textAlign: 'right' }}>
                                 <button
                                   className="btn btn-danger"
@@ -1695,7 +1735,8 @@ export default function SuperAdminPanel({ user }) {
                                 </button>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                       </tbody>
                     </table>
                   </div>

@@ -1587,7 +1587,7 @@ app.get('/api/users/doctors', async (req, res) => {
             query = 'SELECT id, name, email, role, organization_id as "organizationId", public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE organization_id = $1 AND role = \'doctor\' AND is_approved = true ORDER BY created_at DESC;';
             params = [requestedOrgId];
         } else if (isSuperAdmin) {
-            query = 'SELECT id, name, email, role, organization_id as "organizationId", public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = true ORDER BY created_at DESC;';
+            query = 'SELECT u.id, u.name, u.email, u.role, u.organization_id as "organizationId", o.name as "organizationName", o.status as "organizationStatus", u.public_key as "publicKey", u.profile_photo as "profilePhoto", u.doctor_profile as "doctorProfile", u.is_approved as "isApproved", u.created_at as "createdAt" FROM users u LEFT JOIN organizations o ON u.organization_id = o.id WHERE u.role = \'doctor\' AND u.is_approved = true ORDER BY u.created_at DESC;';
         } else if (currentUser && currentUser.role === 'patient') {
             // Patient without query parameter: default to their first active membership facility
             const { rows: mems } = await db.query(
@@ -1744,6 +1744,8 @@ app.get('/api/admin/all', async (req, res) => {
                 u.role, 
                 u.organization_id as "organizationId", 
                 COALESCE(o.name, CASE WHEN u.role = 'super_admin' THEN 'Global Platform Governance' ELSE 'Unassigned Facility' END) as "organizationName",
+                o.status as "organizationStatus",
+                o.license_expires_at as "licenseExpiresAt",
                 u.profile_photo as "profilePhoto", 
                 u.is_approved as "isApproved", 
                 u.created_at as "createdAt" 
