@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Database, ShieldAlert, ShieldCheck, UserCheck, Flame, RefreshCw, Layers, Users, Zap, Terminal, Check, X, Clock, Stethoscope, User, Search, BarChart3, Building2 } from 'lucide-react';
 import PublicHealthAnalytics from './PublicHealthAnalytics';
 import LicenseControlWidget from './LicenseControlWidget';
+import SearchableSelect from './SearchableSelect';
 import { getApiUrl, safeFetch } from '../utils/api';
 
 export default function RegularAdminPanel({ user }) {
@@ -853,12 +854,13 @@ export default function RegularAdminPanel({ user }) {
               <form onSubmit={handleTamperDatabase} style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', minWidth: 0 }}>
                 <div className="form-group" style={{ width: '100%', minWidth: 0 }}>
                   <label>Select Ledger Transaction Record</label>
-                  <select
+                  <SearchableSelect
                     className="form-control"
                     value={tamperRecordId}
+                    placeholder="-- Choose Record --"
                     onChange={(e) => setTamperRecordId(e.target.value)}
                     required
-                    style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', textOverflow: 'ellipsis' }}
+                    style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                   >
                     <option value="">-- Choose Record --</option>
                     {minedRecords.map(mr => (
@@ -866,7 +868,7 @@ export default function RegularAdminPanel({ user }) {
                         Block #{mr.blockIndex}: Patient: {mr.patientName} (Old diagnosis: "{mr.diagnosis.substring(0, 15)}...")
                       </option>
                     ))}
-                  </select>
+                  </SearchableSelect>
                 </div>
 
                 <div className="form-group" style={{ width: '100%', minWidth: 0 }}>

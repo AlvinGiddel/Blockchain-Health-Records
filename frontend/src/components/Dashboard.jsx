@@ -3,6 +3,7 @@ import { User, Activity, AlertTriangle, ShieldCheck, Phone, Clipboard, CheckCirc
 import BreakGlassModal from './BreakGlassModal';
 import QRHealthPassport from './QRHealthPassport';
 import RecordVerificationPortal from './RecordVerificationPortal';
+import SearchableSelect from './SearchableSelect';
 import { safeFetch, getApiUrl } from '../utils/api';
 
 export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavigate }) {
@@ -629,9 +630,10 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                       <Building2 size={16} color="var(--color-primary)" />
                       Select Hospital / Healthcare Facility
                     </label>
-                    <select
+                    <SearchableSelect
                       className="form-control"
                       value={selectedHospitalId}
+                      placeholder="-- Choose Hospital Facility --"
                       onChange={(e) => setSelectedHospitalId(e.target.value)}
                       required
                       style={{ width: '100%', borderColor: 'rgba(99, 102, 241, 0.4)' }}
@@ -645,7 +647,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                           </option>
                         );
                       })}
-                    </select>
+                    </SearchableSelect>
                     {selectedHospitalId && (() => {
                       const isMember = (user.memberships || []).some(m => m.organizationId === selectedHospitalId);
                       const selectedOrg = activeOrganizations.find(o => o.id === selectedHospitalId);
@@ -667,9 +669,10 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
                   <div className="form-group" style={{ marginBottom: '12px' }}>
                     <label>Select Healthcare Provider (Doctor)</label>
-                    <select
+                    <SearchableSelect
                       className="form-control"
                       value={selectedDoctorId}
+                      placeholder={!selectedHospitalId ? '-- Please select a hospital first --' : doctors.length === 0 ? '-- No doctors currently registered at this hospital --' : '-- Select Doctor --'}
                       onChange={(e) => setSelectedDoctorId(e.target.value)}
                       required
                       disabled={!selectedHospitalId || doctors.length === 0}
@@ -686,7 +689,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                           Dr. {doc.name} ({doc.doctorProfile?.specialization || 'General Practitioner'})
                         </option>
                       ))}
-                    </select>
+                    </SearchableSelect>
 
                     {selectedDoctorId && (() => {
                       const doc = doctors.find(d => (d._id || d.id) === selectedDoctorId);
@@ -928,16 +931,17 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
             <form onSubmit={handleUpdateAvailability} className="grid-3" style={{ gap: '20px', alignItems: 'start' }}>
               <div className="form-group">
                 <label>Current Status</label>
-                <select
+                <SearchableSelect
                   className="form-control"
                   value={availStatus}
+                  placeholder="Select Status"
                   onChange={(e) => setAvailStatus(e.target.value)}
                   style={{ width: '100%' }}
                 >
                   <option value="available">🟢 Available</option>
                   <option value="busy">🟡 Busy</option>
                   <option value="on leave">🔴 On Leave</option>
-                </select>
+                </SearchableSelect>
               </div>
 
               <div className="form-group span-2-desktop">

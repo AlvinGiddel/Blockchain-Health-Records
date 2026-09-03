@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Shield, Lock, Mail, User, Activity, AlertCircle, Heart, Stethoscope, ArrowLeft, KeyRound, Eye, EyeOff, Building2, Clock } from 'lucide-react';
 import logoSvg from '../assets/logo.svg';
 import { safeFetch } from '../utils/api';
+import SearchableSelect from './SearchableSelect';
 
 export default function Login({ onLoginSuccess }) {
   const [isRegister, setIsRegister] = useState(false);
@@ -673,12 +674,13 @@ export default function Login({ onLoginSuccess }) {
                         <Building2 size={16} color="var(--color-primary)" />
                         Select Your Hospital / Healthcare Facility <span style={{ color: '#ef4444' }}>*</span>
                       </label>
-                      <select
+                      <SearchableSelect
                         id="patientHospital"
                         className="form-control"
                         value={patientOrgId}
                         onChange={(e) => setPatientOrgId(e.target.value)}
                         required
+                        placeholder="-- Choose Hospital Facility --"
                         style={{ width: '100%', borderColor: 'rgba(99, 102, 241, 0.4)' }}
                       >
                         <option value="">-- Choose Hospital Facility --</option>
@@ -687,7 +689,7 @@ export default function Login({ onLoginSuccess }) {
                             🏥 {org.name}
                           </option>
                         ))}
-                      </select>
+                      </SearchableSelect>
                       <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
                         Your universal identity works across all hospitals. This establishes your first clinic relationship.
                       </span>
@@ -710,26 +712,40 @@ export default function Login({ onLoginSuccess }) {
                     </div>
                     <div className="form-group">
                       <label htmlFor="gender">Gender</label>
-                      <select id="gender" className="form-control" value={gender} onChange={(e) => setGender(e.target.value)} required>
+                      <SearchableSelect 
+                        id="gender" 
+                        className="form-control" 
+                        value={gender} 
+                        onChange={(e) => setGender(e.target.value)} 
+                        required
+                        placeholder="-- Select Gender --"
+                      >
                         <option value="">-- Select Gender --</option>
-                        <option>Male</option>
-                        <option>Female</option>
-                        <option>Prefer not to say</option>
-                      </select>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Prefer not to say">Prefer not to say</option>
+                      </SearchableSelect>
                     </div>
                     <div className="form-group">
                       <label htmlFor="bloodType">Blood Group</label>
-                      <select id="bloodType" className="form-control" value={bloodType} onChange={(e) => setBloodType(e.target.value)} required>
+                      <SearchableSelect 
+                        id="bloodType" 
+                        className="form-control" 
+                        value={bloodType} 
+                        onChange={(e) => setBloodType(e.target.value)} 
+                        required
+                        placeholder="-- Select Blood Group --"
+                      >
                         <option value="">-- Select Blood Group --</option>
-                        <option>A+</option>
-                        <option>A-</option>
-                        <option>B+</option>
-                        <option>B-</option>
-                        <option>AB+</option>
-                        <option>AB-</option>
-                        <option>O+</option>
-                        <option>O-</option>
-                      </select>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                      </SearchableSelect>
                     </div>
                     <div className="form-group">
                       <label htmlFor="allergies">Allergies (comma separated)</label>
@@ -876,10 +892,11 @@ export default function Login({ onLoginSuccess }) {
                         <Building2 size={16} color="var(--color-primary)" />
                         Affiliated Hospital / Healthcare Facility <span style={{ color: '#ef4444' }}>*</span>
                       </label>
-                      <select
+                      <SearchableSelect
                         id="doctorHospital"
                         className="form-control"
                         value={doctorOrgId}
+                        placeholder="-- Choose Hospital Facility --"
                         onChange={(e) => {
                           const val = e.target.value;
                           setDoctorOrgId(val);
@@ -902,7 +919,7 @@ export default function Login({ onLoginSuccess }) {
                           </option>
                         ))}
                         <option value="other">➕ My facility is not in the system (Other / External Clinic)</option>
-                      </select>
+                      </SearchableSelect>
                       <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
                         {doctorOrgId && doctorOrgId !== 'other'
                           ? `Your registration will be routed directly to the Clinical Administrator at ${hospital || 'this facility'} for review.`

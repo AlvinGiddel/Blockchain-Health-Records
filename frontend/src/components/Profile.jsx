@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User, Mail, Phone, Activity, Heart, ShieldCheck, AlertTriangle, Edit3, Save, X, Stethoscope, Briefcase, FileText, Lock, Camera, Upload, Trash2 } from 'lucide-react';
 import { safeFetch } from '../utils/api';
 import { compressImage } from '../utils/imageUtils';
+import SearchableSelect from './SearchableSelect';
 
 export default function Profile({ user, onUpdateUser }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -530,29 +531,31 @@ export default function Profile({ user, onUpdateUser }) {
                       </div>
                       <div className="form-group">
                         <label htmlFor="edit-gender">Gender</label>
-                        <select
+                        <SearchableSelect
                           id="edit-gender"
                           className="form-control"
                           required
                           value={editGender}
+                          placeholder="-- Select Gender --"
                           onChange={(e) => setEditGender(e.target.value)}
                         >
                           <option value="">-- Select Gender --</option>
                           <option value="Male">Male</option>
                           <option value="Female">Female</option>
                           <option value="Prefer not to say">Prefer not to say</option>
-                        </select>
+                        </SearchableSelect>
                       </div>
                     </div>
 
                     <div className="grid-2" style={{ gap: '12px', marginBottom: '12px' }}>
                       <div className="form-group">
                         <label htmlFor="edit-bloodType">Blood Group</label>
-                        <select
+                        <SearchableSelect
                           id="edit-bloodType"
                           className="form-control"
                           required
                           value={editBloodType}
+                          placeholder="-- Select Blood Group --"
                           onChange={(e) => setEditBloodType(e.target.value)}
                         >
                           <option value="">-- Select Blood Group --</option>
@@ -564,7 +567,7 @@ export default function Profile({ user, onUpdateUser }) {
                           <option value="AB-">AB-</option>
                           <option value="O+">O+</option>
                           <option value="O-">O-</option>
-                        </select>
+                        </SearchableSelect>
                       </div>
                       <div className="form-group">
                         <label htmlFor="edit-phone">Phone Number</label>

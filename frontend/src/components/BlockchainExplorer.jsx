@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Database, ShieldAlert, Cpu, CheckCircle2, ChevronRight, AlertTriangle, RefreshCw, Flame, HelpCircle, GitFork } from 'lucide-react';
 import MerkleTreeVisualizer from './MerkleTreeVisualizer';
+import SearchableSelect from './SearchableSelect';
 import { getApiUrl } from '../utils/api';
 
 export default function BlockchainExplorer({ user }) {
@@ -447,9 +448,10 @@ export default function BlockchainExplorer({ user }) {
                 <form onSubmit={handleTamperDatabase}>
                   <div className="form-group" style={{ marginBottom: '12px' }}>
                     <label>Select Mined Record</label>
-                    <select
+                    <SearchableSelect
                       className="form-control"
                       value={tamperRecordId}
+                      placeholder="-- Choose Record --"
                       onChange={(e) => setTamperRecordId(e.target.value)}
                       required
                     >
@@ -459,7 +461,7 @@ export default function BlockchainExplorer({ user }) {
                           Block #{mr.blockIndex}: {mr.patientName} ({mr.diagnosis.substring(0, 15)}...)
                         </option>
                       ))}
-                    </select>
+                    </SearchableSelect>
                   </div>
 
                   <div className="form-group" style={{ marginBottom: '16px' }}>

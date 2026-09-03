@@ -3,6 +3,7 @@ import { Shield, Server, RefreshCw, AlertTriangle, CheckCircle, Clock, Lock, Key
 import { safeFetch } from '../utils/api';
 import PaystackRenewalModal from './PaystackRenewalModal';
 import PaymentHistoryModal from './PaymentHistoryModal';
+import SearchableSelect from './SearchableSelect';
 
 export default function LicenseControlWidget({ user }) {
   const [licenseInfo, setLicenseInfo] = useState(null);
@@ -912,11 +913,17 @@ export default function LicenseControlWidget({ user }) {
               <div className="grid-2" style={{ gap: '12px', marginBottom: '14px' }}>
                 <div>
                   <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Cadre</label>
-                  <select className="form-control" value={newCadre} onChange={e => setNewCadre(e.target.value)} style={{ width: '100%' }}>
+                  <SearchableSelect 
+                    className="form-control" 
+                    value={newCadre} 
+                    placeholder="-- Select Cadre --"
+                    onChange={e => setNewCadre(e.target.value)} 
+                    style={{ width: '100%' }}
+                  >
                     <option value="Medical Practitioner">Medical Practitioner (A)</option>
                     <option value="Dental Practitioner">Dental Practitioner (B)</option>
                     <option value="Specialist Practitioner">Specialist Practitioner (C/T)</option>
-                  </select>
+                  </SearchableSelect>
                 </div>
                 <div>
                   <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Specialization</label>
