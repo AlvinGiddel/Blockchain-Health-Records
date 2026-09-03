@@ -55,6 +55,8 @@ export default function SuperAdminPanel({ user }) {
   // Search state for Node Directory & Registry Control
   const [nodeSearchQuery, setNodeSearchQuery] = useState('');
   const [activeDirectoryTab, setActiveDirectoryTab] = useState('doctors'); // 'doctors' | 'patients'
+  const [pendingAdminSearch, setPendingAdminSearch] = useState('');
+  const [pendingDoctorSearch, setPendingDoctorSearch] = useState('');
 
   // Filtered Doctors & Patients based on search query
   const filteredDoctors = dbDoctors.filter(doc => {
@@ -825,9 +827,44 @@ export default function SuperAdminPanel({ user }) {
       {/* Pending Tenant Admin Approvals */}
       {pendingAdmins.length > 0 && (
         <div className="glass-card" style={{ border: '1px solid rgba(245, 158, 11, 0.3)', marginBottom: '28px', boxShadow: '0 0 15px rgba(245, 158, 11, 0.1)' }}>
-          <h3 style={{ fontSize: '1.2rem', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b' }}>
-            <ShieldAlert size={20} /> Pending Tenant Administrator Registrations ({pendingAdmins.length})
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '12px' }}>
+            <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b' }}>
+              <ShieldAlert size={20} /> Pending Tenant Administrator Registrations ({pendingAdmins.length})
+            </h3>
+
+            {/* Pending Admins Search Input & Button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '240px', maxWidth: '340px', width: '100%', position: 'relative' }}>
+              <div style={{ position: 'relative', width: '100%' }}>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Filter pending admins by name or email..."
+                  value={pendingAdminSearch}
+                  onChange={(e) => setPendingAdminSearch(e.target.value)}
+                  style={{ paddingLeft: '32px', paddingRight: pendingAdminSearch ? '28px' : '10px', fontSize: '0.8rem', height: '34px', borderRadius: '8px' }}
+                />
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                {pendingAdminSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setPendingAdminSearch('')}
+                    style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                    title="Clear Search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ height: '34px', padding: '0 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
+                onClick={() => {}}
+              >
+                <Search size={13} /> Search
+              </button>
+            </div>
+          </div>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
             The following individuals have registered as administrators for tenant health institutions. As Platform Super Admin, approve or reject their system access.
           </p>
@@ -842,7 +879,16 @@ export default function SuperAdminPanel({ user }) {
                 </tr>
               </thead>
               <tbody>
-                {pendingAdmins.map(adm => (
+                {pendingAdmins
+                  .filter(adm => {
+                    if (!pendingAdminSearch.trim()) return true;
+                    const q = pendingAdminSearch.toLowerCase();
+                    return (
+                      (adm.name && adm.name.toLowerCase().includes(q)) ||
+                      (adm.email && adm.email.toLowerCase().includes(q))
+                    );
+                  })
+                  .map(adm => (
                   <tr key={adm.id || adm._id}>
                     <td style={{ fontWeight: 600 }}>{adm.name}</td>
                     <td>{adm.email}</td>
@@ -876,21 +922,57 @@ export default function SuperAdminPanel({ user }) {
       {/* Pending Doctor Approvals (Global Practitioner Verification) */}
       {pendingDoctors.length > 0 && (
         <div className="glass-card" style={{ border: '1px solid rgba(99, 102, 241, 0.3)', marginBottom: '28px', boxShadow: '0 0 15px rgba(99, 102, 241, 0.1)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '12px' }}>
             <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
               <Stethoscope size={20} color="var(--color-primary)" /> Pending Clinical Practitioner Approvals ({pendingDoctors.length})
             </h3>
-            <button
-              type="button"
-              onClick={refreshPendingDoctors}
-              disabled={isRefreshingPendingDocs}
-              className="btn btn-secondary"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '6px 12px' }}
-              title="Instantly refresh approval queue"
-            >
-              <RefreshCw size={14} className={isRefreshingPendingDocs ? 'spin' : ''} />
-              {isRefreshingPendingDocs ? 'Checking...' : 'Refresh Queue'}
-            </button>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, justifyContent: 'flex-end', minWidth: '280px' }}>
+              {/* Pending Doctors Search Input & Button */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', maxWidth: '340px', width: '100%', position: 'relative' }}>
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Filter pending doctors by name, license..."
+                    value={pendingDoctorSearch}
+                    onChange={(e) => setPendingDoctorSearch(e.target.value)}
+                    style={{ paddingLeft: '32px', paddingRight: pendingDoctorSearch ? '28px' : '10px', fontSize: '0.8rem', height: '34px', borderRadius: '8px' }}
+                  />
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  {pendingDoctorSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setPendingDoctorSearch('')}
+                      style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                      title="Clear Search"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ height: '34px', padding: '0 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
+                  onClick={() => {}}
+                >
+                  <Search size={13} /> Search
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={refreshPendingDoctors}
+                disabled={isRefreshingPendingDocs}
+                className="btn btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', padding: '0 12px', height: '34px' }}
+                title="Instantly refresh approval queue"
+              >
+                <RefreshCw size={14} className={isRefreshingPendingDocs ? 'spin' : ''} />
+                {isRefreshingPendingDocs ? 'Checking...' : 'Refresh'}
+              </button>
+            </div>
           </div>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
             Practitioners awaiting license credential validation before their cryptographic signing keys are enabled in the tenant node network.
@@ -909,7 +991,19 @@ export default function SuperAdminPanel({ user }) {
                 </tr>
               </thead>
               <tbody>
-                {pendingDoctors.map(doc => (
+                {pendingDoctors
+                  .filter(doc => {
+                    if (!pendingDoctorSearch.trim()) return true;
+                    const q = pendingDoctorSearch.toLowerCase();
+                    return (
+                      (doc.name && doc.name.toLowerCase().includes(q)) ||
+                      (doc.email && doc.email.toLowerCase().includes(q)) ||
+                      (doc.doctorProfile?.specialization && doc.doctorProfile.specialization.toLowerCase().includes(q)) ||
+                      (doc.doctorProfile?.licenseNumber && doc.doctorProfile.licenseNumber.toLowerCase().includes(q)) ||
+                      (doc.doctorProfile?.hospital && doc.doctorProfile.hospital.toLowerCase().includes(q))
+                    );
+                  })
+                  .map(doc => (
                   <tr key={doc.id || doc._id}>
                     <td style={{ fontWeight: 600 }}>Dr. {doc.name}</td>
                     <td>{doc.email}</td>
@@ -958,27 +1052,37 @@ export default function SuperAdminPanel({ user }) {
               </p>
             </div>
 
-            {/* Search Input */}
-            <div style={{ position: 'relative', width: '100%', maxWidth: '280px' }}>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Search by name, email, license..."
-                value={nodeSearchQuery}
-                onChange={(e) => setNodeSearchQuery(e.target.value)}
-                style={{ paddingLeft: '32px', paddingRight: nodeSearchQuery ? '28px' : '10px', fontSize: '0.8rem', height: '36px' }}
-              />
-              <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              {nodeSearchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setNodeSearchQuery('')}
-                  style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
-                  title="Clear Search"
-                >
-                  <X size={14} />
-                </button>
-              )}
+            {/* Search Input & Button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', maxWidth: '340px' }}>
+              <div style={{ position: 'relative', width: '100%' }}>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Search by name, email, license..."
+                  value={nodeSearchQuery}
+                  onChange={(e) => setNodeSearchQuery(e.target.value)}
+                  style={{ paddingLeft: '32px', paddingRight: nodeSearchQuery ? '28px' : '10px', fontSize: '0.8rem', height: '36px', borderRadius: '8px' }}
+                />
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                {nodeSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setNodeSearchQuery('')}
+                    style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                    title="Clear Search"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ height: '36px', padding: '0 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
+                onClick={() => {}}
+              >
+                <Search size={13} /> Search
+              </button>
             </div>
           </div>
 

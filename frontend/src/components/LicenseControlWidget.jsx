@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, Server, RefreshCw, AlertTriangle, CheckCircle, Clock, Lock, Key, Plus, Stethoscope, UserCheck, X, Activity, ToggleLeft, ToggleRight, Building2, Ban, Check, CreditCard } from 'lucide-react';
+import { Shield, Server, RefreshCw, AlertTriangle, CheckCircle, Clock, Lock, Key, Plus, Stethoscope, UserCheck, X, Activity, ToggleLeft, ToggleRight, Building2, Ban, Check, CreditCard, Search } from 'lucide-react';
 import { safeFetch } from '../utils/api';
 import PaystackRenewalModal from './PaystackRenewalModal';
 import PaymentHistoryModal from './PaymentHistoryModal';
@@ -15,17 +15,19 @@ export default function LicenseControlWidget({ user }) {
   // Active Interactive Card Modal State: 'license' | 'security' | 'schedule' | 'kmpdc' | null
   const [activeModal, setActiveModal] = useState(null);
 
-  // Multi-Tenant Organizations State
+  // Multi-Tenant Organizations State & Search
   const [organizations, setOrganizations] = useState([]);
   const [loadingOrgs, setLoadingOrgs] = useState(false);
   const [orgActionLoading, setOrgActionLoading] = useState(null);
   const [orgStatusMsg, setOrgStatusMsg] = useState('');
   const [orgErrorMsg, setOrgErrorMsg] = useState('');
+  const [orgSearch, setOrgSearch] = useState('');
 
-  // KMPDC Registry State
+  // KMPDC Registry State & Search
   const [practitioners, setPractitioners] = useState([]);
   const [loadingPractitioners, setLoadingPractitioners] = useState(false);
   const [showAddDoctorModal, setShowAddDoctorModal] = useState(false);
+  const [practitionerSearch, setPractitionerSearch] = useState('');
 
   // Add Doctor Form State
   const [newLicense, setNewLicense] = useState('');
@@ -539,16 +541,46 @@ export default function LicenseControlWidget({ user }) {
 
       {/* Master KMPDC Practitioners Table Preview */}
       <div style={{ padding: '16px', borderRadius: '10px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Stethoscope size={18} color="var(--color-primary)" />
             <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
               Master KMPDC Doctor Oracle Registry ({practitioners.length} Registered Practitioners)
             </h4>
           </div>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            Official retention register synchronized with Kenyan council standards
-          </span>
+          
+          {/* KMPDC Real-time Search Input & Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '280px', flex: 1, maxWidth: '420px', position: 'relative' }}>
+            <div style={{ position: 'relative', width: '100%' }}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Search by license #, doctor name, cadre, facility..."
+                value={practitionerSearch}
+                onChange={e => setPractitionerSearch(e.target.value)}
+                style={{ paddingLeft: '32px', paddingRight: practitionerSearch ? '28px' : '10px', height: '34px', fontSize: '0.8rem', borderRadius: '8px' }}
+              />
+              <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              {practitionerSearch && (
+                <button
+                  type="button"
+                  onClick={() => setPractitionerSearch('')}
+                  style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                  title="Clear Search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              style={{ height: '34px', padding: '0 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}
+              onClick={() => {}}
+            >
+              <Search size={13} /> Search
+            </button>
+          </div>
         </div>
 
         <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
@@ -563,7 +595,20 @@ export default function LicenseControlWidget({ user }) {
               </tr>
             </thead>
             <tbody>
-              {practitioners.map((doc, idx) => (
+              {practitioners
+                .filter(doc => {
+                  if (!practitionerSearch.trim()) return true;
+                  const q = practitionerSearch.toLowerCase();
+                  return (
+                    (doc.license_number && doc.license_number.toLowerCase().includes(q)) ||
+                    (doc.full_name && doc.full_name.toLowerCase().includes(q)) ||
+                    (doc.specialization && doc.specialization.toLowerCase().includes(q)) ||
+                    (doc.facility && doc.facility.toLowerCase().includes(q)) ||
+                    (doc.cadre && doc.cadre.toLowerCase().includes(q)) ||
+                    (doc.status && doc.status.toLowerCase().includes(q))
+                  );
+                })
+                .map((doc, idx) => (
                 <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                   <td style={{ padding: '8px 6px', fontFamily: 'monospace', color: 'var(--color-primary)', fontWeight: 600 }}>{doc.license_number}</td>
                   <td style={{ padding: '8px 6px', fontWeight: 500 }}>{doc.full_name}</td>
@@ -576,6 +621,24 @@ export default function LicenseControlWidget({ user }) {
                   </td>
                 </tr>
               ))}
+              {practitioners.length > 0 && practitioners.filter(doc => {
+                if (!practitionerSearch.trim()) return true;
+                const q = practitionerSearch.toLowerCase();
+                return (
+                  (doc.license_number && doc.license_number.toLowerCase().includes(q)) ||
+                  (doc.full_name && doc.full_name.toLowerCase().includes(q)) ||
+                  (doc.specialization && doc.specialization.toLowerCase().includes(q)) ||
+                  (doc.facility && doc.facility.toLowerCase().includes(q)) ||
+                  (doc.cadre && doc.cadre.toLowerCase().includes(q)) ||
+                  (doc.status && doc.status.toLowerCase().includes(q))
+                );
+              }).length === 0 && (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                    No practitioners match "{practitionerSearch}"
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -584,7 +647,7 @@ export default function LicenseControlWidget({ user }) {
       {/* Multi-Tenant Organizations & Per-Clinic Kill-Switch Control Center (Super Admin Only) */}
       {user?.role === 'super_admin' && (
         <div style={{ padding: '20px', borderRadius: '10px', background: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ background: 'rgba(99, 102, 241, 0.2)', padding: '6px', borderRadius: '8px' }}>
                 <Building2 size={20} color="var(--color-primary)" />
@@ -598,16 +661,52 @@ export default function LicenseControlWidget({ user }) {
                 </span>
               </div>
             </div>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={fetchOrganizations}
-              disabled={loadingOrgs}
-              style={{ fontSize: '0.8rem', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              <RefreshCw size={14} className={loadingOrgs ? 'rotate-spin' : ''} />
-              {loadingOrgs ? 'Syncing...' : 'Refresh Matrix'}
-            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', flex: 1, justifyContent: 'flex-end' }}>
+              {/* Organization Search Input & Button */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '240px', maxWidth: '380px', width: '100%', position: 'relative' }}>
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search clinics by name, slug, status..."
+                    value={orgSearch}
+                    onChange={e => setOrgSearch(e.target.value)}
+                    style={{ paddingLeft: '32px', paddingRight: orgSearch ? '28px' : '10px', height: '34px', fontSize: '0.8rem', borderRadius: '8px' }}
+                  />
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                  {orgSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setOrgSearch('')}
+                      style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                      title="Clear Search"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ height: '34px', padding: '0 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}
+                  onClick={() => {}}
+                >
+                  <Search size={13} /> Search
+                </button>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={fetchOrganizations}
+                disabled={loadingOrgs}
+                style={{ height: '34px', fontSize: '0.8rem', padding: '0 12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <RefreshCw size={14} className={loadingOrgs ? 'rotate-spin' : ''} />
+                {loadingOrgs ? 'Syncing...' : 'Refresh'}
+              </button>
+            </div>
           </div>
 
           {orgStatusMsg && (
@@ -638,7 +737,17 @@ export default function LicenseControlWidget({ user }) {
                 </tr>
               </thead>
               <tbody>
-                {organizations.map(org => {
+                {organizations
+                  .filter(org => {
+                    if (!orgSearch.trim()) return true;
+                    const q = orgSearch.toLowerCase();
+                    return (
+                      (org.name && org.name.toLowerCase().includes(q)) ||
+                      (org.slug && org.slug.toLowerCase().includes(q)) ||
+                      (org.status && org.status.toLowerCase().includes(q))
+                    );
+                  })
+                  .map(org => {
                   const isOrgSuspended = org.status === 'suspended' || org.status === 'disabled';
                   const isExpired = org.licenseExpiresAt && new Date(org.licenseExpiresAt) < new Date();
                   const isBusy = orgActionLoading === org.id;
