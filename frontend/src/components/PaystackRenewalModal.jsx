@@ -112,16 +112,17 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
         const handler = window.PaystackPop.setup({
           key: publicKey,
           email: user?.email || 'admin@health.go.ke',
-          amount: selectedPlan.amountKES * 100, // in cents
+          amount: Math.round(selectedPlan.amountKES * 100), // in subunits (cents/kobo)
           currency: 'KES',
           ref: reference,
+          channels: ['card', 'mobile_money'],
           metadata: {
             organization_id: organization.id,
             plan_id: selectedPlan.id
           },
-          callback: async function (response) {
+          callback: function (response) {
             // Instant verification after popup completion
-            await verifyAndFinalizePayment(reference);
+            verifyAndFinalizePayment(reference);
           },
           onClose: function () {
             setLoading(false);
