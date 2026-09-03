@@ -56,7 +56,7 @@ function createPaymentRouter(blockchainInstance) {
         res.json({
             success: true,
             plans: SUBSCRIPTION_PLANS,
-            publicKey: process.env.PAYSTACK_PUBLIC_KEY || ''
+            publicKey: (process.env.PAYSTACK_PUBLIC_KEY || '').trim()
         });
     });
 
@@ -171,7 +171,7 @@ function createPaymentRouter(blockchainInstance) {
                 reference: reference,
                 access_code: paystackResult.access_code,
                 authorization_url: paystackResult.authorization_url,
-                publicKey: process.env.PAYSTACK_PUBLIC_KEY || '',
+                publicKey: (process.env.PAYSTACK_PUBLIC_KEY || '').trim(),
                 amountKES: plan.amountKES,
                 plan: plan,
                 organization: {

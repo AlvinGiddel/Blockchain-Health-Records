@@ -102,15 +102,15 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
       }
 
       const reference = initRes.reference;
-      const publicKey = initRes.publicKey;
+      const cleanKey = (initRes.publicKey || '').trim();
 
       // Check if real Paystack Public Key is configured or if mock mode is active
-      const hasRealKey = publicKey && publicKey.startsWith('pk_') && !publicKey.includes('placeholder');
+      const hasRealKey = cleanKey && cleanKey.startsWith('pk_') && !cleanKey.includes('placeholder');
 
       if (window.PaystackPop && hasRealKey) {
         // Open real Paystack Inline Popup (M-Pesa STK Push / Card)
-        const handler = window.PaystackPop.setup({
-          key: publicKey,
+        const setupOptions = {
+          key: cleanKey,
           email: user?.email || 'admin@health.go.ke',
           amount: Math.round(selectedPlan.amountKES * 100), // in subunits (cents/kobo)
           currency: 'KES',
@@ -127,7 +127,14 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
           onClose: function () {
             setLoading(false);
           }
-        });
+        };
+
+        // If backend already generated a verified access_code, supply it directly
+        if (initRes.access_code) {
+          setupOptions.access_code = initRes.access_code;
+        }
+
+        const handler = window.PaystackPop.setup(setupOptions);
         handler.openIframe();
       } else {
         // In local/sandbox testing without live key: offer simulated one-click checkout
