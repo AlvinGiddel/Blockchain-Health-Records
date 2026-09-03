@@ -22,6 +22,7 @@ export default function LicenseRenewalScreen() {
   const [selectedPlanId, setSelectedPlanId] = useState('plan_1m');
   const [loading, setLoading] = useState(true);
   const [initiating, setInitiating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     fetchLicenseStatus();
@@ -32,9 +33,10 @@ export default function LicenseRenewalScreen() {
       const data = await apiRequest('/payments/clinic-license');
       if (data?.organization) {
         setLicenseData(data.organization);
+        setErrorMessage('');
       }
     } catch (err) {
-      console.warn('Could not fetch license:', err);
+      setErrorMessage(err.message || 'No clinic organization associated with user.');
     } finally {
       setLoading(false);
     }
@@ -94,6 +96,18 @@ export default function LicenseRenewalScreen() {
 
           {loading ? (
             <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 20 }} />
+          ) : errorMessage ? (
+            <View style={{ marginTop: 10, gap: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <AlertCircle size={16} color={COLORS.warning} />
+                <Text style={{ color: COLORS.warning, fontSize: 13, fontWeight: '600' }}>
+                  No Clinic Organization Linked
+                </Text>
+              </View>
+              <Text style={{ color: COLORS.textMuted, fontSize: 12, lineHeight: 16 }}>
+                This user account is not currently assigned to a hospital facility. Log in as a patient or registered practitioner, or assign this admin to an organization.
+              </Text>
+            </View>
           ) : (
             <View style={styles.statusBody}>
               <View style={styles.countdownRow}>
