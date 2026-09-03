@@ -10,6 +10,7 @@ import ResetPassword from './components/ResetPassword';
 import Profile from './components/Profile';
 import Settings from './components/Settings';
 import PublicCertificateView from './components/PublicCertificateView';
+import PaystackRenewalModal from './components/PaystackRenewalModal';
 import { safeFetch } from './utils/api';
 
 
@@ -29,6 +30,7 @@ export default function App() {
     return u && u.organizationStatus === 'expired';
   });
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showPaystackModal, setShowPaystackModal] = useState(false);
 
   // Server status & network failure tracking
   const consecutiveFailuresRef = React.useRef(0);
@@ -668,17 +670,33 @@ export default function App() {
               <button
                 type="button"
                 className="btn btn-primary"
+                style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', border: 'none' }}
                 onClick={() => {
-                  alert('Billing desk notified! A platform representative will contact your primary administrator.');
                   setShowUpgradeModal(false);
+                  setShowPaystackModal(true);
                 }}
               >
-                Request Invoice
+                Renew with Paystack (M-Pesa / Card)
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Standalone Paystack Renewal Modal */}
+      <PaystackRenewalModal
+        organization={{
+          id: user?.organization_id,
+          name: user?.organizationName || 'My Health Facility',
+          license_expires_at: user?.organizationExpiry || null
+        }}
+        user={user}
+        isOpen={showPaystackModal}
+        onClose={() => setShowPaystackModal(false)}
+        onSuccess={() => {
+          setIsTrialExpired(false);
+        }}
+      />
     </div>
   );
 }

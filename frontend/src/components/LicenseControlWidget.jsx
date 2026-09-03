@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Shield, Server, RefreshCw, AlertTriangle, CheckCircle, Clock, Lock, Key, Plus, Stethoscope, UserCheck, X, Activity, ToggleLeft, ToggleRight, Building2, Ban, Check } from 'lucide-react';
+import { Shield, Server, RefreshCw, AlertTriangle, CheckCircle, Clock, Lock, Key, Plus, Stethoscope, UserCheck, X, Activity, ToggleLeft, ToggleRight, Building2, Ban, Check, CreditCard } from 'lucide-react';
 import { safeFetch } from '../utils/api';
+import PaystackRenewalModal from './PaystackRenewalModal';
+import PaymentHistoryModal from './PaymentHistoryModal';
 
 export default function LicenseControlWidget({ user }) {
   const [licenseInfo, setLicenseInfo] = useState(null);
@@ -33,6 +35,12 @@ export default function LicenseControlWidget({ user }) {
   const [addDoctorLoading, setAddDoctorLoading] = useState(false);
   const [addDoctorError, setAddDoctorError] = useState('');
   const [addDoctorSuccess, setAddDoctorSuccess] = useState('');
+
+  // Paystack Renewal & Billing States
+  const [paystackModalOrg, setPaystackModalOrg] = useState(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [clinicOrg, setClinicOrg] = useState(null);
+  const [clinicOrgLoading, setClinicOrgLoading] = useState(false);
 
   const fetchLicenseStatus = async () => {
     try {
@@ -225,13 +233,114 @@ export default function LicenseControlWidget({ user }) {
     }
   };
 
+  const fetchClinicOrg = async () => {
+    if (user?.role === 'super_admin') return;
+    setClinicOrgLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const data = await safeFetch('/api/payments/clinic-license', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (data.organization) {
+        setClinicOrg(data.organization);
+      }
+    } catch (err) {
+      console.warn('Could not fetch clinic organization info:', err.message);
+    } finally {
+      setClinicOrgLoading(false);
+    }
+  };
+
   useEffect(() => {
-    fetchLicenseStatus();
-    fetchPractitioners();
-    fetchOrganizations();
-  }, []);
+    if (user?.role === 'super_admin') {
+      fetchLicenseStatus();
+      fetchPractitioners();
+      fetchOrganizations();
+    } else if (user?.role === 'admin') {
+      fetchClinicOrg();
+    }
+  }, [user]);
 
   if (user?.role !== 'super_admin') {
+    if (user?.role === 'admin') {
+      const isSuspended = clinicOrg?.status === 'suspended' || clinicOrg?.status === 'disabled';
+      const isExpired = clinicOrg?.license_expires_at && new Date(clinicOrg.license_expires_at) < new Date();
+      const currentExpiry = clinicOrg?.license_expires_at ? new Date(clinicOrg.license_expires_at) : null;
+      const daysLeft = currentExpiry ? Math.ceil((currentExpiry - new Date()) / (1000 * 60 * 60 * 24)) : 0;
+
+      return (
+        <div className="glass-card" style={{ marginBottom: '24px', border: '1px solid rgba(14, 165, 233, 0.4)', background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.08) 0%, rgba(15, 23, 42, 0.7) 100%)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(14, 165, 233, 0.4)' }}>
+                <Shield size={24} color="#fff" />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-primary)' }}>
+                    {clinicOrg?.name || user?.organizationName || 'Health Facility License'}
+                  </h3>
+                  <span className={`badge ${isSuspended ? 'badge-error' : (isExpired ? 'badge-error' : 'badge-success')}`} style={{ textTransform: 'uppercase', fontSize: '0.72rem' }}>
+                    {isSuspended ? 'SUSPENDED' : (isExpired ? 'EXPIRED' : (clinicOrg?.status || 'ACTIVE').toUpperCase())}
+                  </span>
+                </div>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.84rem', color: 'var(--text-secondary)' }}>
+                  SaaS Operational License &bull; {currentExpiry ? `Expires on ${currentExpiry.toLocaleDateString()} (${daysLeft > 0 ? `${daysLeft} days remaining` : 'Expired'})` : 'Active'}
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowHistoryModal(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}
+              >
+                <Clock size={14} /> Billing History
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setPaystackModalOrg(clinicOrg || { id: user?.organization_id, name: user?.organizationName || 'Clinic' })}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  fontSize: '0.88rem',
+                  padding: '9px 18px',
+                  background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                  border: 'none',
+                  boxShadow: '0 4px 15px rgba(14, 165, 233, 0.35)',
+                  cursor: 'pointer'
+                }}
+              >
+                <CreditCard size={16} /> Renew License with Paystack (M-Pesa / Card)
+              </button>
+            </div>
+          </div>
+
+          <PaystackRenewalModal
+            organization={paystackModalOrg}
+            user={user}
+            isOpen={!!paystackModalOrg}
+            onClose={() => setPaystackModalOrg(null)}
+            onSuccess={() => {
+              fetchClinicOrg();
+            }}
+          />
+
+          <PaymentHistoryModal
+            isOpen={showHistoryModal}
+            onClose={() => setShowHistoryModal(false)}
+            user={user}
+            organizationId={clinicOrg?.id || user?.organization_id}
+          />
+        </div>
+      );
+    }
     return null;
   }
 
@@ -261,6 +370,14 @@ export default function LicenseControlWidget({ user }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            className="btn btn-secondary"
+            onClick={() => setShowHistoryModal(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '8px 14px' }}
+          >
+            <CreditCard size={15} /> Billing Records
+          </button>
+
           <button
             className="btn btn-secondary"
             onClick={() => setShowAddDoctorModal(true)}
@@ -553,6 +670,16 @@ export default function LicenseControlWidget({ user }) {
                         <div style={{ display: 'inline-flex', gap: '6px' }}>
                           <button
                             type="button"
+                            className="btn btn-primary"
+                            onClick={() => setPaystackModalOrg(org)}
+                            style={{ fontSize: '0.75rem', padding: '4px 10px', background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', border: 'none', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            title="Renew via Paystack (M-Pesa / Card)"
+                          >
+                            <CreditCard size={12} /> Paystack
+                          </button>
+
+                          <button
+                            type="button"
                             className="btn btn-secondary"
                             onClick={() => handleExtendOrg(org.id)}
                             disabled={isBusy}
@@ -826,6 +953,25 @@ export default function LicenseControlWidget({ user }) {
           </div>
         </div>
       )}
+
+      {/* Paystack Renewal Modal for Super Admin */}
+      <PaystackRenewalModal
+        organization={paystackModalOrg}
+        user={user}
+        isOpen={!!paystackModalOrg}
+        onClose={() => setPaystackModalOrg(null)}
+        onSuccess={() => {
+          fetchOrganizations();
+        }}
+      />
+
+      {/* Payment Billing History Modal */}
+      <PaymentHistoryModal
+        isOpen={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
+        user={user}
+        organizationId={null}
+      />
 
     </div>
   );

@@ -61,7 +61,11 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'x-organization-id'],
     maxAge: 86400 // Cache CORS preflight for 24h
 }));
-app.use(express.json());
+app.use(express.json({
+    verify: (req, res, buf) => {
+        req.rawBody = buf;
+    }
+}));
 
 // Multi-Tenant Context Middleware: Automatically sets RLS session variables on all DB queries
 app.use((req, res, next) => {
@@ -170,6 +174,10 @@ function parseJsonIfNeeded(data) {
 
 // Initialize Blockchain Engine
 let healthBlockchain = new Blockchain();
+
+// Paystack Payments & License Subscriptions Router
+const createPaymentRouter = require('./routes/paymentRoutes');
+app.use('/api/payments', createPaymentRouter(healthBlockchain));
 
 // Auto-Miner Configurations
 const MEMPOOL_THRESHOLD = parseInt(process.env.MEMPOOL_THRESHOLD, 10) || 10;
