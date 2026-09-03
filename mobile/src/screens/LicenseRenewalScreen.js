@@ -8,10 +8,12 @@ import {
   AlertCircle, ShieldCheck, LogOut, Clock 
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiRequest } from '../api/client';
 import { COLORS } from '../theme/colors';
 
 export default function LicenseRenewalScreen() {
+  const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const [licenseData, setLicenseData] = useState(null);
   const [plans, setPlans] = useState([
@@ -75,14 +77,19 @@ export default function LicenseRenewalScreen() {
 
   return (
     <View style={styles.container}>
-      {/* App Bar */}
-      <View style={styles.appBar}>
-        <View>
+      {/* App Bar with Safe Area */}
+      <View style={[styles.appBar, { paddingTop: Math.max(insets.top + 8, 48) }]}>
+        <View style={{ flex: 1 }}>
           <Text style={styles.greeting}>Clinic Administrator</Text>
           <Text style={styles.userName}>{user?.organization_name || user?.name || 'Clinic'}</Text>
         </View>
-        <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
-          <LogOut size={18} color={COLORS.textSecondary} />
+        <TouchableOpacity 
+          onPress={logout} 
+          style={styles.logoutBtn}
+          activeOpacity={0.7}
+        >
+          <LogOut size={15} color="#ef4444" />
+          <Text style={styles.logoutBtnText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
 
@@ -186,6 +193,16 @@ export default function LicenseRenewalScreen() {
             Early renewals append 30/90/365 days to your existing expiry date without losing remaining days.
           </Text>
         </View>
+
+        {/* Prominent Bottom Sign Out Button */}
+        <TouchableOpacity 
+          style={styles.bottomLogoutBtn} 
+          onPress={logout}
+          activeOpacity={0.7}
+        >
+          <LogOut size={16} color="#ef4444" />
+          <Text style={styles.bottomLogoutText}>Sign Out / Switch Account</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -217,12 +234,37 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary
   },
   logoutBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center'
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)'
+  },
+  logoutBtnText: {
+    color: '#ef4444',
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  bottomLogoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 24,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.25)'
+  },
+  bottomLogoutText: {
+    color: '#ef4444',
+    fontSize: 14,
+    fontWeight: '700'
   },
   scrollBody: {
     padding: 20,

@@ -8,11 +8,13 @@ import {
   Heart, Calendar, Stethoscope, AlertTriangle, Pill 
 } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiRequest } from '../api/client';
 import { COLORS } from '../theme/colors';
 import QRHealthPassportModal from '../components/QRHealthPassportModal';
 
 export default function PatientDashboard() {
+  const insets = useSafeAreaInsets();
   const { user, logout } = useAuth();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,14 +53,19 @@ export default function PatientDashboard() {
 
   return (
     <View style={styles.container}>
-      {/* App Bar */}
-      <View style={styles.appBar}>
-        <View>
+      {/* App Bar with Safe Area */}
+      <View style={[styles.appBar, { paddingTop: Math.max(insets.top + 8, 48) }]}>
+        <View style={{ flex: 1 }}>
           <Text style={styles.greeting}>Welcome back,</Text>
           <Text style={styles.userName}>{user?.name || 'Patient'}</Text>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-          <LogOut size={18} color={COLORS.textSecondary} />
+        <TouchableOpacity 
+          onPress={handleLogout} 
+          style={styles.logoutBtn}
+          activeOpacity={0.7}
+        >
+          <LogOut size={15} color="#ef4444" />
+          <Text style={styles.logoutBtnText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
 
@@ -218,12 +225,20 @@ const styles = StyleSheet.create({
     color: COLORS.textPrimary
   },
   logoutBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center'
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)'
+  },
+  logoutBtnText: {
+    color: '#ef4444',
+    fontSize: 12,
+    fontWeight: '700'
   },
   scrollBody: {
     padding: 20,
