@@ -3,15 +3,15 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const { 
-    sendResetEmail, 
-    sendDoctorApprovalEmail, 
-    sendDoctorRejectionEmail, 
-    sendClinicApprovalEmail, 
-    sendClinicRejectionEmail, 
+const {
+    sendResetEmail,
+    sendDoctorApprovalEmail,
+    sendDoctorRejectionEmail,
+    sendClinicApprovalEmail,
+    sendClinicRejectionEmail,
     sendPractitionerPendingEmail,
     sendAdminNewPractitionerAlert,
-    sendMail 
+    sendMail
 } = require('./mailer');
 const { Blockchain, generateKeyPair, signRecord, getKenyanTimestamp } = require('./blockchain');
 
@@ -40,9 +40,9 @@ function getRequesterOrgScope(req) {
     if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
         try {
             currentUser = jwt.verify(authHeader.substring(7).trim(), JWT_SECRET);
-        } catch (e) {}
+        } catch (e) { }
     }
-    
+
     // If super_admin, they can optionally target a specific clinic or see global (null)
     if (currentUser && currentUser.role === 'super_admin') {
         const explicitOrg = req.headers['x-organization-id'] || req.query.orgId || req.query.organizationId || null;
@@ -194,7 +194,7 @@ async function syncBlockchainWithDatabase() {
     try {
         const { rows: dbBlocks } = await db.query('SELECT * FROM blocks ORDER BY organization_id, index ASC');
         console.log(`Synchronized ${dbBlocks.length} multi-tenant blocks across all organizations.`);
-        
+
         // Load the primary ledger blocks into healthBlockchain.chain for backward-compatible in-memory access
         const { rows: mamaLucyBlocks } = await db.query(`
             SELECT * FROM blocks 
@@ -215,7 +215,7 @@ async function syncBlockchainWithDatabase() {
                 return b;
             });
         }
-        
+
         // Sync pending records from database (records not yet mined) using single JOIN query
         const { rows: pendingDbRecords } = await db.query(`
             SELECT r.*, u.name as patient_name 
@@ -507,10 +507,10 @@ app.get('/api/practitioner/verify', async (req, res) => {
         if (!license) {
             return res.status(400).json({ error: 'License query parameter is required' });
         }
-        const result = await verifyPractitioner({ 
-            cadre: String(cadre), 
-            licenseNumber: String(license), 
-            practitionerName: name ? String(name) : undefined 
+        const result = await verifyPractitioner({
+            cadre: String(cadre),
+            licenseNumber: String(license),
+            practitionerName: name ? String(name) : undefined
         });
         if (!result.verified) {
             return res.status(422).json({
@@ -537,7 +537,7 @@ app.get('/api/practitioner/verify', async (req, res) => {
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, password, role, profile, organizationId } = req.body;
-        
+
         if (role === 'admin' || role === 'super_admin' || !['patient', 'doctor'].includes(role)) {
             return res.status(400).json({ error: 'Registration as Administrator or Super Administrator is not allowed.' });
         }
@@ -567,7 +567,7 @@ app.post('/api/auth/register', async (req, res) => {
                 }
             }
         }
-        
+
         // 1. Check if email already exists
         const cleanEmail = email.toLowerCase().trim();
         const { rows: existingEmailUsers } = await db.query('SELECT * FROM users WHERE LOWER(email) = $1', [cleanEmail]);
@@ -643,8 +643,8 @@ app.post('/api/auth/register', async (req, res) => {
             const incomingLicense = (profile?.licenseNumber || '').trim();
             const cadre = (profile?.cadre || 'doctor').toLowerCase();
             if (!incomingLicense) {
-                return res.status(400).json({ 
-                    error: `Registration rejected: A valid ${cadre === 'nurse' || cadre === 'midwife' ? 'NCK Nursing License / Registration Number' : 'KMPDC Medical License Number'} is required.` 
+                return res.status(400).json({
+                    error: `Registration rejected: A valid ${cadre === 'nurse' || cadre === 'midwife' ? 'NCK Nursing License / Registration Number' : 'KMPDC Medical License Number'} is required.`
                 });
             }
 
@@ -677,11 +677,11 @@ app.post('/api/auth/register', async (req, res) => {
                 return res.status(400).json({ error: `Registration rejected: A practitioner with this ${practitionerCheck.regulator} license number is already registered in the system.` });
             }
         }
-        
+
         // Generate cryptographic keys for this user
         console.log(`Generating RSA keys for registering user: ${name} (${role})...`);
         const { publicKey, privateKey } = generateKeyPair();
-        
+
         let isApprovedVal = true;
         if (role === 'doctor') {
             isApprovedVal = false;
@@ -695,7 +695,7 @@ app.post('/api/auth/register', async (req, res) => {
         const doctorProfile = role === 'doctor' ? profile : null;
 
         const createdAt = getKenyanTimestamp();
-        
+
         // Execute atomic creation of user record and hospital tenant membership
         const client = await db.pool.connect();
         let user;
@@ -707,10 +707,10 @@ app.post('/api/auth/register', async (req, res) => {
             const { rows: insertedUsers } = await client.query(
                 `INSERT INTO users (name, email, password, role, organization_id, public_key, private_key, patient_profile, doctor_profile, is_approved, created_at) 
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-                [name, email.toLowerCase().trim(), hashedPassword, role, assignedOrgId, publicKey, privateKey, 
-                 patientProfile ? JSON.stringify(patientProfile) : null, 
-                 doctorProfile ? JSON.stringify(doctorProfile) : null, 
-                 isApprovedVal, createdAt]
+                [name, email.toLowerCase().trim(), hashedPassword, role, assignedOrgId, publicKey, privateKey,
+                    patientProfile ? JSON.stringify(patientProfile) : null,
+                    doctorProfile ? JSON.stringify(doctorProfile) : null,
+                    isApprovedVal, createdAt]
             );
             user = insertedUsers[0];
 
@@ -862,9 +862,9 @@ app.post('/api/auth/register', async (req, res) => {
                 }
             });
         }
-        
-        const token = jwt.sign({ 
-            id: user.id, 
+
+        const token = jwt.sign({
+            id: user.id,
             email: user.email,
             role: user.role,
             organization_id: user.organization_id || null,
@@ -931,8 +931,8 @@ app.post('/api/auth/login', async (req, res) => {
             const rateLimitResult = checkSuperAdminRateLimit(clientIp);
             if (!rateLimitResult.allowed) {
                 console.warn(`[Security Alert] Super Admin login rate limit exceeded from IP: ${clientIp}`);
-                return res.status(429).json({ 
-                    error: `Too many Super Admin login attempts. Rate limit exceeded. Try again in ${rateLimitResult.retryAfterSec} seconds.` 
+                return res.status(429).json({
+                    error: `Too many Super Admin login attempts. Rate limit exceeded. Try again in ${rateLimitResult.retryAfterSec} seconds.`
                 });
             }
         }
@@ -946,7 +946,7 @@ app.post('/api/auth/login', async (req, res) => {
         if (!isMatch) {
             return res.status(401).json({ error: 'Invalid credentials.' });
         }
-        
+
         // Block unapproved/rejected admins and doctors from logging in
         if (user.role === 'admin') {
             if (user.is_rejected) {
@@ -1014,8 +1014,8 @@ app.post('/api/auth/login', async (req, res) => {
             memberships = memRows;
         }
 
-        const token = jwt.sign({ 
-            id: user.id, 
+        const token = jwt.sign({
+            id: user.id,
             email: user.email,
             role: user.role,
             organization_id: user.organization_id || null,
@@ -1178,7 +1178,7 @@ app.post('/api/auth/register-clinic', async (req, res) => {
         });
 
     } catch (err) {
-        await client.query('ROLLBACK;').catch(() => {});
+        await client.query('ROLLBACK;').catch(() => { });
         console.error('Error during clinic registration:', err);
         res.status(500).json({ error: err.message || 'Failed to register clinic.' });
     } finally {
@@ -1299,11 +1299,11 @@ app.post('/api/admin/organizations/:id/approve', async (req, res) => {
         const { id } = req.params;
         await client.query('BEGIN;');
 
-        // 1. Update organization: status = 'trial', license_expires_at = NOW() + 14 days
+        // 1. Update organization: status = 'trial', license_expires_at = NOW() + 7 days
         const { rows: updatedOrgs } = await client.query(`
             UPDATE organizations 
             SET status = 'trial',
-                license_expires_at = NOW() + INTERVAL '14 days',
+                license_expires_at = NOW() + INTERVAL '7 days',
                 updated_at = NOW()
             WHERE id = $1
             RETURNING *;
@@ -1363,7 +1363,7 @@ app.post('/api/admin/organizations/:id/approve', async (req, res) => {
             organization: org
         });
     } catch (err) {
-        await client.query('ROLLBACK;').catch(() => {});
+        await client.query('ROLLBACK;').catch(() => { });
         console.error('Error approving clinic:', err);
         res.status(500).json({ error: err.message || 'Failed to approve clinic.' });
     } finally {
@@ -1452,7 +1452,7 @@ app.post('/api/admin/organizations/:id/reject', async (req, res) => {
             organization: org
         });
     } catch (err) {
-        await client.query('ROLLBACK;').catch(() => {});
+        await client.query('ROLLBACK;').catch(() => { });
         console.error('Error rejecting clinic:', err);
         res.status(500).json({ error: err.message || 'Failed to reject clinic.' });
     } finally {
@@ -2073,7 +2073,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         // Generate reset token
         const token = crypto.randomBytes(20).toString('hex');
         const tokenExpires = new Date(Date.now() + 3600000); // 1 hour expiration
-        
+
         await db.query(
             'UPDATE users SET reset_password_token = $1, reset_password_expires = $2 WHERE id = $3',
             [token, tokenExpires, user.id]
@@ -2139,7 +2139,7 @@ app.post('/api/auth/reset-password/:token', async (req, res) => {
         // Update password
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
-        
+
         await db.query(
             'UPDATE users SET password = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE id = $2',
             [hashedPassword, user.id]
@@ -2185,8 +2185,8 @@ app.put('/api/users/patient/profile', async (req, res) => {
         if (gender !== undefined) profile.gender = gender;
         if (bloodType !== undefined) profile.bloodType = bloodType;
         if (allergies !== undefined) {
-            profile.allergies = Array.isArray(allergies) 
-                ? allergies 
+            profile.allergies = Array.isArray(allergies)
+                ? allergies
                 : allergies.split(',').map(s => s.trim()).filter(Boolean);
         }
         if (phone !== undefined) profile.phone = phone;
@@ -2252,7 +2252,7 @@ app.put('/api/users/doctor/profile', async (req, res) => {
         const user = users[0];
 
         let profile = user.doctor_profile || {};
-        
+
         // Prevent editing if already done once
         if (profile.hasEditedProfile) {
             return res.status(403).json({ error: 'Clinical profile can only be edited once. Updates are locked.' });
@@ -2329,7 +2329,7 @@ app.put('/api/users/doctor/availability', async (req, res) => {
             return res.status(404).json({ error: 'Doctor not found.' });
         }
         const doctor = users[0];
-        
+
         let profile = doctor.doctor_profile || {};
         profile.availability = {
             workingDays: workingDays || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
@@ -2337,27 +2337,27 @@ app.put('/api/users/doctor/availability', async (req, res) => {
             workingHoursEnd: workingHoursEnd || '17:00',
             status: status || 'available'
         };
-        
+
         const { rows: updatedDoctors } = await db.query(
             'UPDATE users SET doctor_profile = $1 WHERE id = $2 RETURNING *',
             [JSON.stringify(profile), doctorId]
         );
         const updatedDoctor = updatedDoctors[0];
-        
+
         // Log the change in the audit trail (in background)
         db.query(
             `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6)`,
             [
-                'availability_update', 
-                updatedDoctor.id, 
-                updatedDoctor.name, 
-                updatedDoctor.id, 
-                updatedDoctor.name, 
+                'availability_update',
+                updatedDoctor.id,
+                updatedDoctor.name,
+                updatedDoctor.id,
+                updatedDoctor.name,
                 `Dr. ${updatedDoctor.name} updated availability: Days: ${profile.availability.workingDays.join(', ')}, Hours: ${profile.availability.workingHoursStart} - ${profile.availability.workingHoursEnd}, Status: ${profile.availability.status}.`
             ]
         ).catch(err => console.error('Failed to log availability update audit:', err));
-        
+
         res.json({
             success: true,
             message: 'Availability updated successfully!',
@@ -2393,7 +2393,7 @@ app.post('/api/appointments', async (req, res) => {
         }
         const patient = patients[0];
         const doctor = doctors[0];
-        
+
         // Prevent duplicate appointment bookings
         const { rows: existingAppt } = await db.query(
             `SELECT id FROM appointments 
@@ -2403,7 +2403,7 @@ app.post('/api/appointments', async (req, res) => {
         if (existingAppt.length > 0) {
             return res.status(400).json({ error: 'An appointment request at this date and time already exists.' });
         }
-        
+
         // Doctor Availability Validation
         const availability = doctor.doctor_profile?.availability || {
             status: 'available',
@@ -2459,11 +2459,11 @@ app.post('/api/appointments', async (req, res) => {
                 h = h % 12 || 12;
                 return `${h}:${mStr} ${ampm}`;
             };
-            return res.status(400).json({ 
-                error: `Appointments must be booked during working hours: ${formatTime12hBackend(availability.workingHoursStart)} to ${formatTime12hBackend(availability.workingHoursEnd)}.` 
+            return res.status(400).json({
+                error: `Appointments must be booked during working hours: ${formatTime12hBackend(availability.workingHoursStart)} to ${formatTime12hBackend(availability.workingHoursEnd)}.`
             });
         }
-        
+
         // Determine target hospital facility
         const targetOrgId = organizationId || doctor.organization_id;
 
@@ -2476,7 +2476,7 @@ app.post('/api/appointments', async (req, res) => {
                 DO UPDATE SET status = 'active';
             `, [patientId, targetOrgId]);
         }
-        
+
         const createdAt = getKenyanTimestamp();
         const { rows: appointments } = await db.query(
             `INSERT INTO appointments (patient_id, doctor_id, patient_name, doctor_name, date, time, reason, status, created_at, organization_id) 
@@ -2524,7 +2524,7 @@ app.get('/api/appointments', async (req, res) => {
             LEFT JOIN organizations o ON a.organization_id = o.id
         `;
         let params = [];
-        
+
         if (requesterRole === 'patient') {
             query += ' WHERE a.patient_id = $1';
             params.push(requesterId);
@@ -2540,7 +2540,7 @@ app.get('/api/appointments', async (req, res) => {
         } else {
             return res.status(403).json({ error: 'Invalid requester role.' });
         }
-        
+
         query += ' ORDER BY a.created_at DESC';
         const { rows: appointments } = await db.query(query, params);
         res.json(appointments);
@@ -2554,7 +2554,7 @@ app.post('/api/appointments/:id/status', async (req, res) => {
     try {
         const { status } = req.body;
         const appointmentId = req.params.id;
-        
+
         const { rows: appointments } = await db.query('UPDATE appointments SET status = $1 WHERE id = $2 RETURNING *', [status, appointmentId]);
         if (appointments.length === 0) {
             return res.status(404).json({ error: 'Appointment not found.' });
@@ -2597,7 +2597,7 @@ app.post('/api/consultations', async (req, res) => {
             return res.status(404).json({ error: 'Appointment not found.' });
         }
         const appointment = appointments[0];
-        
+
         const [doctorsRes, patientsRes] = await Promise.all([
             db.query('SELECT * FROM users WHERE id = $1', [appointment.doctor_id]),
             db.query('SELECT * FROM users WHERE id = $1', [appointment.patient_id])
@@ -2709,7 +2709,7 @@ app.get('/api/admin/stats', async (req, res) => {
             const { rows: dCount } = await db.query("SELECT count(*) FROM users WHERE organization_id = $1 AND role = 'doctor' AND is_approved = true", [targetOrgId]);
             const { rows: paCount } = await db.query("SELECT count(DISTINCT tm.user_id) FROM tenant_memberships tm JOIN users u ON tm.user_id = u.id WHERE tm.organization_id = $1 AND tm.status = 'active' AND u.role = 'patient'", [targetOrgId]);
             const { rows: admCount } = await db.query("SELECT count(*) FROM users WHERE organization_id = $1 AND role = 'admin' AND is_approved = true", [targetOrgId]);
-            
+
             return res.json({
                 totalAppointments: parseInt(aCount[0].count),
                 pendingAppointments: parseInt(pACount[0].count),
@@ -2732,7 +2732,7 @@ app.get('/api/admin/stats', async (req, res) => {
             const { rows: dCount } = await db.query("SELECT count(*) FROM users WHERE role = 'doctor' AND is_approved = true");
             const { rows: paCount } = await db.query("SELECT count(*) FROM users WHERE role = 'patient'");
             const { rows: admCount } = await db.query("SELECT count(*) FROM users WHERE role IN ('admin', 'super_admin') AND is_approved = true");
-            
+
             return res.json({
                 totalAppointments: parseInt(aCount[0].count),
                 pendingAppointments: parseInt(pACount[0].count),
@@ -2758,7 +2758,7 @@ app.get('/api/admin/stats', async (req, res) => {
 app.post('/api/records', async (req, res) => {
     try {
         const { patientId, diagnosis, treatment, prescriptions, ipfsHash, doctorId } = req.body;
-        
+
         const [doctorsRes, patientsRes] = await Promise.all([
             db.query('SELECT * FROM users WHERE id = $1', [doctorId]),
             db.query('SELECT * FROM users WHERE id = $1', [patientId])
@@ -2783,13 +2783,13 @@ app.post('/api/records', async (req, res) => {
                 [patientId, doctorId]
             )
         ]);
-                             
+
         if (apptRes.rows.length === 0 && breakGlassRes.rows.length === 0) {
             return res.status(403).json({ error: 'Access Denied: You are not actively treating this patient and have no active break-glass authorization.' });
         }
 
         const timestamp = getKenyanTimestamp();
-        
+
         // Construct the record structure for signing
         const recordData = {
             patientId,
@@ -2797,11 +2797,11 @@ app.post('/api/records', async (req, res) => {
             treatment,
             timestamp
         };
-        
+
         // Sign the record using Doctor's Private Key
         console.log(`Doctor ${doctor.name} is signing medical record cryptographically...`);
         const signature = signRecord(doctor.private_key, recordData);
-        
+
         const transactionHash = crypto.createHash('sha256').update(signature + timestamp).digest('hex');
 
         // Encrypt fields
@@ -2822,7 +2822,7 @@ app.post('/api/records', async (req, res) => {
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
             ['record_create', patientId, patient.name, doctorId, doctor.name, `Dr. ${doctor.name} added a new diagnosis/treatment record.`, timestamp]
         ).catch(err => console.error('Failed to log record creation audit:', err));
-        
+
         // Add to blockchain's pending record memory list
         const pendingRecord = {
             recordId: newRecord.id,
@@ -2840,7 +2840,7 @@ app.post('/api/records', async (req, res) => {
             timestamp,
             transactionHash
         };
-        
+
         healthBlockchain.addRecord(pendingRecord);
         checkMempoolThreshold();
 
@@ -2859,7 +2859,7 @@ app.post('/api/records', async (req, res) => {
             blockIndex: -1,
             timestamp: newRecord.timestamp
         };
-        
+
         res.status(201).json({ message: 'Record created, signed, and broadcast to Ledger Pool!', record: responseRecord });
     } catch (error) {
         console.error('Record creation error:', error);
@@ -2872,11 +2872,11 @@ app.get('/api/records/patient/:id', async (req, res) => {
     try {
         const patientId = req.params.id;
         const { requesterId, requesterRole } = req.query;
-        
+
         if (!requesterId || !requesterRole) {
             return res.status(400).json({ error: 'requesterId and requesterRole query parameters are required.' });
         }
-        
+
         // Allow patient to access their own records
         if (requesterRole === 'patient') {
             if (requesterId !== patientId) {
@@ -2894,7 +2894,7 @@ app.get('/api/records/patient/:id', async (req, res) => {
                     [patientId, requesterId]
                 )
             ]);
-                                 
+
             if (apptRes.rows.length === 0 && breakGlassRes.rows.length === 0) {
                 return res.status(403).json({ error: 'Access Denied: You do not have active treatment or emergency break-glass authorization for this patient.' });
             }
@@ -2970,9 +2970,9 @@ app.get('/api/admin/records', async (req, res) => {
             params.push(recordType);
         }
         query += ' ORDER BY r.timestamp DESC';
-        
+
         const { rows: records } = await db.query(query, params);
-        
+
         const formattedRecords = records.map(rec => {
             return {
                 id: rec.id,
@@ -3028,7 +3028,7 @@ app.get('/api/audit/logs', async (req, res) => {
         if (conditions.length > 0) {
             query += ' WHERE ' + conditions.join(' AND ');
         }
-        
+
         query += ' ORDER BY timestamp DESC';
         const { rows: logs } = await db.query(query, params);
         res.json(logs);
@@ -3045,12 +3045,12 @@ app.post('/api/blockchain/mine', async (req, res) => {
         if (isMining) {
             return res.status(409).json({ error: 'Mining is already in progress. Please wait for the current block to seal.' });
         }
-        
+
         const result = await executeMining('manual admin trigger');
         if (!result.success) {
             return res.status(400).json({ error: result.error || 'No pending records to mine. Add new records first.' });
         }
-        
+
         res.status(200).json({
             message: 'Block successfully mined and stored on ledger!',
             block: result.block
@@ -3077,10 +3077,10 @@ app.get('/api/blockchain/blocks', async (req, res) => {
         const formattedBlocks = blocks.map(b => {
             let records = b.records;
             if (typeof records === 'string') {
-                try { records = JSON.parse(records); } catch (e) {}
+                try { records = JSON.parse(records); } catch (e) { }
             }
             if (typeof records === 'string') {
-                try { records = JSON.parse(records); } catch (e) {}
+                try { records = JSON.parse(records); } catch (e) { }
             }
             return {
                 ...b,
@@ -3110,17 +3110,17 @@ app.get('/api/blockchain/validate', async (req, res) => {
 app.post('/api/blockchain/tamper', async (req, res) => {
     try {
         const { recordId, tamperedDiagnosis } = req.body;
-        
+
         const { rows: records } = await db.query('SELECT * FROM records WHERE id = $1', [recordId]);
         if (records.length === 0) {
             return res.status(404).json({ error: 'Record not found.' });
         }
         const record = records[0];
         const oldDiagnosis = decrypt(record.diagnosis);
-        
+
         // Force-update PostgreSQL records table to write raw plaintext (simulate database tampering)
         await db.query('UPDATE records SET diagnosis = $1 WHERE id = $2', [tamperedDiagnosis, recordId]);
-        
+
         // Also tamper with the block list in the DB/memory to demonstrate chain corruption
         if (record.is_mined && record.block_index !== -1) {
             const { rows: blocks } = await db.query('SELECT * FROM blocks WHERE index = $1', [record.block_index]);
@@ -3134,7 +3134,7 @@ app.post('/api/blockchain/tamper', async (req, res) => {
                 });
                 await db.query('UPDATE blocks SET records = $1 WHERE index = $2', [JSON.stringify(updatedRecords), record.block_index]);
             }
-            
+
             // Tamper in-memory chain too
             const memoryBlock = healthBlockchain.chain.find(b => b.index === record.block_index);
             if (memoryBlock) {
@@ -3146,7 +3146,7 @@ app.post('/api/blockchain/tamper', async (req, res) => {
                 });
             }
         }
-        
+
         res.json({
             message: `Database TAMPERED successfully! Diagnoses updated directly. Old: "${oldDiagnosis}", New: "${tamperedDiagnosis}". Check blockchain validation state now.`,
             success: true
@@ -3160,7 +3160,7 @@ app.post('/api/blockchain/tamper', async (req, res) => {
 app.post('/api/blockchain/recover', async (req, res) => {
     try {
         console.log('Initiating Ledger Self-Healing Recovery...');
-        
+
         const { rows: dbBlocks } = await db.query('SELECT * FROM blocks ORDER BY index ASC');
         if (dbBlocks.length <= 1) {
             return res.status(400).json({ error: 'No block data to recover from. Genesis block cannot be repaired.' });
@@ -3170,20 +3170,20 @@ app.post('/api/blockchain/recover', async (req, res) => {
         for (let i = 1; i < dbBlocks.length; i++) {
             const block = dbBlocks[i];
             let cleanRecords = [];
-            
+
             for (let rec of block.records) {
                 const { rows: recRows } = await db.query('SELECT * FROM records WHERE id = $1', [rec.recordId]);
                 if (recRows.length > 0) {
                     const dbRecord = recRows[0];
                     const originalDiagnosis = rec.diagnosis.replace(/ \(HACKED\)/g, '');
-                    
+
                     // Encrypt original diagnosis back
                     await db.query('UPDATE records SET diagnosis = $1 WHERE id = $2', [encrypt(originalDiagnosis), rec.recordId]);
                     rec.diagnosis = originalDiagnosis;
                 }
                 cleanRecords.push(rec);
             }
-            
+
             const prevBlock = dbBlocks[i - 1];
             block.previous_hash = prevBlock.hash;
             block.records = cleanRecords;
@@ -3197,14 +3197,14 @@ app.post('/api/blockchain/recover', async (req, res) => {
             );
             b.nonce = parseInt(block.nonce);
             b.hash = b.calculateHash();
-            
+
             await db.query('UPDATE blocks SET records = $1, previous_hash = $2, hash = $3 WHERE index = $4', [JSON.stringify(block.records), block.previous_hash, b.hash, block.index]);
             block.hash = b.hash;
         }
-        
+
         // Re-sync memory chain
         await syncBlockchainWithDatabase();
-        
+
         res.json({ success: true, message: 'Ledger database successfully recovered! Chain integrity restored.' });
     } catch (err) {
         console.error('Recovery failed:', err);
@@ -3219,7 +3219,7 @@ app.post('/api/blockchain/recover', async (req, res) => {
 async function rebuildChainAfterDeletion() {
     try {
         console.log('Rebuilding blockchain after user deletion...');
-        
+
         const { rows: allDbBlocks } = await db.query('SELECT * FROM blocks ORDER BY index ASC');
         if (allDbBlocks.length <= 1) {
             await syncBlockchainWithDatabase();
@@ -3227,16 +3227,16 @@ async function rebuildChainAfterDeletion() {
         }
 
         const newChain = [allDbBlocks[0]]; // start with Genesis block
-        
+
         for (let i = 1; i < allDbBlocks.length; i++) {
             const dbBlock = allDbBlocks[i];
             let activeRecords = [];
-            
+
             for (let rec of dbBlock.records) {
                 const { rows: pRows } = await db.query('SELECT 1 FROM users WHERE id = $1', [rec.patientId]);
                 const { rows: dRows } = await db.query('SELECT 1 FROM users WHERE id = $1', [rec.doctorId]);
                 const { rows: rRows } = await db.query('SELECT 1 FROM records WHERE id = $1', [rec.recordId]);
-                
+
                 if (pRows.length > 0 && dRows.length > 0 && rRows.length > 0) {
                     activeRecords.push(rec);
                 }
