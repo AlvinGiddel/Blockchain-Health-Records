@@ -185,22 +185,22 @@ const SUBSCRIPTION_PLANS = [
         id: 'plan_1m',
         name: 'Standard Monthly Renewal',
         days: 30,
-        amountKES: 2500,
+        amountKES: 20000,
         description: '30-day full clinic operational license with fail-closed security bypass and multi-practitioner ledger access.'
     },
     {
         id: 'plan_3m',
         name: 'Quarterly Clinic Plan',
         days: 90,
-        amountKES: 7000,
-        description: '90-day extended license with priority attestation and automated audit backups (Save KES 500).'
+        amountKES: 54000,
+        description: '90-day extended license with priority attestation and automated audit backups (Save KES 6,000).'
     },
     {
         id: 'plan_1y',
         name: 'Annual Enterprise Health License',
         days: 365,
-        amountKES: 25000,
-        description: '365-day enterprise license, unlimited practitioners, full emergency break-glass, and dedicated node support.'
+        amountKES: 192000,
+        description: '365-day enterprise license, unlimited practitioners, full emergency break-glass, and dedicated node support (Save KES 48,000).'
     }
 ];
 

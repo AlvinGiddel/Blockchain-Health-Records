@@ -31,9 +31,9 @@ function loadPaystackScript() {
 
 export default function PaystackRenewalModal({ organization, user, isOpen, onClose, onSuccess }) {
   const [plans, setPlans] = useState([
-    { id: 'plan_1m', name: 'Standard Monthly Renewal', days: 30, amountKES: 2500, popular: true },
-    { id: 'plan_3m', name: 'Quarterly Clinic Plan', days: 90, amountKES: 7000, popular: false },
-    { id: 'plan_1y', name: 'Annual Enterprise Health License', days: 365, amountKES: 25000, popular: false }
+    { id: 'plan_1m', name: 'Standard Monthly Renewal', days: 30, amountKES: 20000, popular: true },
+    { id: 'plan_3m', name: 'Quarterly Clinic Plan', days: 90, amountKES: 54000, popular: false },
+    { id: 'plan_1y', name: 'Annual Enterprise Health License', days: 365, amountKES: 192000, popular: false }
   ]);
   const [selectedPlanId, setSelectedPlanId] = useState('plan_1m');
   const [loading, setLoading] = useState(false);
@@ -503,7 +503,9 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
                           <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#38bdf8' }}>
                             KES {plan.amountKES.toLocaleString()}
                           </div>
-                          <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>KES {Math.round(plan.amountKES / (plan.days / 30))}/mo</div>
+                          <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                            KES {Math.round(plan.days === 365 ? plan.amountKES / 12 : plan.amountKES / (plan.days / 30)).toLocaleString()}/mo
+                          </div>
                         </div>
                       </div>
                     );
