@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { CreditCard, CheckCircle, XCircle, Clock, X, Hash, RefreshCw, Building2, Phone } from 'lucide-react';
 import { safeFetch } from '../utils/api';
 
@@ -40,20 +41,23 @@ export default function PaymentHistoryModal({ isOpen, onClose, user, organizatio
 
   if (!isOpen) return null;
 
-  return (
+  const modalNode = (
     <div style={{
       position: 'fixed',
       top: 0,
       left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(5, 5, 15, 0.85)',
+      width: '100vw',
+      height: '100vh',
+      backgroundColor: 'rgba(5, 5, 15, 0.88)',
       backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 10000,
-      padding: '16px'
+      zIndex: 999999,
+      padding: '16px',
+      boxSizing: 'border-box',
+      overflowY: 'auto'
     }}>
       <div style={{
         background: 'linear-gradient(145deg, #111827 0%, #1f2937 100%)',
@@ -62,11 +66,12 @@ export default function PaymentHistoryModal({ isOpen, onClose, user, organizatio
         width: '100%',
         maxWidth: '780px',
         maxHeight: '85vh',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85)',
         color: '#f9fafb',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        margin: 'auto'
       }}>
         {/* Header */}
         <div style={{
@@ -235,4 +240,6 @@ export default function PaymentHistoryModal({ isOpen, onClose, user, organizatio
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalNode, document.body) : modalNode;
 }

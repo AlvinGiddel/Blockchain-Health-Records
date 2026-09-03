@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   CreditCard, Shield, CheckCircle, AlertTriangle, 
   Clock, X, ArrowRight, ExternalLink, RefreshCw, Zap, Phone, Sparkles 
@@ -164,20 +165,23 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
     }
   };
 
-  return (
+  const modalNode = (
     <div style={{
       position: 'fixed',
       top: 0,
       left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(5, 5, 15, 0.85)',
+      width: '100vw',
+      height: '100vh',
+      backgroundColor: 'rgba(5, 5, 15, 0.88)',
       backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 10000,
-      padding: '16px'
+      zIndex: 999999,
+      padding: '16px',
+      boxSizing: 'border-box',
+      overflowY: 'auto'
     }}>
       <div style={{
         background: 'linear-gradient(145deg, #111827 0%, #1f2937 100%)',
@@ -185,9 +189,13 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
         borderRadius: '16px',
         width: '100%',
         maxWidth: '560px',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(14, 165, 233, 0.2)',
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 30px rgba(14, 165, 233, 0.25)',
         color: '#f9fafb',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        margin: 'auto'
       }}>
         {/* Modal Header */}
         <div style={{
@@ -236,7 +244,7 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
         </div>
 
         {/* Modal Body */}
-        <div style={{ padding: '24px' }}>
+        <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
           {error && (
             <div style={{
               padding: '12px 16px',
@@ -548,4 +556,6 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalNode, document.body) : modalNode;
 }
