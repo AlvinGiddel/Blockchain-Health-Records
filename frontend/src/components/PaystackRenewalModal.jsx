@@ -92,7 +92,8 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
         },
         body: JSON.stringify({
           planId: selectedPlan.id,
-          organizationId: organization.id
+          organizationId: organization.id,
+          email: user?.email
         })
       });
 

@@ -15,7 +15,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345
 /**
  * Authentication & Authorization middleware for payments
  */
-function authenticatePaymentUser(req, res, next) {
+async function authenticatePaymentUser(req, res, next) {
     const authHeader = req.headers.authorization || req.headers.Authorization;
     if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
         return res.status(401).json({ error: 'Authentication required for billing operations.' });
@@ -25,6 +25,20 @@ function authenticatePaymentUser(req, res, next) {
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         req.user = decoded;
+
+        // Ensure email and organization_id exist on req.user
+        if (!req.user.email && req.user.id) {
+            try {
+                const { rows } = await db.query('SELECT email, name, organization_id FROM users WHERE id = $1', [req.user.id]);
+                if (rows.length > 0) {
+                    req.user.email = rows[0].email;
+                    if (!req.user.name) req.user.name = rows[0].name;
+                    if (!req.user.organization_id) req.user.organization_id = rows[0].organization_id;
+                }
+            } catch (queryErr) {
+                console.warn('[PaymentAuth] Could not prefetch user email:', queryErr.message);
+            }
+        }
         next();
     } catch (err) {
         return res.status(401).json({ error: 'Invalid or expired authentication session.' });
@@ -69,7 +83,7 @@ function createPaymentRouter(blockchainInstance) {
     // 2. Initialize a Paystack renewal transaction
     router.post('/initialize', authenticatePaymentUser, async (req, res) => {
         try {
-            const { planId = 'plan_1m', organizationId: requestedOrgId } = req.body;
+            const { planId = 'plan_1m', organizationId: requestedOrgId, email: providedEmail } = req.body;
             const currentUser = req.user;
 
             // Resolve target organization with strict multi-tenant scoping
@@ -97,6 +111,12 @@ function createPaymentRouter(blockchainInstance) {
 
             // Resolve selected subscription plan
             const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId) || SUBSCRIPTION_PLANS[0];
+
+            // Resolve customer email with robust fallbacks
+            let customerEmail = providedEmail || currentUser.email;
+            if (!customerEmail) {
+                customerEmail = `admin@${organization.slug || 'clinic'}.local`;
+            }
 
             // Generate clean, traceable Paystack reference
             const safeOrgSlug = (organization.slug || organization.name.toLowerCase().replace(/[^a-z0-9]/g, '-')).slice(0, 15);
@@ -127,12 +147,12 @@ function createPaymentRouter(blockchainInstance) {
                 'license_renewal',
                 plan.days,
                 plan.name,
-                currentUser.email
+                customerEmail
             ]);
 
             // Call Paystack API
             const paystackResult = await initializeTransaction({
-                email: currentUser.email,
+                email: customerEmail,
                 amountInKES: plan.amountKES,
                 reference: reference,
                 metadata: {
@@ -141,6 +161,7 @@ function createPaymentRouter(blockchainInstance) {
                     plan_id: plan.id,
                     plan_days: plan.days,
                     user_id: currentUser.id,
+                    user_email: customerEmail,
                     purpose: 'license_renewal'
                 }
             });

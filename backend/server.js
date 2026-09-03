@@ -865,6 +865,7 @@ app.post('/api/auth/register', async (req, res) => {
         
         const token = jwt.sign({ 
             id: user.id, 
+            email: user.email,
             role: user.role,
             organization_id: user.organization_id || null,
             organizationName: targetOrg ? targetOrg.name : null
@@ -1015,6 +1016,7 @@ app.post('/api/auth/login', async (req, res) => {
 
         const token = jwt.sign({ 
             id: user.id, 
+            email: user.email,
             role: user.role,
             organization_id: user.organization_id || null,
             organizationName: organizationName || null,
