@@ -197,7 +197,7 @@ const SUBSCRIPTION_PLANS = [
     },
     {
         id: 'plan_1y',
-        name: 'Annual Enterprise Health License',
+        name: 'Annual Medical License',
         days: 365,
         amountKES: 192000,
         description: '365-day enterprise license, unlimited practitioners, full emergency break-glass, and dedicated node support (Save KES 48,000).'
