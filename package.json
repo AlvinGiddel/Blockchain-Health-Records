@@ -9,7 +9,7 @@
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
-    "expo": "^57.0.20",
+    "expo": "^46.0.21",
     "express": "^4.18.2",
     "googleapis": "^178.0.0",
     "jsonwebtoken": "^9.0.2",
