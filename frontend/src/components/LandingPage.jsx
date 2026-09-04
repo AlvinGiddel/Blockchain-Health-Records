@@ -209,7 +209,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                 <Button
                   variant="outline"
                   onClick={() => onNavigateLogin()}
-                  className="border-[#E2E8F0] dark:border-[#1E3A5F] text-[#0B2545] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-[#112239] text-sm font-medium px-4"
+                  className="border-[#CBD5E1] dark:border-[#1E3A5F] bg-white dark:bg-[#112239] text-[#0B2545] dark:text-white hover:bg-slate-100 dark:hover:bg-[#1B314F] text-sm font-medium px-4"
                 >
                   Log in
                 </Button>
@@ -284,7 +284,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                   <Button
                     variant="outline"
                     onClick={() => { setMobileMenuOpen(false); onNavigateLogin(); }}
-                    className="w-full justify-center"
+                    className="w-full justify-center border-[#CBD5E1] dark:border-[#1E3A5F] bg-white dark:bg-[#112239] text-[#0B2545] dark:text-white hover:bg-slate-100 dark:hover:bg-[#1B314F]"
                   >
                     Log in to Portal
                   </Button>
@@ -342,7 +342,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                   size="lg"
                   variant="outline"
                   onClick={() => onNavigateLogin()}
-                  className="w-full sm:w-auto border-[#CBD5E1] dark:border-[#1E3A5F] text-[#0B2545] dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-[#112239] font-medium text-base px-6 py-3.5 rounded-xl"
+                  className="w-full sm:w-auto border-[#CBD5E1] dark:border-[#1E3A5F] bg-white dark:bg-[#112239] text-[#0B2545] dark:text-white hover:bg-slate-100 dark:hover:bg-[#1B314F] font-medium text-base px-6 py-3.5 rounded-xl shadow-xs"
                 >
                   Log in to portal
                 </Button>
