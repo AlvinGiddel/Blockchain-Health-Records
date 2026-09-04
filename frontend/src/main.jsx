@@ -27,8 +27,8 @@ class ErrorBoundary extends React.Component {
           alignItems: 'center',
           justifyContent: 'center',
           minHeight: '100vh',
-          backgroundColor: '#0a0b10',
-          color: '#f3f4f6',
+          backgroundColor: '#F8FAFC',
+          color: '#0F172A',
           fontFamily: 'system-ui, sans-serif',
           padding: '20px',
           textAlign: 'center'
@@ -38,24 +38,24 @@ class ErrorBoundary extends React.Component {
             width: '100%',
             padding: '32px',
             borderRadius: '16px',
-            background: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)'
+            background: '#FFFFFF',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 4px 16px rgba(11, 37, 69, 0.08)'
           }}>
             <h2 style={{ color: '#ef4444', marginBottom: '12px', fontSize: '1.4rem' }}>Application Encountered An Issue</h2>
-            <p style={{ color: '#9ca3af', fontSize: '0.9rem', marginBottom: '16px', lineHeight: 1.5 }}>
+            <p style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '16px', lineHeight: 1.5 }}>
               A temporary interface error occurred. Details below:
             </p>
 
             <div style={{
-              background: 'rgba(0, 0, 0, 0.6)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              background: '#F1F5F9',
+              border: '1px solid #E2E8F0',
               borderRadius: '8px',
               padding: '12px',
               textAlign: 'left',
               fontFamily: 'monospace',
               fontSize: '0.8rem',
-              color: '#f87171',
+              color: '#dc2626',
               maxHeight: '180px',
               overflowY: 'auto',
               marginBottom: '20px',
@@ -72,9 +72,9 @@ class ErrorBoundary extends React.Component {
                   this.setState({ hasError: false, error: null, errorInfo: null });
                 }}
                 style={{
-                  backgroundColor: '#374151',
-                  color: '#fff',
-                  border: 'none',
+                  backgroundColor: '#E2E8F0',
+                  color: '#0F172A',
+                  border: '1px solid #CBD5E1',
                   padding: '10px 20px',
                   borderRadius: '8px',
                   fontWeight: 600,
@@ -91,7 +91,7 @@ class ErrorBoundary extends React.Component {
                   window.location.reload();
                 }}
                 style={{
-                  backgroundColor: '#6366f1',
+                  backgroundColor: '#0F766E',
                   color: '#fff',
                   border: 'none',
                   padding: '10px 20px',

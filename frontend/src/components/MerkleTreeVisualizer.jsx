@@ -94,26 +94,26 @@ export default function MerkleTreeVisualizer({ block }) {
             style={{
               padding: '10px 18px',
               borderRadius: '8px',
-              backgroundColor: 'rgba(168, 85, 247, 0.15)',
-              border: '2px solid #a855f7',
+              backgroundColor: 'rgba(37, 99, 235, 0.12)',
+              border: '2px solid #2563EB',
               cursor: 'pointer',
               textAlign: 'center',
-              boxShadow: '0 0 15px rgba(168, 85, 247, 0.2)',
+              boxShadow: '0 4px 14px rgba(37, 99, 235, 0.18)',
               transition: 'transform 0.2s',
               maxWidth: '380px'
             }}
             onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
             onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
           >
-            <div style={{ fontSize: '0.7rem', color: '#c084fc', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+            <div style={{ fontSize: '0.7rem', color: '#2563EB', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
               🌳 Merkle Root Hash
             </div>
-            <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: '#ffffff', wordBreak: 'break-all' }}>
+            <div style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-primary, #0B2545)', wordBreak: 'break-all' }}>
               {rootHash.slice(0, 24)}...
             </div>
           </div>
           {/* Connector to branch level */}
-          <div style={{ width: '2px', height: '16px', backgroundColor: '#a855f7' }}></div>
+          <div style={{ width: '2px', height: '16px', backgroundColor: '#2563EB' }}></div>
         </div>
 
         {/* LEVEL 2: INTERMEDIATE BRANCHES (if multiple records) */}
@@ -158,14 +158,14 @@ export default function MerkleTreeVisualizer({ block }) {
                 maxWidth: '260px',
                 padding: '10px 14px',
                 borderRadius: '8px',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid #10b981',
+                backgroundColor: '#E8F7F2',
+                border: '1px solid #A3E3CD',
                 cursor: 'pointer',
                 transition: 'all 0.2s'
               }}
               onMouseEnter={e => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.2)';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(29, 158, 117, 0.2)';
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.transform = 'translateY(0)';
@@ -173,9 +173,9 @@ export default function MerkleTreeVisualizer({ block }) {
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                <span style={{ fontSize: '0.7rem', color: '#34d399', fontWeight: 700 }}>LEAF #{idx + 1}</span>
+                <span style={{ fontSize: '0.7rem', color: '#1D9E75', fontWeight: 700 }}>LEAF #{idx + 1}</span>
                 {leaf.isSigned && (
-                  <span style={{ fontSize: '0.65rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                  <span style={{ fontSize: '0.65rem', color: '#1D9E75', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 600 }}>
                     <ShieldCheck size={12} /> RSA Signed
                   </span>
                 )}

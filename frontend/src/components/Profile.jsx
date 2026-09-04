@@ -497,7 +497,7 @@ export default function Profile({ user, onUpdateUser }) {
                 </div>
               )}
               {successMsg && (
-                <div className="badge-success" style={{ padding: '8px', borderRadius: '6px', marginBottom: '12px', fontSize: '0.85rem', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
+                <div className="badge-success" style={{ padding: '8px 12px', borderRadius: '6px', marginBottom: '12px', fontSize: '0.85rem', color: '#1D9E75', border: '1px solid #A3E3CD', backgroundColor: '#E8F7F2' }}>
                   {successMsg}
                 </div>
               )}
@@ -737,7 +737,7 @@ export default function Profile({ user, onUpdateUser }) {
               </div>
             )}
             {emailSuccess && (
-              <div className="badge-success" style={{ padding: '8px 12px', borderRadius: '6px', marginBottom: '12px', fontSize: '0.85rem', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', backgroundColor: 'rgba(16, 185, 129, 0.1)' }}>
+              <div className="badge-success" style={{ padding: '8px 12px', borderRadius: '6px', marginBottom: '12px', fontSize: '0.85rem', color: '#1D9E75', border: '1px solid #A3E3CD', backgroundColor: '#E8F7F2' }}>
                 {emailSuccess}
               </div>
             )}

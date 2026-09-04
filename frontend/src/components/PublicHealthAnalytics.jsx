@@ -200,7 +200,7 @@ export default function PublicHealthAnalytics() {
             <FileText size={20} color="var(--color-primary)" />
           </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>{totalRecords}</div>
-          <div style={{ marginTop: '8px', fontSize: '0.72rem', color: '#6366f1', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 600 }}>
+          <div style={{ marginTop: '8px', fontSize: '0.72rem', color: 'var(--color-accent)', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 600 }}>
             Inspect Sealed Records <ChevronRight size={12} />
           </div>
         </div>
@@ -359,7 +359,7 @@ export default function PublicHealthAnalytics() {
                 <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {activeModal === 'patients' && <><Users color="var(--color-primary)" /> Registered Patient Roster ({patientsList.length})</>}
                   {activeModal === 'doctors' && <><Heart color="#10b981" /> Approved Doctor Roster ({doctorsList.length})</>}
-                  {activeModal === 'records' && <><FileText color="#6366f1" /> Encrypted Records Ledger ({recordsList.length})</>}
+                  {activeModal === 'records' && <><FileText color="var(--color-accent)" /> Encrypted Records Ledger ({recordsList.length})</>}
                   {activeModal === 'blocks' && <><Database color="#3b82f6" /> Mined Blockchain Ledger ({blocksList.length})</>}
                   {activeModal === 'breakGlass' && <><ShieldAlert color="#ef4444" /> ER Emergency Break-Glass Audit Trail ({breakGlassLogs.length})</>}
                 </h3>

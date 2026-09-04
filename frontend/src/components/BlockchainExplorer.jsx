@@ -327,19 +327,19 @@ export default function BlockchainExplorer({ user }) {
                         onClick={() => setExpandedMerkleBlock(expandedMerkleBlock === block.index ? null : block.index)}
                         style={{
                           marginTop: '12px',
-                          background: 'none',
-                          border: '1px solid rgba(168, 85, 247, 0.4)',
+                          background: 'rgba(37, 99, 235, 0.08)',
+                          border: '1px solid rgba(37, 99, 235, 0.3)',
                           borderRadius: '6px',
                           padding: '6px 12px',
-                          color: '#c084fc',
+                          color: '#2563EB',
                           cursor: 'pointer',
                           fontSize: '0.8rem',
+                          fontWeight: 600,
                           display: 'flex',
                           alignItems: 'center',
                           gap: '6px',
                           width: '100%',
                           justifyContent: 'center',
-                          backgroundColor: 'rgba(168, 85, 247, 0.08)',
                           transition: 'background 0.2s'
                         }}
                       >

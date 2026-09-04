@@ -54,7 +54,7 @@ export default function QRHealthPassport({ user, onClose }) {
           isDark = val % 2 === 0;
         }
         if (isDark) {
-          cells.push(<rect key={`${r}-${c}`} x={c * 10} y={r * 10} width={10} height={10} fill="var(--color-primary, #6366f1)" />);
+          cells.push(<rect key={`${r}-${c}`} x={c * 10} y={r * 10} width={10} height={10} fill="var(--color-primary, #0B2545)" />);
         }
       }
     }
@@ -120,7 +120,7 @@ export default function QRHealthPassport({ user, onClose }) {
         </div>
 
         <div ref={cardRef} style={{
-          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(16, 185, 129, 0.08) 100%)',
+          background: 'linear-gradient(135deg, rgba(15, 118, 110, 0.08) 0%, rgba(29, 158, 117, 0.06) 100%)',
           border: '1px solid var(--glass-border)',
           borderRadius: '16px',
           padding: '20px',

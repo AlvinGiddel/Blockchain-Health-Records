@@ -66,10 +66,10 @@ export default function PublicCertificateView({ recordId, onDismiss }) {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', gap: '16px', color: '#fff' }}>
-        <div style={{ width: '48px', height: '48px', border: '4px solid rgba(99, 102, 241, 0.2)', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-        <h3 style={{ margin: 0, fontWeight: 600 }}>Verifying Cryptographic Ledger Seal...</h3>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Querying decentralized blockchain blocks and validating RSA signatures</p>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', gap: '16px', color: 'var(--text-primary, #0B2545)' }}>
+        <div style={{ width: '48px', height: '48px', border: '4px solid rgba(15, 118, 110, 0.2)', borderTopColor: '#0F766E', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <h3 style={{ margin: 0, fontWeight: 700, color: '#0B2545' }}>Verifying Cryptographic Ledger Seal...</h3>
+        <p style={{ color: 'var(--text-secondary, #475569)', fontSize: '0.85rem' }}>Querying decentralized blockchain blocks and validating RSA signatures</p>
       </div>
     );
   }
@@ -100,7 +100,7 @@ export default function PublicCertificateView({ recordId, onDismiss }) {
   }) : new Date().toLocaleString();
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#0b0f19', padding: '24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main, #F8FAFC)', padding: '24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       
       {/* Top Action Bar (Hidden on Print) */}
       <div 
@@ -112,11 +112,11 @@ export default function PublicCertificateView({ recordId, onDismiss }) {
           justifyContent: 'space-between',
           alignItems: 'center',
           marginBottom: '20px',
-          backgroundColor: 'rgba(15, 23, 42, 0.85)',
-          padding: '12px 20px',
-          borderRadius: '10px',
-          border: '1px solid rgba(99, 102, 241, 0.3)',
-          backdropFilter: 'blur(10px)',
+          backgroundColor: 'var(--card, #FFFFFF)',
+          padding: '14px 20px',
+          borderRadius: '12px',
+          border: '1px solid var(--border, #E2E8F0)',
+          boxShadow: '0 4px 12px rgba(11, 37, 69, 0.05)',
           boxSizing: 'border-box'
         }}
       >
@@ -128,17 +128,17 @@ export default function PublicCertificateView({ recordId, onDismiss }) {
             gap: '8px',
             background: 'none',
             border: 'none',
-            color: '#94a3b8',
+            color: 'var(--text-secondary, #475569)',
             cursor: 'pointer',
             fontSize: '0.9rem',
-            fontWeight: 500
+            fontWeight: 600
           }}
         >
           <ArrowLeft size={18} /> Exit Verification View
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600, border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#E8F7F2', color: '#1D9E75', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, border: '1px solid #A3E3CD' }}>
             <ShieldCheck size={16} /> BLOCKCHAIN SEAL VERIFIED
           </div>
           <button
@@ -148,7 +148,7 @@ export default function PublicCertificateView({ recordId, onDismiss }) {
               alignItems: 'center',
               gap: '6px',
               padding: '8px 16px',
-              backgroundColor: '#059669',
+              backgroundColor: '#0F766E',
               color: '#ffffff',
               border: 'none',
               borderRadius: '6px',

@@ -274,11 +274,11 @@ export default function LicenseControlWidget({ user }) {
       const daysLeft = currentExpiry ? Math.ceil((currentExpiry - new Date()) / (1000 * 60 * 60 * 24)) : 0;
 
       return (
-        <div className="glass-card" style={{ marginBottom: '24px', border: '1px solid rgba(14, 165, 233, 0.4)', background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.08) 0%, rgba(15, 23, 42, 0.7) 100%)' }}>
+        <div className="glass-card" style={{ marginBottom: '24px', border: '1px solid var(--border)', background: 'var(--card)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 20px rgba(14, 165, 233, 0.4)' }}>
-                <Shield size={24} color="#fff" />
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(15, 118, 110, 0.1)', border: '1px solid rgba(15, 118, 110, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Shield size={24} color="#0F766E" />
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -314,9 +314,9 @@ export default function LicenseControlWidget({ user }) {
                   gap: '8px',
                   fontSize: '0.88rem',
                   padding: '9px 18px',
-                  background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                  background: '#0F766E',
                   border: 'none',
-                  boxShadow: '0 4px 15px rgba(14, 165, 233, 0.35)',
+                  boxShadow: '0 4px 12px rgba(15, 118, 110, 0.2)',
                   cursor: 'pointer'
                 }}
               >
@@ -782,7 +782,7 @@ export default function LicenseControlWidget({ user }) {
                             type="button"
                             className="btn btn-primary"
                             onClick={() => setPaystackModalOrg(org)}
-                            style={{ fontSize: '0.75rem', padding: '4px 10px', background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', border: 'none', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            style={{ fontSize: '0.75rem', padding: '5px 12px', background: '#0F766E', border: 'none', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: '4px', borderRadius: '6px', cursor: 'pointer' }}
                             title="Renew via Paystack (M-Pesa / Card)"
                           >
                             <CreditCard size={12} /> Paystack
@@ -846,7 +846,7 @@ export default function LicenseControlWidget({ user }) {
               As Super Admin, you can instantly test and verify how this hospital deployment reacts when the remote subscription expires or when the kill-switch is triggered.
             </p>
 
-            <div style={{ padding: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', marginBottom: '20px', fontSize: '0.85rem' }}>
+            <div style={{ padding: '16px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '20px', fontSize: '0.85rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Configured Client ID:</span>
                 <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>knh-hospital-01</span>
@@ -940,7 +940,7 @@ export default function LicenseControlWidget({ user }) {
               The backend runs an autonomous timer that pings your central Supabase Edge Function:
             </p>
 
-            <div style={{ padding: '16px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px', marginBottom: '20px', fontSize: '0.85rem' }}>
+            <div style={{ padding: '16px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '20px', fontSize: '0.85rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Polling Interval:</span>
                 <span style={{ fontWeight: 600 }}>Every 6 Hours (21,600,000 ms)</span>

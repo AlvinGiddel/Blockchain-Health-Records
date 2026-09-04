@@ -275,7 +275,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                             setPatientSearchQuery(p.name);
                             setShowSearchDropdown(false);
                           }}
-                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.15)'}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(15, 118, 110, 0.08)'}
                           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                         >
                           <strong style={{ display: 'block', fontSize: '0.9rem', color: 'var(--text-primary)' }}>{p.name}</strong>
@@ -499,7 +499,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                             </button>
                             <button
                               className="btn btn-secondary"
-                              style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(37, 99, 235, 0.12)', borderColor: 'rgba(37, 99, 235, 0.3)', color: 'var(--color-primary)' }}
+                              style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(15, 118, 110, 0.08)', borderColor: 'rgba(15, 118, 110, 0.25)', color: '#0F766E' }}
                               onClick={() => setExportingPdfRecord(rec)}
                               title="Export Verifiable Certificate with QR Code"
                             >
@@ -531,7 +531,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                         )}
 
                         {rec.ipfsHash && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)', borderRadius: '8px', width: 'fit-content', cursor: 'pointer', marginBottom: '14px' }} onClick={() => handleOpenIpfsFile(rec)}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', width: 'fit-content', cursor: 'pointer', marginBottom: '14px' }} onClick={() => handleOpenIpfsFile(rec)}>
                             <Link2 size={14} color="var(--color-accent)" />
                             <span style={{ fontSize: '0.85rem', color: 'var(--color-accent)', fontWeight: 500 }}>IPFS Attachment: {rec.ipfsHash.substring(0, 10)}...{rec.ipfsHash.substring(rec.ipfsHash.length - 6)}</span>
                           </div>
@@ -545,7 +545,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                             <Lock size={12} /> {expandedRecord === (rec.id || rec._id) ? 'Hide Verification Metadata' : 'View Verification Metadata'}
                           </button>
                           {expandedRecord === (rec.id || rec._id) && (
-                            <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+                            <div style={{ marginTop: '12px', padding: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.75rem', fontFamily: 'monospace' }}>
                               <div>
                                 <strong style={{ color: 'var(--color-primary)' }}>Doctor Public Key (PEM Hash):</strong>
                                 <div style={{ wordBreak: 'break-all', color: 'var(--text-secondary)', marginTop: '2px', maxHeight: '60px', overflowY: 'auto' }}>
@@ -622,7 +622,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                             </button>
                             <button
                               className="btn btn-secondary"
-                              style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(37, 99, 235, 0.12)', borderColor: 'rgba(37, 99, 235, 0.3)', color: 'var(--color-primary)' }}
+                              style={{ padding: '4px 10px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(15, 118, 110, 0.08)', borderColor: 'rgba(15, 118, 110, 0.25)', color: '#0F766E' }}
                               onClick={() => setExportingPdfRecord(rec)}
                               title="Export Verifiable Certificate with QR Code"
                             >
@@ -671,7 +671,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                           </div>
                         )}
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '10px 12px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)', borderRadius: '8px', marginBottom: '14px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '10px 12px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '14px' }}>
                           <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Blockchain Transaction Hash</span>
                           <span style={{ fontSize: '0.8rem', color: 'var(--color-accent)', fontFamily: 'monospace', wordBreak: 'break-all' }}>{rec.transactionHash}</span>
                         </div>
@@ -684,7 +684,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                             <Lock size={12} /> {expandedRecord === (rec.id || rec._id) ? 'Hide Verification Metadata' : 'View Verification Metadata'}
                           </button>
                           {expandedRecord === (rec.id || rec._id) && (
-                            <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.75rem', fontFamily: 'monospace' }}>
+                            <div style={{ marginTop: '12px', padding: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.75rem', fontFamily: 'monospace' }}>
                               <div>
                                 <strong style={{ color: 'var(--color-primary)' }}>Consultation Content Hash (SHA-256):</strong>
                                 <div style={{ wordBreak: 'break-all', color: 'var(--text-secondary)', marginTop: '2px' }}>
@@ -725,33 +725,33 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
 
       {/* Simulated IPFS document view modal */}
       {viewingIpfsDoc && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: '600px', background: 'var(--bg-secondary)', border: '1px solid rgba(6, 182, 212, 0.3)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '16px', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-accent)' }}>
-                <FileText size={22} /> IPFS File Explorer
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(11, 37, 69, 0.65)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div className="glass-card" style={{ width: '100%', maxWidth: '600px', background: 'var(--card)', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '16px', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary, #0B2545)' }}>
+                <FileText size={22} color="#0F766E" /> IPFS File Explorer
               </h3>
               <button style={{ background: 'transparent', border: 'none', fontSize: '1.25rem', color: 'var(--text-secondary)', cursor: 'pointer' }} onClick={() => setViewingIpfsDoc(null)}>✕</button>
             </div>
             
-            <div style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '8px', padding: '16px', marginBottom: '20px', fontSize: '0.8rem' }}>
+            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', padding: '16px', marginBottom: '20px', fontSize: '0.8rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>IPFS Hash Node</span>
-                <span style={{ fontFamily: 'monospace', color: 'var(--color-accent)' }}>{viewingIpfsDoc.ipfsHash}</span>
+                <span style={{ fontFamily: 'monospace', color: '#0F766E', fontWeight: 600 }}>{viewingIpfsDoc.ipfsHash}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Encryption protocol</span>
-                <span>SHA-256 IPFS Peer Gateway</span>
+                <span style={{ fontWeight: 600 }}>SHA-256 IPFS Peer Gateway</span>
               </div>
             </div>
 
-            <div style={{ border: '2px dashed var(--glass-border)', borderRadius: '8px', padding: '30px 20px', textAlign: 'center', background: 'rgba(0,0,0,0.2)' }}>
-              <Award size={48} color="var(--color-primary)" style={{ margin: '0 auto 12px' }} />
-              <h4 style={{ marginBottom: '8px' }}>Simulated Clinical Certificate Document</h4>
+            <div style={{ border: '2px dashed var(--border)', borderRadius: '8px', padding: '30px 20px', textAlign: 'center', background: 'var(--bg-secondary)' }}>
+              <Award size={48} color="#0F766E" style={{ margin: '0 auto 12px' }} />
+              <h4 style={{ marginBottom: '8px', color: 'var(--text-primary, #0B2545)' }}>Simulated Clinical Certificate Document</h4>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: '400px', margin: '0 auto 16px' }}>
                 This clinical scan/lab report is hashed off-chain on the InterPlanetary File System (IPFS) to conserve blockchain storage.
               </p>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '6px 12px', borderRadius: '4px', color: 'var(--color-success)', fontSize: '0.85rem' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#E8F7F2', border: '1px solid #A3E3CD', padding: '6px 12px', borderRadius: '4px', color: '#1D9E75', fontSize: '0.85rem', fontWeight: 700 }}>
                 <Check size={14} /> File Hash Verified: Untampered
               </div>
             </div>

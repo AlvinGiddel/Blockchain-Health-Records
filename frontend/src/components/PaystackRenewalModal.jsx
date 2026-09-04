@@ -181,7 +181,7 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
       left: 0,
       width: '100vw',
       height: '100vh',
-      backgroundColor: 'rgba(5, 5, 15, 0.88)',
+      backgroundColor: 'rgba(11, 37, 69, 0.65)',
       backdropFilter: 'blur(8px)',
       WebkitBackdropFilter: 'blur(8px)',
       display: 'flex',
@@ -193,46 +193,46 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
       overflowY: 'auto'
     }}>
       <div style={{
-        background: 'linear-gradient(145deg, #111827 0%, #1f2937 100%)',
-        border: '1px solid rgba(14, 165, 233, 0.4)',
+        background: 'var(--card, #FFFFFF)',
+        border: '1px solid var(--border, #E2E8F0)',
         borderRadius: '16px',
         width: '100%',
         maxWidth: '560px',
         maxHeight: '90vh',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 30px rgba(14, 165, 233, 0.25)',
-        color: '#f9fafb',
+        boxShadow: '0 20px 40px -15px rgba(11, 37, 69, 0.2)',
+        color: 'var(--text-primary, #0F172A)',
         overflow: 'hidden',
         margin: 'auto'
       }}>
         {/* Modal Header */}
         <div style={{
           padding: '20px 24px',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+          borderBottom: '1px solid var(--border, #E2E8F0)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: 'rgba(14, 165, 233, 0.08)'
+          background: 'var(--bg-secondary, #F8FAFC)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
               width: '40px',
               height: '40px',
               borderRadius: '10px',
-              background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+              background: 'rgba(15, 118, 110, 0.1)',
+              border: '1px solid rgba(15, 118, 110, 0.2)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 0 15px rgba(14, 165, 233, 0.4)'
+              justifyContent: 'center'
             }}>
-              <CreditCard size={20} color="#fff" />
+              <CreditCard size={20} color="#0F766E" />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 600 }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary, #0B2545)' }}>
                 Renew Clinic SaaS License
               </h3>
-              <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: '#94a3b8' }}>
+              <p style={{ margin: '2px 0 0 0', fontSize: '0.8rem', color: 'var(--text-secondary, #475569)' }}>
                 Paystack Gateway • M-Pesa STK Push & Cards
               </p>
             </div>
@@ -242,7 +242,7 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#94a3b8',
+              color: 'var(--text-secondary, #475569)',
               cursor: 'pointer',
               padding: '6px',
               borderRadius: '8px'
@@ -258,9 +258,9 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
             <div style={{
               padding: '12px 16px',
               borderRadius: '8px',
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              color: '#f87171',
+              backgroundColor: '#FEF2F2',
+              border: '1px solid #FECACA',
+              color: '#B91C1C',
               fontSize: '0.85rem',
               marginBottom: '16px',
               display: 'flex',
@@ -279,26 +279,25 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
                 width: '64px',
                 height: '64px',
                 borderRadius: '50%',
-                background: 'rgba(16, 185, 129, 0.2)',
-                border: '2px solid #10b981',
+                background: '#E8F7F2',
+                border: '2px solid #A3E3CD',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                margin: '0 auto 16px',
-                boxShadow: '0 0 25px rgba(16, 185, 129, 0.4)'
+                margin: '0 auto 16px'
               }}>
-                <CheckCircle size={36} color="#10b981" />
+                <CheckCircle size={36} color="#1D9E75" />
               </div>
-              <h4 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 8px 0', color: '#34d399' }}>
+              <h4 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 8px 0', color: '#0B2545' }}>
                 License Successfully Renewed!
               </h4>
-              <p style={{ fontSize: '0.88rem', color: '#cbd5e1', margin: '0 0 20px 0' }}>
+              <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary, #475569)', margin: '0 0 20px 0' }}>
                 {successData.message}
               </p>
 
               <div style={{
-                background: 'rgba(15, 23, 42, 0.6)',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'var(--bg-secondary, #F8FAFC)',
+                border: '1px solid var(--border, #E2E8F0)',
                 borderRadius: '12px',
                 padding: '16px',
                 textAlign: 'left',
@@ -306,31 +305,31 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
                 marginBottom: '24px'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: '#94a3b8' }}>Facility:</span>
+                  <span style={{ color: 'var(--text-secondary, #475569)' }}>Facility:</span>
                   <span style={{ fontWeight: 600 }}>{organization.name}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: '#94a3b8' }}>Paystack Reference:</span>
-                  <span style={{ fontFamily: 'monospace', color: '#38bdf8' }}>{successData.payment?.reference}</span>
+                  <span style={{ color: 'var(--text-secondary, #475569)' }}>Paystack Reference:</span>
+                  <span style={{ fontFamily: 'monospace', color: '#0F766E', fontWeight: 600 }}>{successData.payment?.reference}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: '#94a3b8' }}>Amount Paid:</span>
-                  <span style={{ fontWeight: 700, color: '#10b981' }}>KES {Number(successData.payment?.amount || 0).toLocaleString()}</span>
+                  <span style={{ color: 'var(--text-secondary, #475569)' }}>Amount Paid:</span>
+                  <span style={{ fontWeight: 700, color: '#1D9E75' }}>KES {Number(successData.payment?.amount || 0).toLocaleString()}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: '#94a3b8' }}>Channel:</span>
+                  <span style={{ color: 'var(--text-secondary, #475569)' }}>Channel:</span>
                   <span style={{ textTransform: 'uppercase' }}>{successData.payment?.channel || 'M-Pesa'}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: '#94a3b8' }}>New Expiration:</span>
-                  <span style={{ fontWeight: 700, color: '#f59e0b' }}>
+                  <span style={{ color: 'var(--text-secondary, #475569)' }}>New Expiration:</span>
+                  <span style={{ fontWeight: 700, color: '#D97706' }}>
                     {new Date(successData.organization?.license_expires_at).toLocaleDateString()}
                   </span>
                 </div>
                 {successData.payment?.blockchain_tx_hash && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px', marginTop: '8px' }}>
-                    <span style={{ color: '#94a3b8' }}>Blockchain Audit Hash:</span>
-                    <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: '#a78bfa' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border, #E2E8F0)', paddingTop: '8px', marginTop: '8px' }}>
+                    <span style={{ color: 'var(--text-secondary, #475569)' }}>Blockchain Ledger Seal:</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: '#2563EB' }}>
                       {successData.payment.blockchain_tx_hash.slice(0, 16)}...
                     </span>
                   </div>
@@ -345,7 +344,7 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
                   padding: '12px',
                   borderRadius: '10px',
                   fontWeight: 600,
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  background: '#0F766E',
                   border: 'none',
                   color: '#fff',
                   cursor: 'pointer'
@@ -360,38 +359,38 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
               <div style={{
                 padding: '16px',
                 borderRadius: '12px',
-                background: 'rgba(56, 189, 248, 0.1)',
-                border: '1px solid rgba(56, 189, 248, 0.3)',
+                background: '#EFF6FF',
+                border: '1px solid #BFDBFE',
                 marginBottom: '20px'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#38bdf8', fontWeight: 600, marginBottom: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1D4ED8', fontWeight: 600, marginBottom: '6px' }}>
                   <Sparkles size={16} />
                   <span>Sandbox Test Mode Active</span>
                 </div>
-                <p style={{ margin: 0, fontSize: '0.82rem', color: '#94a3b8', lineHeight: 1.5 }}>
-                  Live Paystack keys are not set in `.env`. The system has generated reference <code style={{ color: '#38bdf8' }}>{pendingReference}</code>. You can simulate completing an M-Pesa STK push or Card payment to verify atomic idempotency, fair extension, and blockchain sealing.
+                <p style={{ margin: 0, fontSize: '0.82rem', color: '#1E40AF', lineHeight: 1.5 }}>
+                  Live Paystack keys are not set in `.env`. The system has generated reference <code style={{ color: '#0F766E', fontWeight: 600 }}>{pendingReference}</code>. You can simulate completing an M-Pesa STK push or Card payment to verify atomic idempotency, fair extension, and blockchain sealing.
                 </p>
               </div>
 
               <div style={{
-                background: 'rgba(15, 23, 42, 0.5)',
+                background: 'var(--bg-secondary, #F8FAFC)',
                 borderRadius: '12px',
                 padding: '16px',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
+                border: '1px solid var(--border, #E2E8F0)',
                 marginBottom: '20px',
                 fontSize: '0.85rem'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: '#94a3b8' }}>Plan:</span>
+                  <span style={{ color: 'var(--text-secondary, #475569)' }}>Plan:</span>
                   <span style={{ fontWeight: 600 }}>{selectedPlan.name}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: '#94a3b8' }}>Amount:</span>
-                  <span style={{ fontWeight: 700, color: '#34d399' }}>KES {selectedPlan.amountKES.toLocaleString()}</span>
+                  <span style={{ color: 'var(--text-secondary, #475569)' }}>Amount:</span>
+                  <span style={{ fontWeight: 700, color: '#1D9E75' }}>KES {selectedPlan.amountKES.toLocaleString()}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#94a3b8' }}>Fair Extension:</span>
-                  <span style={{ color: '#f59e0b', fontWeight: 600 }}>
+                  <span style={{ color: 'var(--text-secondary, #475569)' }}>Fair Extension:</span>
+                  <span style={{ color: '#D97706', fontWeight: 600 }}>
                     +{selectedPlan.days} Days → {projectedExpiry.toLocaleDateString()}
                   </span>
                 </div>
@@ -414,7 +413,7 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
                   style={{
                     flex: 2,
                     padding: '12px',
-                    background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                    background: '#0F766E',
                     border: 'none',
                     color: '#fff',
                     fontWeight: 600,
@@ -434,22 +433,22 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
             <div>
               {/* Facility & Expiry Overview */}
               <div style={{
-                background: 'rgba(15, 23, 42, 0.6)',
+                background: 'var(--bg-secondary, #F8FAFC)',
                 borderRadius: '12px',
                 padding: '14px 18px',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
+                border: '1px solid var(--border, #E2E8F0)',
                 marginBottom: '20px',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center'
               }}>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase' }}>Target Facility</div>
-                  <div style={{ fontWeight: 600, fontSize: '0.95rem', color: '#f1f5f9' }}>{organization.name}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #475569)', textTransform: 'uppercase', fontWeight: 600 }}>Target Facility</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-primary, #0B2545)' }}>{organization.name}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase' }}>Current Expiry</div>
-                  <div style={{ fontWeight: 600, fontSize: '0.9rem', color: currentExpiryDate < new Date() ? '#ef4444' : '#10b981' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary, #475569)', textTransform: 'uppercase', fontWeight: 600 }}>Current Expiry</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem', color: currentExpiryDate < new Date() ? '#DC2626' : '#1D9E75' }}>
                     {currentExpiryDate.toLocaleDateString()}
                   </div>
                 </div>
@@ -457,7 +456,7 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
 
               {/* Plan Options */}
               <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '10px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary, #475569)', textTransform: 'uppercase', fontWeight: 600, marginBottom: '10px' }}>
                   Select Subscription Plan
                 </label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -470,8 +469,8 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
                         style={{
                           padding: '14px 16px',
                           borderRadius: '10px',
-                          border: isSelected ? '2px solid #0ea5e9' : '1px solid rgba(255, 255, 255, 0.1)',
-                          background: isSelected ? 'rgba(14, 165, 233, 0.12)' : 'rgba(255, 255, 255, 0.02)',
+                          border: isSelected ? '2px solid #0F766E' : '1px solid var(--border, #E2E8F0)',
+                          background: isSelected ? 'rgba(15, 118, 110, 0.06)' : 'var(--card, #FFFFFF)',
                           cursor: 'pointer',
                           display: 'flex',
                           justifyContent: 'space-between',
@@ -481,13 +480,13 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
                       >
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{plan.name}</span>
+                            <span style={{ fontWeight: 700, fontSize: '0.95rem', color: isSelected ? '#0F766E' : 'var(--text-primary, #0B2545)' }}>{plan.name}</span>
                             {plan.popular && (
                               <span style={{
                                 fontSize: '0.65rem',
-                                background: '#0ea5e9',
+                                background: '#0F766E',
                                 color: '#fff',
-                                padding: '2px 6px',
+                                padding: '2px 8px',
                                 borderRadius: '4px',
                                 fontWeight: 700
                               }}>
@@ -495,15 +494,15 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
                               </span>
                             )}
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '2px' }}>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary, #475569)', marginTop: '2px' }}>
                             Adds +{plan.days} days operational license
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#38bdf8' }}>
+                          <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0F766E' }}>
                             KES {plan.amountKES.toLocaleString()}
                           </div>
-                          <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary, #64748B)' }}>
                             KES {Math.round(plan.days === 365 ? plan.amountKES / 12 : plan.amountKES / (plan.days / 30)).toLocaleString()}/mo
                           </div>
                         </div>
@@ -517,16 +516,16 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
               <div style={{
                 padding: '12px 16px',
                 borderRadius: '10px',
-                background: 'rgba(245, 158, 11, 0.08)',
-                border: '1px solid rgba(245, 158, 11, 0.25)',
+                background: '#FFFBEB',
+                border: '1px solid #FDE68A',
                 fontSize: '0.8rem',
-                color: '#fbbf24',
+                color: '#92400E',
                 marginBottom: '24px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px'
               }}>
-                <Clock size={18} style={{ flexShrink: 0 }} />
+                <Clock size={18} style={{ flexShrink: 0, color: '#D97706' }} />
                 <span>
                   <strong>Fair Extension Guarantee:</strong> Days are added from {currentExpiryDate > new Date() ? 'your remaining balance' : 'today'}. New expiration will be <strong>{projectedExpiry.toLocaleDateString()}</strong>.
                 </span>
@@ -543,7 +542,7 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
                   borderRadius: '10px',
                   fontWeight: 600,
                   fontSize: '0.95rem',
-                  background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+                  background: '#0F766E',
                   border: 'none',
                   color: '#fff',
                   cursor: loading ? 'not-allowed' : 'pointer',
@@ -551,14 +550,14 @@ export default function PaystackRenewalModal({ organization, user, isOpen, onClo
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '10px',
-                  boxShadow: '0 4px 15px rgba(14, 165, 233, 0.4)'
+                  boxShadow: '0 4px 12px rgba(15, 118, 110, 0.25)'
                 }}
               >
                 <CreditCard size={18} />
                 {loading ? 'Connecting to Paystack...' : `Pay KES ${selectedPlan.amountKES.toLocaleString()} with Paystack`}
               </button>
 
-              <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.75rem', color: '#64748b' }}>
+              <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '0.75rem', color: 'var(--text-secondary, #64748B)' }}>
                 🔒 Secured by Paystack • Supports M-Pesa STK Push & Visa/Mastercard
               </div>
             </div>

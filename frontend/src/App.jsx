@@ -612,7 +612,7 @@ export default function App() {
               <button
                 type="button"
                 className="btn btn-primary"
-                style={{ fontSize: '0.82rem', padding: '6px 14px', background: '#6366f1', borderColor: '#6366f1' }}
+                style={{ fontSize: '0.82rem', padding: '6px 14px', background: '#0F766E', borderColor: '#0F766E' }}
                 onClick={() => setShowUpgradeModal(true)}
               >
                 Upgrade to Full License &rarr;
@@ -665,7 +665,7 @@ export default function App() {
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', lineHeight: '1.6', marginBottom: '20px' }}>
               Your 14-day free trial for <strong>{user?.organizationName || 'your clinic'}</strong> has concluded. In accordance with clinical data safety guidelines, your facility is in <strong>Read-Only Grace Mode</strong>.
             </p>
-            <div style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
+            <div style={{ background: 'rgba(15, 118, 110, 0.08)', border: '1px solid rgba(15, 118, 110, 0.25)', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
               <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>Clinical Tier Plan: $149 / mo</div>
               <ul style={{ margin: 0, paddingLeft: '18px', color: 'var(--text-secondary)', fontSize: '0.82rem', lineHeight: '1.6' }}>
                 <li>Unlimited patient EHR records & SHA-256 block mining</li>
@@ -687,7 +687,7 @@ export default function App() {
               <button
                 type="button"
                 className="btn btn-primary"
-                style={{ background: 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)', border: 'none' }}
+                style={{ background: '#0F766E', borderColor: '#0F766E', color: '#fff' }}
                 onClick={() => {
                   setShowUpgradeModal(false);
                   setShowPaystackModal(true);

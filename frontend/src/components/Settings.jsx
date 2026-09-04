@@ -190,7 +190,7 @@ export default function Settings({ user, onUpdateUser }) {
       {/* 1. Profile Picture Card */}
       <div className="glass-card" style={{ padding: '32px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-          <div style={{ background: 'rgba(99, 102, 241, 0.15)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+          <div style={{ background: 'rgba(15, 118, 110, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(15, 118, 110, 0.25)' }}>
             <Camera size={20} color="var(--color-primary)" />
           </div>
           <h3 style={{ fontSize: '1.25rem', margin: 0, color: 'var(--text-primary)' }}>
@@ -289,7 +289,7 @@ export default function Settings({ user, onUpdateUser }) {
       {/* 2. Update Email Address Card */}
       <div className="glass-card" style={{ padding: '32px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-          <div style={{ background: 'rgba(99, 102, 241, 0.15)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+          <div style={{ background: 'rgba(15, 118, 110, 0.1)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(15, 118, 110, 0.25)' }}>
             <Mail size={20} color="var(--color-primary)" />
           </div>
           <h3 style={{ fontSize: '1.25rem', margin: 0, color: 'var(--text-primary)' }}>

@@ -556,8 +556,8 @@ export default function SuperAdminPanel({ user }) {
       <div className="glass-card" style={{ marginBottom: '28px', border: pendingClinics.length > 0 ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid var(--glass-border)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ background: pendingClinics.length > 0 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(99, 102, 241, 0.1)', padding: '10px', borderRadius: '10px' }}>
-              <Building2 size={22} color={pendingClinics.length > 0 ? '#f59e0b' : 'var(--color-primary)'} />
+            <div style={{ background: pendingClinics.length > 0 ? 'rgba(245, 158, 11, 0.15)' : 'rgba(15, 118, 110, 0.1)', padding: '10px', borderRadius: '10px' }}>
+              <Building2 size={22} color={pendingClinics.length > 0 ? '#f59e0b' : '#0F766E'} />
             </div>
             <div>
               <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -737,19 +737,19 @@ export default function SuperAdminPanel({ user }) {
         <div
           className="glass-card stats-card-clickable"
           onClick={() => { setActiveMetricModal('doctors'); setModalSearchQuery(''); }}
-          style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', transition: 'all 0.25s ease', border: '1px solid rgba(99, 102, 241, 0.25)' }}
+          style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', transition: 'all 0.25s ease', border: '1px solid var(--border)' }}
           title="Click to inspect Licensed Practitioners"
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ background: 'rgba(99, 102, 241, 0.12)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Stethoscope size={24} color="var(--color-primary)" />
+            <div style={{ background: 'rgba(15, 118, 110, 0.1)', border: '1px solid rgba(15, 118, 110, 0.25)', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Stethoscope size={24} color="#0F766E" />
             </div>
             <div>
               <h4 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{stats.doctors}</h4>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '2px 0 0 0' }}>Licensed Practitioners</p>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--color-primary)', fontWeight: 600, borderTop: '1px solid var(--glass-border)', paddingTop: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: '#0F766E', fontWeight: 600, borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
             <span>Inspect Nodes</span>
             <ChevronRight size={13} />
           </div>
@@ -781,19 +781,19 @@ export default function SuperAdminPanel({ user }) {
         <div
           className="glass-card stats-card-clickable"
           onClick={() => { setActiveMetricModal('blocks'); setModalSearchQuery(''); }}
-          style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', transition: 'all 0.25s ease', border: '1px solid rgba(139, 92, 246, 0.25)' }}
+          style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', cursor: 'pointer', transition: 'all 0.25s ease', border: '1px solid var(--border)' }}
           title="Click to inspect Mined Blocks"
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <div style={{ background: 'rgba(139, 92, 246, 0.12)', border: '1px solid rgba(139, 92, 246, 0.3)', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Layers size={24} color="#8b5cf6" />
+            <div style={{ background: 'rgba(37, 99, 235, 0.1)', border: '1px solid rgba(37, 99, 235, 0.25)', borderRadius: '12px', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Layers size={24} color="#2563EB" />
             </div>
             <div>
               <h4 style={{ fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{stats.blocks}</h4>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: '2px 0 0 0' }}>Mined Blocks (Height)</p>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: '#8b5cf6', fontWeight: 600, borderTop: '1px solid var(--glass-border)', paddingTop: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.72rem', color: '#2563EB', fontWeight: 600, borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
             <span>View Chain State</span>
             <ChevronRight size={13} />
           </div>
@@ -921,10 +921,10 @@ export default function SuperAdminPanel({ user }) {
 
       {/* Pending Doctor Approvals (Global Practitioner Verification) */}
       {pendingDoctors.length > 0 && (
-        <div className="glass-card" style={{ border: '1px solid rgba(99, 102, 241, 0.3)', marginBottom: '28px', boxShadow: '0 0 15px rgba(99, 102, 241, 0.1)' }}>
+        <div className="glass-card" style={{ border: '1px solid var(--border)', marginBottom: '28px', boxShadow: '0 4px 12px rgba(11, 37, 69, 0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '12px' }}>
-            <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
-              <Stethoscope size={20} color="var(--color-primary)" /> Pending Clinical Practitioner Approvals ({pendingDoctors.length})
+            <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: '#0B2545' }}>
+              <Stethoscope size={20} color="#0F766E" /> Pending Clinical Practitioner Approvals ({pendingDoctors.length})
             </h3>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, justifyContent: 'flex-end', minWidth: '280px' }}>
@@ -1091,9 +1091,9 @@ export default function SuperAdminPanel({ user }) {
             <button
               onClick={() => setActiveDirectoryTab('doctors')}
               style={{
-                background: activeDirectoryTab === 'doctors' ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                border: activeDirectoryTab === 'doctors' ? '1px solid rgba(99, 102, 241, 0.3)' : '1px solid transparent',
-                color: activeDirectoryTab === 'doctors' ? 'var(--color-primary)' : 'var(--text-secondary)',
+                background: activeDirectoryTab === 'doctors' ? 'rgba(15, 118, 110, 0.1)' : 'transparent',
+                border: activeDirectoryTab === 'doctors' ? '1px solid rgba(15, 118, 110, 0.3)' : '1px solid transparent',
+                color: activeDirectoryTab === 'doctors' ? '#0F766E' : 'var(--text-secondary)',
                 borderRadius: '8px',
                 padding: '6px 14px',
                 fontSize: '0.85rem',
@@ -1411,18 +1411,18 @@ export default function SuperAdminPanel({ user }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{
                   background: activeMetricModal === 'admins' ? 'rgba(245, 158, 11, 0.15)' :
-                    activeMetricModal === 'doctors' ? 'rgba(99, 102, 241, 0.15)' :
-                      activeMetricModal === 'patients' ? 'rgba(16, 185, 129, 0.15)' :
-                        activeMetricModal === 'blocks' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                    activeMetricModal === 'doctors' ? 'rgba(15, 118, 110, 0.15)' :
+                      activeMetricModal === 'patients' ? 'rgba(29, 158, 117, 0.15)' :
+                        activeMetricModal === 'blocks' ? 'rgba(37, 99, 235, 0.15)' : 'rgba(29, 158, 117, 0.15)',
                   padding: '10px',
                   borderRadius: '10px',
-                  border: '1px solid var(--glass-border)'
+                  border: '1px solid var(--border)'
                 }}>
                   {activeMetricModal === 'admins' && <UserCog size={22} color="#f59e0b" />}
-                  {activeMetricModal === 'doctors' && <Stethoscope size={22} color="var(--color-primary)" />}
-                  {activeMetricModal === 'patients' && <Users size={22} color="#10b981" />}
-                  {activeMetricModal === 'blocks' && <Layers size={22} color="#8b5cf6" />}
-                  {activeMetricModal === 'consensus' && <Cpu size={22} color="#10b981" />}
+                  {activeMetricModal === 'doctors' && <Stethoscope size={22} color="#0F766E" />}
+                  {activeMetricModal === 'patients' && <Users size={22} color="#1D9E75" />}
+                  {activeMetricModal === 'blocks' && <Layers size={22} color="#2563EB" />}
+                  {activeMetricModal === 'consensus' && <Cpu size={22} color="#1D9E75" />}
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
@@ -1820,7 +1820,7 @@ export default function SuperAdminPanel({ user }) {
                     </div>
                     <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Mempool Buffer</span>
-                      <strong style={{ display: 'block', fontSize: '1.2rem', color: '#8b5cf6' }}>{mempoolRecords.length} pending</strong>
+                      <strong style={{ display: 'block', fontSize: '1.2rem', color: '#2563EB' }}>{mempoolRecords.length} pending</strong>
                     </div>
                   </div>
 
@@ -1889,7 +1889,7 @@ export default function SuperAdminPanel({ user }) {
 
                     <div style={{ background: 'rgba(255,255,255,0.02)', padding: '14px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', display: 'block', marginBottom: '4px' }}>Autonomous Auto-Miner</span>
-                      <strong style={{ fontSize: '0.95rem', color: '#8b5cf6' }}>Active & Mutex-Protected</strong>
+                      <strong style={{ fontSize: '0.95rem', color: '#2563EB' }}>Active & Mutex-Protected</strong>
                       <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Trigger threshold: 10 transactions or 60,000ms periodic fallback</p>
                     </div>
 
