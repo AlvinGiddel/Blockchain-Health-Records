@@ -112,10 +112,14 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+import { ThemeProvider } from './context/ThemeContext.jsx'
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <App />
+      <ThemeProvider>
+        <App />
+      </ThemeProvider>
     </ErrorBoundary>
   </React.StrictMode>,
 )

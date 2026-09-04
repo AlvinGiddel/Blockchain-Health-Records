@@ -351,18 +351,18 @@ export default function LicenseControlWidget({ user }) {
   const failureCount = licenseInfo?.consecutiveFailures || 0;
 
   return (
-    <div className="glass-card" style={{ marginBottom: '28px', border: '1px solid rgba(99, 102, 241, 0.4)', background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%)' }}>
+    <div className="glass-card mb-7">
       
       {/* Widget Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '16px', marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid rgba(99, 102, 241, 0.4)' }}>
-            <Key size={22} color="var(--color-primary)" />
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#E6F4F2', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #A3E3CD' }}>
+            <Key size={22} color="#0F766E" />
           </div>
           <div>
             <h3 style={{ margin: 0, fontSize: '1.2rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               Super Admin SaaS & Licensing Control Center
-              <span className="badge" style={{ fontSize: '0.7rem', backgroundColor: 'rgba(99, 102, 241, 0.25)', color: '#818cf8', border: '1px solid rgba(99, 102, 241, 0.5)' }}>
+              <span className="badge" style={{ fontSize: '0.7rem', backgroundColor: '#0B2545', color: '#ffffff' }}>
                 ROOT AUTHORITY
               </span>
             </h3>
@@ -432,7 +432,7 @@ export default function LicenseControlWidget({ user }) {
           }}
           onMouseEnter={e => {
             e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.15)';
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(15, 118, 110, 0.12)';
           }}
           onMouseLeave={e => {
             e.currentTarget.style.transform = 'translateY(0)';
@@ -443,13 +443,13 @@ export default function LicenseControlWidget({ user }) {
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
               Instance License State
             </div>
-            <span style={{ fontSize: '0.7rem', color: '#818cf8', textDecoration: 'underline' }}>Click to Test / Manage</span>
+            <span style={{ fontSize: '0.7rem', color: '#0F766E', textDecoration: 'underline' }}>Click to Test / Manage</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {isActive ? (
               <>
-                <CheckCircle size={22} color="#10b981" />
-                <span style={{ fontSize: '1.15rem', fontWeight: 700, color: '#10b981' }}>ACTIVE & LICENSED</span>
+                <CheckCircle size={22} color="#1D9E75" />
+                <span style={{ fontSize: '1.15rem', fontWeight: 700, color: '#1D9E75' }}>ACTIVE & LICENSED</span>
               </>
             ) : (
               <>
@@ -469,14 +469,14 @@ export default function LicenseControlWidget({ user }) {
           style={{
             padding: '18px',
             borderRadius: '10px',
-            background: 'rgba(0,0,0,0.25)',
+            background: 'rgba(0,0,0,0.05)',
             border: '1px solid var(--glass-border)',
             cursor: 'pointer',
             transition: 'all 0.2s'
           }}
           onMouseEnter={e => {
             e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.15)';
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(15, 118, 110, 0.12)';
           }}
           onMouseLeave={e => {
             e.currentTarget.style.transform = 'translateY(0)';
@@ -487,7 +487,7 @@ export default function LicenseControlWidget({ user }) {
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
               Fail-Closed Security Matrix
             </div>
-            <span style={{ fontSize: '0.7rem', color: '#818cf8', textDecoration: 'underline' }}>View Policy</span>
+            <span style={{ fontSize: '0.7rem', color: '#0F766E', textDecoration: 'underline' }}>View Policy</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <Server size={22} color={failureCount === 0 ? 'var(--color-primary)' : '#f59e0b'} />
@@ -506,14 +506,14 @@ export default function LicenseControlWidget({ user }) {
           style={{
             padding: '18px',
             borderRadius: '10px',
-            background: 'rgba(0,0,0,0.25)',
+            background: 'rgba(0,0,0,0.05)',
             border: '1px solid var(--glass-border)',
             cursor: 'pointer',
             transition: 'all 0.2s'
           }}
           onMouseEnter={e => {
             e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.15)';
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(15, 118, 110, 0.12)';
           }}
           onMouseLeave={e => {
             e.currentTarget.style.transform = 'translateY(0)';
@@ -646,11 +646,11 @@ export default function LicenseControlWidget({ user }) {
 
       {/* Multi-Tenant Organizations & Per-Clinic Kill-Switch Control Center (Super Admin Only) */}
       {user?.role === 'super_admin' && (
-        <div style={{ padding: '20px', borderRadius: '10px', background: 'rgba(99, 102, 241, 0.06)', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+        <div style={{ padding: '20px', borderRadius: '10px', background: 'rgba(15, 118, 110, 0.05)', border: '1px solid rgba(15, 118, 110, 0.2)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ background: 'rgba(99, 102, 241, 0.2)', padding: '6px', borderRadius: '8px' }}>
-                <Building2 size={20} color="var(--color-primary)" />
+              <div style={{ background: '#E6F4F2', padding: '6px', borderRadius: '8px', border: '1px solid #A3E3CD' }}>
+                <Building2 size={20} color="#0F766E" />
               </div>
               <div>
                 <h4 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--text-primary)' }}>
@@ -833,8 +833,8 @@ export default function LicenseControlWidget({ user }) {
 
       {/* MODAL 1: Interactive License & Kill-Switch Controller */}
       {activeModal === 'license' && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px' }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: '550px', background: 'var(--bg-secondary)', border: '1px solid rgba(99, 102, 241, 0.4)' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px' }}>
+          <div className="glass-card" style={{ width: '100%', maxWidth: '550px', background: 'var(--card)', border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '14px', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
                 <Key size={20} /> Remote Kill-Switch Controller

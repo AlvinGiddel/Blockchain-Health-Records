@@ -1,4 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
-  <path d="M50,130 A70,70 0 0 1 190,130 L140,130 L125,80 L110,160 L95,100 L80,130 L50,130"
-    fill="none" stroke="#16E0BD" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Clinical Trust Shield Seal -->
+  <path d="M120,24 C162,24 196,44 196,88 C196,146 152,192 120,216 C88,192 44,146 44,88 C44,44 78,24 120,24 Z" 
+        fill="#0B2545" />
+  <!-- Inner Protection Ring -->
+  <path d="M120,38 C153,38 180,54 180,90 C180,137 145,176 120,198 C95,176 60,137 60,90 C60,54 87,38 120,38 Z" 
+        fill="#07182D" opacity="0.15" />
+  <!-- Clinical Heartbeat Pulse -->
+  <path d="M72,118 L94,118 L105,92 L118,144 L132,84 L144,130 L152,118 L168,118" 
+        fill="none" stroke="#14B8A6" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Verified Core Dot -->
+  <circle cx="120" cy="56" r="5" fill="#1D9E75" />
 </svg>

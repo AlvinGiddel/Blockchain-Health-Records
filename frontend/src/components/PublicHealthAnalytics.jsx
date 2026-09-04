@@ -127,7 +127,7 @@ export default function PublicHealthAnalytics() {
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'translateY(-4px)';
             e.currentTarget.style.borderColor = 'var(--color-primary)';
-            e.currentTarget.style.boxShadow = '0 8px 25px rgba(99, 102, 241, 0.25)';
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(15, 118, 110, 0.12)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = 'none';
@@ -186,8 +186,8 @@ export default function PublicHealthAnalytics() {
           onClick={() => openModal('records')}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'translateY(-4px)';
-            e.currentTarget.style.borderColor = '#6366f1';
-            e.currentTarget.style.boxShadow = '0 8px 25px rgba(99, 102, 241, 0.25)';
+            e.currentTarget.style.borderColor = 'var(--color-primary)';
+            e.currentTarget.style.boxShadow = '0 8px 24px rgba(15, 118, 110, 0.12)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = 'none';
@@ -197,7 +197,7 @@ export default function PublicHealthAnalytics() {
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 600 }}>Encrypted Records</span>
-            <FileText size={20} color="#6366f1" />
+            <FileText size={20} color="var(--color-primary)" />
           </div>
           <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>{totalRecords}</div>
           <div style={{ marginTop: '8px', fontSize: '0.72rem', color: '#6366f1', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: 600 }}>

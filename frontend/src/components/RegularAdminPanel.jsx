@@ -690,7 +690,7 @@ export default function RegularAdminPanel({ user }) {
       )}
 
       {/* Pending Doctor Approvals */}
-      <div className="glass-card" style={{ border: '1px solid rgba(99, 102, 241, 0.3)', marginBottom: '32px', boxShadow: '0 0 15px rgba(99, 102, 241, 0.1)' }}>
+      <div className="glass-card mb-8">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <h3 style={{ fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
             <Stethoscope size={22} color="var(--color-primary)" /> Pending Practitioner Approvals ({pendingDoctors.length})
@@ -737,7 +737,7 @@ export default function RegularAdminPanel({ user }) {
                       {doc.doctorProfile?.profilePhoto ? (
                         <img src={doc.doctorProfile.profilePhoto} alt={`Dr. ${doc.name}`} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--glass-border)' }} />
                       ) : (
-                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(99, 102, 241, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(15, 118, 110, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <User size={14} color="var(--color-primary)" />
                         </div>
                       )}
@@ -782,8 +782,8 @@ export default function RegularAdminPanel({ user }) {
           onClick={() => handleStatsCardClick('total_appointments')}
           style={{ display: 'flex', alignItems: 'center', gap: '20px', cursor: 'pointer' }}
         >
-          <div style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '12px', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Layers size={22} color="var(--color-primary)" />
+          <div style={{ background: '#E6F4F2', border: '1px solid #A3E3CD', borderRadius: '12px', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Layers size={22} color="#0F766E" />
           </div>
           <div>
             <h4 style={{ fontSize: '1.4rem', margin: 0 }}>{stats.totalAppointments}</h4>
@@ -796,8 +796,8 @@ export default function RegularAdminPanel({ user }) {
           onClick={() => handleStatsCardClick('pending_appointments')}
           style={{ display: 'flex', alignItems: 'center', gap: '20px', cursor: 'pointer' }}
         >
-          <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '12px', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Clock size={22} color="var(--color-warning)" />
+          <div style={{ background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: '12px', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Clock size={22} color="#D97706" />
           </div>
           <div>
             <h4 style={{ fontSize: '1.4rem', margin: 0 }}>{stats.pendingAppointments}</h4>
@@ -810,8 +810,8 @@ export default function RegularAdminPanel({ user }) {
           onClick={() => handleStatsCardClick('completed_consultations')}
           style={{ display: 'flex', alignItems: 'center', gap: '20px', cursor: 'pointer' }}
         >
-          <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '12px', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Users size={22} color="var(--color-success)" />
+          <div style={{ background: '#E8F7F2', border: '1px solid #A3E3CD', borderRadius: '12px', width: '50px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Users size={22} color="#1D9E75" />
           </div>
           <div>
             <h4 style={{ fontSize: '1.4rem', margin: 0 }}>{stats.completedConsultations}</h4>
@@ -965,7 +965,7 @@ export default function RegularAdminPanel({ user }) {
                               {doc.doctorProfile?.profilePhoto ? (
                                 <img src={doc.doctorProfile.profilePhoto} alt={`Dr. ${doc.name}`} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--glass-border)' }} />
                               ) : (
-                                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(99, 102, 241, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(15, 118, 110, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                   <User size={12} color="var(--color-primary)" />
                                 </div>
                               )}
@@ -1239,7 +1239,7 @@ export default function RegularAdminPanel({ user }) {
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '12px', marginBottom: '12px' }}>
                 <div>
-                  <span className="badge badge-primary" style={{ fontSize: '0.9rem', padding: '4px 10px', background: 'rgba(99, 102, 241, 0.15)', color: 'var(--color-primary)', border: '1px solid rgba(99, 102, 241, 0.25)' }}>
+                  <span className="badge" style={{ fontSize: '0.9rem', padding: '4px 10px', background: '#E6F4F2', color: '#0F766E', border: '1px solid #A3E3CD' }}>
                     Block #{block.index}
                   </span>
                   <span style={{ marginLeft: '12px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
@@ -1406,31 +1406,31 @@ export default function RegularAdminPanel({ user }) {
           <div className="glass-card" style={{
             width: '100%',
             maxWidth: '1100px',
-            border: '1px solid var(--glass-border)',
-            boxShadow: '0 0 30px rgba(99, 102, 241, 0.15)',
+            border: '1px solid var(--border)',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15)',
             padding: '28px',
-            background: 'rgba(15, 15, 25, 0.98)',
+            background: 'var(--card)',
             maxHeight: '85vh',
             display: 'flex',
             flexDirection: 'column'
           }}>
             {/* Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ background: 'rgba(99, 102, 241, 0.15)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
-                  <Layers size={20} color="var(--color-primary)" />
+                <div style={{ background: '#E6F4F2', padding: '8px', borderRadius: '8px', border: '1px solid #A3E3CD' }}>
+                  <Layers size={20} color="#0F766E" />
                 </div>
                 <div>
                   <h3 style={{ fontSize: '1.30rem', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
                     {viewModal.title}
                   </h3>
-                  <span className="badge badge-success" style={{ fontSize: '0.65rem', padding: '2px 8px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)', marginTop: '4px', display: 'inline-block' }}>
+                  <span className="badge badge-success" style={{ fontSize: '0.65rem', padding: '2px 8px', marginTop: '4px', display: 'inline-block' }}>
                     Read-Only Access
                   </span>
                 </div>
               </div>
               <button 
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--glass-border)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', cursor: 'pointer' }}
+                style={{ background: 'var(--secondary)', border: '1px solid var(--border)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-primary)', cursor: 'pointer' }}
                 onClick={() => setViewModal({ isOpen: false, title: '', type: '', data: [] })}
               >
                 <X size={18} />

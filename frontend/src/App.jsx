@@ -12,6 +12,10 @@ import Settings from './components/Settings';
 import PublicCertificateView from './components/PublicCertificateView';
 import PaystackRenewalModal from './components/PaystackRenewalModal';
 import { safeFetch } from './utils/api';
+import { Toaster } from './components/ui/sonner';
+import clinicalBg from './assets/clinical_login_bg.jpg';
+import { useTheme } from './context/ThemeContext';
+import { ThemeToggle } from './components/ui/theme-toggle';
 
 
 export default function App() {
@@ -127,13 +131,8 @@ export default function App() {
 
   const [publicRecordId, setPublicRecordId] = useState(null);
 
-  // Theme states & persistence
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+  // Global theme context
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -407,16 +406,38 @@ export default function App() {
   // If user is not authenticated, render Login/Register
   if (!user) {
     return (
-      <div className="app-container login-page">
-        <header className="navbar">
-          <div className="nav-brand">
-            <img src={logoSvg} alt="Logo" style={{ width: '24px', height: '24px' }} />
-            <span>BLOCKCHAIN HEALTH RECORDS</span>
+      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#07182D] text-[#0F172A] dark:text-[#F8FAFC] flex flex-col font-sans relative transition-colors duration-200">
+        <header className="h-16 border-b border-[#E2E8F0] dark:border-[#1E3A5F] bg-white/95 dark:bg-[#0B192C]/95 backdrop-blur-md px-4 sm:px-8 flex items-center justify-between sticky top-0 z-50 shadow-sm transition-colors duration-200">
+          <div className="flex items-center gap-3">
+            <img src={logoSvg} alt="BHC Logo" className="w-8 h-8 rounded-lg" />
+            <div className="flex flex-col">
+              <span className="text-sm font-bold tracking-tight text-[#0B2545] dark:text-white">BLOCK HEALTH CHAIN</span>
+              <span className="text-[10px] font-medium text-[#475569] dark:text-[#94A3B8] tracking-wider uppercase">Clinical Trust Network</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#E8F7F2] dark:bg-[#064E3B]/50 text-[#1D9E75] dark:text-[#34D399] border border-[#A3E3CD] dark:border-[#065F46]">
+              <span className="w-2 h-2 rounded-full bg-[#1D9E75] dark:bg-[#34D399]"></span>
+              Ledger Online
+            </span>
+
+            {/* Shared High-Contrast Accessible Theme Toggle */}
+            <ThemeToggle />
           </div>
         </header>
-        <main className="main-content">
-          <Login onLoginSuccess={handleLoginSuccess} />
+        <main 
+          className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8 relative bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: `url(${clinicalBg})` }}
+        >
+          {/* Adjusted 62% clinical wash overlay: authentic clinical photo visibility + high-contrast card separation */}
+          <div className="absolute inset-0 bg-[#F8FAFC]/62 dark:bg-[#07182D]/75 backdrop-blur-[1px] pointer-events-none transition-colors duration-200" />
+          
+          {/* Elevated form container */}
+          <div className="relative z-10 w-full flex justify-center">
+            <Login onLoginSuccess={handleLoginSuccess} />
+          </div>
         </main>
+        <Toaster position="top-right" richColors />
       </div>
     );
   }
@@ -508,14 +529,7 @@ export default function App() {
               <span>Settings</span>
             </button>
 
-            <button
-              className="sidebar-action-btn"
-              onClick={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
-              title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            >
-              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-              <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-            </button>
+            <ThemeToggle className="sidebar-action-btn w-full justify-start text-xs" />
 
             <button
               className="sidebar-action-btn"
@@ -563,6 +577,9 @@ export default function App() {
             </button>
           )}
           <h2 className="header-title">{getTabTitle()}</h2>
+          <div style={{ marginLeft: 'auto' }}>
+            <ThemeToggle variant="icon" />
+          </div>
         </header>
 
         {/* Persistent Trial Expired Read-Only Grace Mode Banner */}
@@ -697,6 +714,7 @@ export default function App() {
           setIsTrialExpired(false);
         }}
       />
+      <Toaster position="top-right" richColors />
     </div>
   );
 }

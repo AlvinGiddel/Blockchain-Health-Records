@@ -194,11 +194,11 @@ export default function SearchableSelect({
               }
             }}
             style={{
-              background: 'rgba(99, 102, 241, 0.15)',
-              border: '1px solid rgba(99, 102, 241, 0.35)',
+              background: 'rgba(15, 118, 110, 0.08)',
+              border: '1px solid rgba(15, 118, 110, 0.25)',
               borderRadius: '6px',
               padding: '3px 7px',
-              color: 'var(--color-primary, #818cf8)',
+              color: 'var(--color-primary)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -208,12 +208,12 @@ export default function SearchableSelect({
               transition: 'all 0.15s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(99, 102, 241, 0.28)';
-              e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.6)';
+              e.currentTarget.style.background = 'rgba(15, 118, 110, 0.16)';
+              e.currentTarget.style.borderColor = 'var(--color-primary)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(99, 102, 241, 0.15)';
-              e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.35)';
+              e.currentTarget.style.background = 'rgba(15, 118, 110, 0.08)';
+              e.currentTarget.style.borderColor = 'rgba(15, 118, 110, 0.25)';
             }}
           >
             <Search size={11} /> Search
@@ -222,7 +222,7 @@ export default function SearchableSelect({
           <ChevronDown 
             size={14} 
             style={{
-              color: 'var(--text-muted, #94a3b8)',
+              color: 'var(--text-muted)',
               transform: isOpen ? 'rotate(180deg)' : 'none',
               transition: 'transform 0.2s ease'
             }} 
@@ -237,10 +237,10 @@ export default function SearchableSelect({
           top: 'calc(100% + 4px)',
           left: 0,
           right: 0,
-          backgroundColor: '#0f172a',
-          border: '1px solid rgba(99, 102, 241, 0.4)',
+          backgroundColor: 'var(--card)',
+          border: '1px solid var(--border)',
           borderRadius: '10px',
-          boxShadow: '0 15px 35px -5px rgba(0, 0, 0, 0.7), 0 0 20px rgba(99, 102, 241, 0.15)',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15)',
           zIndex: 9999,
           overflow: 'hidden',
           animation: 'fadeIn 0.15s ease-out'
@@ -248,8 +248,8 @@ export default function SearchableSelect({
           {/* Search Box Input Field */}
           <div style={{
             padding: '8px 10px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            borderBottom: '1px solid var(--border)',
+            backgroundColor: 'var(--card)',
             position: 'sticky',
             top: 0,
             zIndex: 1
@@ -260,7 +260,7 @@ export default function SearchableSelect({
                 style={{
                   position: 'absolute',
                   left: '10px',
-                  color: 'var(--color-primary, #818cf8)',
+                  color: 'var(--text-muted)',
                   pointerEvents: 'none'
                 }} 
               />
@@ -273,10 +273,10 @@ export default function SearchableSelect({
                 style={{
                   width: '100%',
                   padding: '7px 30px 7px 30px',
-                  backgroundColor: 'rgba(30, 41, 59, 0.8)',
-                  border: '1px solid rgba(99, 102, 241, 0.3)',
+                  backgroundColor: 'var(--secondary)',
+                  border: '1px solid var(--border)',
                   borderRadius: '6px',
-                  color: '#fff',
+                  color: 'var(--text-primary)',
                   fontSize: '0.84rem',
                   outline: 'none',
                   boxSizing: 'border-box'
@@ -302,7 +302,7 @@ export default function SearchableSelect({
                     right: '8px',
                     background: 'none',
                     border: 'none',
-                    color: 'var(--text-muted, #94a3b8)',
+                    color: 'var(--text-muted)',
                     cursor: 'pointer',
                     padding: '2px',
                     display: 'flex',
@@ -325,7 +325,7 @@ export default function SearchableSelect({
               <div style={{
                 padding: '12px',
                 textAlign: 'center',
-                color: 'var(--text-muted, #94a3b8)',
+                color: 'var(--text-muted)',
                 fontSize: '0.82rem'
               }}>
                 No matching options found for "{searchQuery}"
@@ -345,13 +345,13 @@ export default function SearchableSelect({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.25)' : 'transparent',
-                      color: isSelected ? '#a5b4fc' : (opt.value === '' ? 'var(--text-muted, #94a3b8)' : '#f1f5f9'),
+                      backgroundColor: isSelected ? 'rgba(15, 118, 110, 0.12)' : 'transparent',
+                      color: isSelected ? 'var(--color-primary)' : (opt.value === '' ? 'var(--text-muted)' : 'var(--text-primary)'),
                       fontWeight: isSelected ? 600 : 400,
                       transition: 'background-color 0.12s ease'
                     }}
                     onMouseEnter={(e) => {
-                      if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.06)';
+                      if (!isSelected) e.currentTarget.style.backgroundColor = 'var(--secondary)';
                     }}
                     onMouseLeave={(e) => {
                       if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent';

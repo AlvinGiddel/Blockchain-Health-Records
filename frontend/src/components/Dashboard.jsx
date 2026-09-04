@@ -4,6 +4,8 @@ import BreakGlassModal from './BreakGlassModal';
 import QRHealthPassport from './QRHealthPassport';
 import RecordVerificationPortal from './RecordVerificationPortal';
 import SearchableSelect from './SearchableSelect';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
 import { safeFetch, getApiUrl } from '../utils/api';
 
 export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavigate }) {
@@ -443,51 +445,56 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
   return (
     <div>
-      <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="mb-8 flex flex-wrap justify-between items-start gap-4">
         <div>
-          <h1 style={{ fontSize: '2.25rem', fontWeight: 800 }}>Welcome, {user.name}</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>
-            {user.role === 'doctor' ? 'Healthcare Provider Portal' : 'Secure Personal Health Records'}
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0B2545] dark:text-white tracking-tight">
+            Welcome, {user.name}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            {user.role === 'doctor' ? 'Healthcare Provider Clinical Portal' : 'Secure Personal Health Records'}
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        <div className="flex flex-wrap items-center gap-2.5">
           {user.role === 'patient' && (
-            <button
-              className="btn btn-primary"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontSize: '0.85rem' }}
+            <Button
+              variant="default"
+              size="sm"
+              className="gap-2 bg-[#0F766E] hover:bg-[#0D655E] text-white"
               onClick={() => setShowQRPassportModal(true)}
             >
               <QrCode size={16} /> Health Passport & QR
-            </button>
+            </Button>
           )}
-          {/* Top banner break-glass button removed; break-glass trigger is preserved per-patient in Patient Registry */}
-          <button
-            className="btn btn-secondary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontSize: '0.85rem' }}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 border-[#E2E8F0] dark:border-[#1E3A5F] dark:bg-[#112239] dark:text-[#F8FAFC]"
             onClick={() => {
               setSelectedVerificationRecordId('');
               setShowVerificationModal(true);
             }}
           >
-            <ShieldCheck size={16} /> Verify Record Seal
-          </button>
+            <ShieldCheck size={16} className="text-[#1D9E75]" /> Verify Record Seal
+          </Button>
         </div>
       </div>
 
       {user.role === 'patient' ? (
         <div>
           {/* Personal Health Summary */}
-          <div className="glass-card" style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '1.2rem', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
-              <Activity size={20} /> Personal Health Summary
+          <div className="glass-card mb-6">
+            <h3 className="text-lg font-bold text-[#0B2545] dark:text-white flex items-center gap-2 mb-5">
+              <Activity size={20} className="text-[#0F766E]" /> Personal Health Summary
             </h3>
 
             <div className="grid-2" style={{ gap: '24px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '10px' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Blood Group</span>
-                  <span className="badge badge-success" style={{ fontSize: '0.85rem' }}>{user.patientProfile?.bloodType || 'O+'}</span>
+                  <Badge variant="verified" className="text-sm font-bold">
+                    {user.patientProfile?.bloodType || 'O+'}
+                  </Badge>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -496,7 +503,9 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
                     {user.patientProfile?.allergies && user.patientProfile.allergies.length > 0 ? (
                       user.patientProfile.allergies.map((allergy, i) => (
-                        <span key={i} className="badge badge-error" style={{ textTransform: 'capitalize' }}>{allergy}</span>
+                        <Badge key={i} variant="destructive" className="capitalize">
+                          {allergy}
+                        </Badge>
                       ))
                     ) : (
                       <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No known allergies</span>
@@ -531,21 +540,23 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                   }
                   const next = upcoming[0];
                   return (
-                    <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '12px 16px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+                    <div style={{ background: 'var(--card)', padding: '14px 16px', borderRadius: '10px', border: '1px solid var(--border)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
                         <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)' }}>Dr. {next.doctorName}</strong>
                         {next.organizationName && (
-                          <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: 'var(--color-primary)', fontSize: '0.72rem', padding: '2px 6px' }}>
+                          <span className="badge" style={{ background: '#E6F4F2', color: '#0F766E', border: '1px solid #A3E3CD', fontSize: '0.72rem', padding: '2px 6px' }}>
                             🏥 {next.organizationName}
                           </span>
                         )}
                       </div>
-                      <p style={{ margin: '4px 0 0 0', color: 'var(--color-accent)', fontSize: '0.85rem', fontWeight: 500 }}>
+                      <p style={{ margin: '6px 0 0 0', color: 'var(--color-primary)', fontSize: '0.85rem', fontWeight: 600 }}>
                         {next.date} at {next.time}
                       </p>
-                      <span className={`badge ${next.status === 'Confirmed' ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.7rem', padding: '2px 8px', marginTop: '8px', display: 'inline-block' }}>
-                        {next.status}
-                      </span>
+                      <div style={{ marginTop: '8px' }}>
+                        <Badge variant={next.status === 'Confirmed' ? 'verified' : 'warning'}>
+                          {next.status}
+                        </Badge>
+                      </div>
                     </div>
                   );
                 })()}
@@ -558,13 +569,13 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {/* Quick Actions Panel */}
               <div className="glass-card">
-                <h3 style={{ fontSize: '1.25rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-accent)' }}>
-                  <Clipboard size={20} /> Quick Actions
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: '#0B2545' }}>
+                  <Clipboard size={18} className="text-[#0F766E]" /> Quick Actions
                 </h3>
                 <div className="grid-quick-actions">
                   <button
                     className="btn btn-secondary"
-                    style={{ fontSize: '0.85rem', padding: '14px', display: 'flex', gap: '8px', justifyContent: 'center', background: 'rgba(99, 102, 241, 0.05)' }}
+                    style={{ fontSize: '0.85rem', padding: '12px 14px', display: 'flex', gap: '8px', justifyContent: 'center' }}
                     onClick={() => onNavigate && onNavigate('records')}
                   >
                     <FileText size={16} color="var(--color-primary)" /> View My Health Folder
@@ -572,7 +583,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
                   <button
                     className="btn btn-secondary"
-                    style={{ fontSize: '0.85rem', padding: '14px', display: 'flex', gap: '8px', justifyContent: 'center', background: 'rgba(16, 185, 129, 0.05)' }}
+                    style={{ fontSize: '0.85rem', padding: '12px 14px', display: 'flex', gap: '8px', justifyContent: 'center' }}
                     onClick={() => onNavigate && onNavigate('profile')}
                   >
                     <User size={16} color="var(--color-success)" /> View Profile Details
@@ -580,7 +591,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
                   <button
                     className="btn btn-secondary"
-                    style={{ fontSize: '0.85rem', padding: '14px', display: 'flex', gap: '8px', justifyContent: 'center', background: 'rgba(99, 102, 241, 0.08)' }}
+                    style={{ fontSize: '0.85rem', padding: '12px 14px', display: 'flex', gap: '8px', justifyContent: 'center' }}
                     onClick={() => {
                       const formEl = document.getElementById('appointment-booking-section');
                       if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
@@ -636,7 +647,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                       placeholder="-- Choose Hospital Facility --"
                       onChange={(e) => setSelectedHospitalId(e.target.value)}
                       required
-                      style={{ width: '100%', borderColor: 'rgba(99, 102, 241, 0.4)' }}
+                      style={{ width: '100%' }}
                     >
                       <option value="">-- Choose Hospital Facility --</option>
                       {activeOrganizations.map(org => {
@@ -654,11 +665,11 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                       return (
                         <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem' }}>
                           {isMember ? (
-                            <span className="badge badge-success" style={{ padding: '2px 8px' }}>
+                            <Badge variant="verified">
                               ✓ Active Clinic Membership
-                            </span>
+                            </Badge>
                           ) : (
-                            <span className="badge" style={{ background: 'rgba(99, 102, 241, 0.15)', color: 'var(--color-accent)', padding: '2px 8px' }}>
+                            <span className="badge" style={{ background: '#E6F4F2', color: '#0F766E', border: '1px solid #A3E3CD', padding: '2px 8px' }}>
                               🆕 Multi-Clinic Pass: First visit will automatically affiliate you to {selectedOrg?.name || 'this hospital'}
                             </span>
                           )}
@@ -695,11 +706,11 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                       const doc = doctors.find(d => (d._id || d.id) === selectedDoctorId);
                       if (!doc) return null;
                       return (
-                        <div className="glass-card" style={{ marginTop: '16px', background: 'rgba(255, 255, 255, 0.03)', padding: '16px', border: '1px dashed var(--glass-border)', display: 'flex', gap: '16px', alignItems: 'center' }}>
+                        <div className="glass-card" style={{ marginTop: '16px', background: 'var(--card)', padding: '16px', border: '1px dashed var(--border)', display: 'flex', gap: '16px', alignItems: 'center' }}>
                           {doc.doctorProfile?.profilePhoto ? (
-                            <img src={doc.doctorProfile.profilePhoto} alt={`Dr. ${doc.name}`} style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--glass-border)' }} />
+                            <img src={doc.doctorProfile.profilePhoto} alt={`Dr. ${doc.name}`} style={{ width: '80px', height: '80px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border)' }} />
                           ) : (
-                            <div style={{ width: '80px', height: '80px', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: '80px', height: '80px', borderRadius: '12px', background: 'rgba(15, 118, 110, 0.08)', border: '1px solid rgba(15, 118, 110, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               <User size={36} color="var(--color-primary)" />
                             </div>
                           )}
@@ -838,13 +849,11 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                             width: '10px',
                             height: '10px',
                             borderRadius: '50%',
-                            background: 'var(--bg-primary)',
-                            border: `2px solid ${evt.type === 'record' ? 'var(--color-success)' :
-                                evt.type === 'appointment' ? 'var(--color-primary)' : 'var(--color-accent)'
+                            background: 'var(--card)',
+                            border: `2px solid ${evt.type === 'record' ? '#1D9E75' :
+                                evt.type === 'appointment' ? '#0F766E' : '#0B2545'
                               }`,
-                            boxShadow: `0 0 8px ${evt.type === 'record' ? 'rgba(16, 185, 129, 0.4)' :
-                                evt.type === 'appointment' ? 'rgba(99, 102, 241, 0.4)' : 'rgba(6, 182, 212, 0.4)'
-                              }`
+                            boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
                           }} />
 
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -878,33 +887,33 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
           {/* Doctor Profile & Metrics */}
           <div className="grid-3" style={{ marginBottom: '32px' }}>
             <div className="glass-card metric-card-interactive" style={{ display: 'flex', alignItems: 'center', gap: '20px' }} onClick={() => setViewingDoctorProfileModal(true)}>
-              <div style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '12px', width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <User size={28} color="var(--color-primary)" />
+              <div style={{ background: 'rgba(11, 37, 69, 0.08)', border: '1px solid rgba(11, 37, 69, 0.18)', borderRadius: '12px', width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <User size={28} color="#0B2545" />
               </div>
               <div>
-                <h4 style={{ fontSize: '1.1rem', margin: 0 }}>Dr. {user.name}</h4>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{user.doctorProfile?.specialization || 'Clinical Practitioner'}</p>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{user.doctorProfile?.hospital || 'Blockchain Health Network'}</p>
+                <h4 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700 }}>Dr. {user.name}</h4>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '2px 0 0 0' }}>{user.doctorProfile?.specialization || 'Clinical Practitioner'}</p>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', margin: '2px 0 0 0' }}>{user.doctorProfile?.hospital || 'Blockchain Health Network'}</p>
               </div>
             </div>
 
             <div className="glass-card metric-card-interactive" style={{ display: 'flex', alignItems: 'center', gap: '20px' }} onClick={() => setViewingRecordsModal(true)}>
-              <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '12px', width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CheckCircle size={28} color="var(--color-success)" />
+              <div style={{ background: '#E8F7F2', border: '1px solid #A3E3CD', borderRadius: '12px', width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <CheckCircle size={28} color="#1D9E75" />
               </div>
               <div>
-                <h4 style={{ fontSize: '1.5rem', margin: 0 }}>{recordsCount}</h4>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Total Medical Blocks Mined</p>
+                <h4 style={{ fontSize: '1.5rem', margin: 0, fontWeight: 800 }}>{recordsCount}</h4>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '2px 0 0 0' }}>Signed Clinical Records</p>
               </div>
             </div>
 
             <div className="glass-card metric-card-interactive" style={{ display: 'flex', alignItems: 'center', gap: '20px' }} onClick={() => setViewingBlocksModal(true)}>
-              <div style={{ background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '12px', width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Clock size={28} color="var(--color-warning)" />
+              <div style={{ background: '#E6F4F2', border: '1px solid #A3E3CD', borderRadius: '12px', width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Clock size={28} color="#0F766E" />
               </div>
               <div>
-                <h4 style={{ fontSize: '1.5rem', margin: 0 }}>{blocksCount}</h4>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Blockchain Height (Blocks)</p>
+                <h4 style={{ fontSize: '1.5rem', margin: 0, fontWeight: 800 }}>{blocksCount}</h4>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '2px 0 0 0' }}>Verified Ledger Height (Blocks)</p>
               </div>
             </div>
           </div>
@@ -1500,9 +1509,9 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
               </button>
             </div>
 
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '24px', background: 'rgba(255, 255, 255, 0.02)', padding: '16px', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
-              <div style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.3)', borderRadius: '12px', width: '72px', height: '72px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <User size={36} color="var(--color-primary)" />
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '24px', background: 'var(--card)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <div style={{ background: 'rgba(11, 37, 69, 0.08)', border: '1px solid rgba(11, 37, 69, 0.2)', borderRadius: '12px', width: '72px', height: '72px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <User size={36} color="#0B2545" />
               </div>
               <div>
                 <h4 style={{ fontSize: '1.25rem', margin: '0 0 4px 0' }}>Dr. {user.name}</h4>
@@ -1667,7 +1676,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span className="badge badge-success" style={{ fontSize: '0.75rem' }}>Block #{rec.blockIndex}</span>
-                        <span className="badge" style={{ background: rec.txType === 'consultation' ? 'rgba(6, 182, 212, 0.15)' : 'rgba(99, 102, 241, 0.15)', color: rec.txType === 'consultation' ? 'var(--color-accent)' : 'var(--color-primary)', fontSize: '0.75rem', textTransform: 'uppercase' }}>
+                        <span className="badge" style={{ background: '#E6F4F2', color: '#0F766E', border: '1px solid #A3E3CD', fontSize: '0.75rem', textTransform: 'uppercase' }}>
                           {rec.txType || 'medical'}
                         </span>
                       </div>

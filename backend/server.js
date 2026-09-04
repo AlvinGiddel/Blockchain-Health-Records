@@ -3951,8 +3951,14 @@ app.use((req, res) => {
 
 // Global Express error handling middleware
 app.use((err, req, res, next) => {
-    console.error('[SYS ERROR] Unhandled API Express error:', err);
-    res.status(500).json({ error: 'Internal server error occurred.', message: err.message });
+    const statusCode = err.status || err.statusCode || 500;
+    if (statusCode >= 500) {
+        console.error('[SYS ERROR] Unhandled API Express error:', err);
+    }
+    res.status(statusCode).json({ 
+        error: err.expose || statusCode < 500 ? (err.message || 'Request failed.') : 'Internal server error occurred.', 
+        message: err.message 
+    });
 });
 
 // Global process exception handlers to prevent Node server crashes
