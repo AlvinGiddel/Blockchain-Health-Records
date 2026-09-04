@@ -1343,7 +1343,7 @@ app.post('/api/admin/organizations/:id/approve', async (req, res) => {
         await client.query(`
             INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp)
             VALUES ($1, 'clinic_approved', $2, $3, $2, $3, $4, NOW());
-        `, [id, decoded.id, decoded.name || 'Super Admin', `Clinic "${org.name}" approved by Super Admin. 14-day trial activated.`]);
+        `, [id, decoded.id, decoded.name || 'Super Admin', `Clinic "${org.name}" approved by Super Admin. 7-day trial activated.`]);
 
         await client.query('COMMIT;');
 
@@ -1359,7 +1359,7 @@ app.post('/api/admin/organizations/:id/approve', async (req, res) => {
 
         res.json({
             success: true,
-            message: `Clinic "${org.name}" approved successfully! 14-day trial activated.`,
+            message: `Clinic "${org.name}" approved successfully! 7-day trial activated.`,
             organization: org
         });
     } catch (err) {

@@ -359,7 +359,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                   <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">Council Verification</p>
                 </div>
                 <div>
-                  <p className="text-xl sm:text-2xl font-bold text-[#1D9E75] dark:text-[#34D399]">30 Days</p>
+                  <p className="text-xl sm:text-2xl font-bold text-[#1D9E75] dark:text-[#34D399]">7 Days</p>
                   <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">Complimentary Trial</p>
                 </div>
               </div>
@@ -649,7 +649,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
               Predictable plans for clinics and hospital facilities
             </h2>
             <p className="text-base text-[#475569] dark:text-slate-300 leading-relaxed">
-              Every facility tier receives complete tamper-evident ledger access. Zero hidden fees. All new clinic registrations receive a 30-day trial upon administrative verification.
+              Every facility tier receives complete tamper-evident ledger access. Zero hidden fees. All new clinic registrations receive a 7-day trial upon administrative verification.
             </p>
           </div>
 
@@ -721,7 +721,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                     Register Clinic on this Plan
                   </Button>
                   <p className="text-[11px] text-center text-slate-400 mt-2">
-                    Includes 30-day initial trial
+                    Includes 7-day initial trial
                   </p>
                 </div>
 
@@ -824,7 +824,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
           <div className="bg-[#0B2545] dark:bg-[#0F243E] rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden shadow-xl">
             <div className="relative z-10 max-w-2xl space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#1D9E75]/20 text-[#34D399] border border-[#1D9E75]/40">
-                <Sparkles className="w-3.5 h-3.5" /> Start With a 30-Day Free Trial
+                <Sparkles className="w-3.5 h-3.5" /> Start With a 7-Day Free Trial
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
                 Ready to secure your clinic's health records?
@@ -919,7 +919,9 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                 </li>
                 <li className="flex items-center gap-2">
                   <Phone className="w-3.5 h-3.5 text-[#0F766E] shrink-0" />
-                  <span>+254 (0) 20 790 0000 / WhatsApp Desk</span>
+                  <a href="tel:0706296617" className="hover:text-[#0F766E] transition-colors">
+                    0706296617 / WhatsApp Desk
+                  </a>
                 </li>
               </ul>
             </div>

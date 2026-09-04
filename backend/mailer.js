@@ -515,8 +515,8 @@ async function sendClinicApprovalEmail({ email, adminName, clinicName }) {
     <body style="margin: 0; padding: 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0d0e15; color: #f8fafc;">
       <div style="max-width: 580px; margin: 0 auto; background: #161822; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 32px;">
         <div style="text-align: center; margin-bottom: 24px;">
-          <h2 style="color: #10b981; margin: 0 0 8px 0; font-size: 22px;">🎉 Clinic Registration Approved!</h2>
-          <p style="color: #94a3b8; font-size: 14px; margin: 0;">14-Day Free Trial Activated</p>
+          <h2 style="color: #1D9E75; margin: 0 0 8px 0; font-size: 22px;">🎉 Clinic Registration Approved!</h2>
+          <p style="color: #94a3b8; font-size: 14px; margin: 0;">7-Day Free Trial Activated</p>
         </div>
         <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1;">
           Hello <strong>${adminName}</strong>,
@@ -524,16 +524,16 @@ async function sendClinicApprovalEmail({ email, adminName, clinicName }) {
         <p style="font-size: 15px; line-height: 1.6; color: #cbd5e1;">
           We are pleased to inform you that your healthcare facility, <strong>${clinicName}</strong>, has been reviewed and approved by platform administration.
         </p>
-        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 16px; margin: 24px 0;">
-          <p style="margin: 0 0 8px 0; font-weight: 600; color: #10b981; font-size: 14px;">Included with your trial:</p>
+        <div style="background: rgba(29, 158, 117, 0.08); border: 1px solid rgba(29, 158, 117, 0.25); border-radius: 8px; padding: 16px; margin: 24px 0;">
+          <p style="margin: 0 0 8px 0; font-weight: 600; color: #1D9E75; font-size: 14px;">Included with your trial:</p>
           <ul style="margin: 0; padding-left: 20px; color: #cbd5e1; font-size: 13.5px; line-height: 1.6;">
             <li>Dedicated isolated blockchain ledger & cryptographic genesis block</li>
             <li>Doctor credentialing & patient medical record management</li>
-            <li>14 days of full platform access starting today</li>
+            <li>7 days of full platform access starting today</li>
           </ul>
         </div>
         <div style="text-align: center; margin: 32px 0;">
-          <a href="${loginUrl}" style="background: #6366f1; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; display: inline-block;">
+          <a href="${loginUrl}" style="background: #0F766E; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; display: inline-block;">
             Log In to Admin Command Center
           </a>
         </div>
@@ -545,7 +545,7 @@ async function sendClinicApprovalEmail({ email, adminName, clinicName }) {
     </html>
     `;
 
-    const textContent = `Hello ${adminName},\n\nYour clinic "${clinicName}" has been approved! Your 14-day trial has begun.\n\nLog in at: ${loginUrl}`;
+    const textContent = `Hello ${adminName},\n\nYour clinic "${clinicName}" has been approved! Your 7-day trial has begun.\n\nLog in at: ${loginUrl}`;
 
     return await dispatchEmail({
         to: email,
