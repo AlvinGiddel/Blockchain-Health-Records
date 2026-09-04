@@ -69,6 +69,13 @@ CREATE POLICY p_users_clinic_staff ON users
         ))
     );
 
+DROP POLICY IF EXISTS p_users_view_approved_doctors ON users;
+CREATE POLICY p_users_view_approved_doctors ON users
+    FOR SELECT
+    USING (
+        role = 'doctor' AND is_approved = true
+    );
+
 -- ==============================================================================
 -- 2. LICENSES TABLE RLS (Per-Organization License Isolation)
 -- ==============================================================================
@@ -161,8 +168,9 @@ CREATE POLICY p_audit_logs_clinic_access ON audit_logs
 
 DROP POLICY IF EXISTS p_audit_logs_patient_access ON audit_logs;
 CREATE POLICY p_audit_logs_patient_access ON audit_logs
-    FOR SELECT
-    USING (patient_id = get_current_user_id());
+    FOR ALL
+    USING (patient_id = get_current_user_id())
+    WITH CHECK (patient_id = get_current_user_id());
 
 -- ==============================================================================
 -- 7. TENANT MEMBERSHIPS TABLE RLS
@@ -177,8 +185,9 @@ CREATE POLICY p_memberships_super_admin ON tenant_memberships
 
 DROP POLICY IF EXISTS p_memberships_self ON tenant_memberships;
 CREATE POLICY p_memberships_self ON tenant_memberships
-    FOR SELECT
-    USING (user_id = get_current_user_id());
+    FOR ALL
+    USING (user_id = get_current_user_id())
+    WITH CHECK (user_id = get_current_user_id());
 
 DROP POLICY IF EXISTS p_memberships_clinic_access ON tenant_memberships;
 CREATE POLICY p_memberships_clinic_access ON tenant_memberships
