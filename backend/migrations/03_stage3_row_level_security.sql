@@ -163,14 +163,24 @@ CREATE POLICY p_audit_logs_super_admin ON audit_logs
 
 DROP POLICY IF EXISTS p_audit_logs_clinic_access ON audit_logs;
 CREATE POLICY p_audit_logs_clinic_access ON audit_logs
-    FOR ALL
+    FOR SELECT
     USING (organization_id = get_current_org_id());
 
 DROP POLICY IF EXISTS p_audit_logs_patient_access ON audit_logs;
 CREATE POLICY p_audit_logs_patient_access ON audit_logs
-    FOR ALL
-    USING (patient_id = get_current_user_id())
-    WITH CHECK (patient_id = get_current_user_id());
+    FOR SELECT
+    USING (patient_id = get_current_user_id());
+
+DROP POLICY IF EXISTS p_audit_logs_insert ON audit_logs;
+CREATE POLICY p_audit_logs_insert ON audit_logs
+    FOR INSERT
+    WITH CHECK (true);
+
+DROP POLICY IF EXISTS p_audit_logs_update ON audit_logs;
+CREATE POLICY p_audit_logs_update ON audit_logs
+    FOR UPDATE
+    USING (is_super_admin() OR organization_id = get_current_org_id() OR organization_id IS NULL)
+    WITH CHECK (is_super_admin() OR organization_id = get_current_org_id() OR organization_id IS NULL);
 
 -- ==============================================================================
 -- 7. TENANT MEMBERSHIPS TABLE RLS

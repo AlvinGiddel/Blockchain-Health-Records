@@ -150,12 +150,12 @@ function decrypt(text) {
 }
 
 // Helper to log audit events with explicit Kenyan timestamp
-const logAuditEvent = (eventType, patientId, patientName, doctorId, doctorName, details, customTimestamp = null) => {
+const logAuditEvent = (eventType, patientId, patientName, doctorId, doctorName, details, customTimestamp = null, organizationId = null) => {
     const timestamp = customTimestamp || getKenyanTimestamp();
     return db.query(
-        `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [eventType, patientId, patientName, doctorId, doctorName, details, timestamp]
+        `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [organizationId, eventType, patientId, patientName, doctorId, doctorName, details, timestamp]
     ).catch(err => console.error(`[AUDIT LOG ERROR] Failed to log ${eventType}:`, err.message));
 };
 
@@ -846,9 +846,9 @@ app.post('/api/auth/register', async (req, res) => {
 
             // Log doctor registration request event in audit trail (in background)
             db.query(
-                `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                ['doctor_request', user.id, user.name, user.id, 'System Admin', `New practitioner registration request submitted by ${user.name} (${user.email}). Pending approval.`, createdAt]
+                `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                [user.organization_id || null, 'doctor_request', user.id, user.name, user.id, 'System Admin', `New practitioner registration request submitted by ${user.name} (${user.email}). Pending approval.`, createdAt]
             ).catch(err => console.error('Failed to log doctor request audit:', err));
 
             return res.status(202).json({
@@ -1851,9 +1851,9 @@ app.post('/api/admin/approve/:id', async (req, res) => {
 
         // Log admin approval in audit trail (in background)
         db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            ['admin_approve', updatedAdmin.id, updatedAdmin.name, updatedAdmin.id, 'System Admin', `Admin registration request for ${updatedAdmin.name} (${updatedAdmin.email}) approved.`]
+            `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [updatedAdmin.organization_id || null, 'admin_approve', updatedAdmin.id, updatedAdmin.name, updatedAdmin.id, 'System Admin', `Admin registration request for ${updatedAdmin.name} (${updatedAdmin.email}) approved.`]
         ).catch(err => console.error('Failed to log admin approval audit:', err));
 
         console.log(`Admin ${updatedAdmin.name} (${updatedAdmin.email}) approved by administrator.`);
@@ -1878,9 +1878,9 @@ app.post('/api/admin/reject/:id', async (req, res) => {
 
         // Log admin rejection in audit trail (in background)
         db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            ['admin_reject', updatedAdmin.id, updatedAdmin.name, updatedAdmin.id, 'System Admin', `Admin registration request for ${updatedAdmin.name} (${updatedAdmin.email}) rejected.`]
+            `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [updatedAdmin.organization_id || null, 'admin_reject', updatedAdmin.id, updatedAdmin.name, updatedAdmin.id, 'System Admin', `Admin registration request for ${updatedAdmin.name} (${updatedAdmin.email}) rejected.`]
         ).catch(err => console.error('Failed to log admin rejection audit:', err));
 
         console.log(`Admin ${updatedAdmin.name} (${updatedAdmin.email}) rejected by administrator.`);
@@ -1918,9 +1918,9 @@ app.post('/api/auth/change-password', async (req, res) => {
 
         // Log the password change in the audit trail (in background)
         db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            ['password_change', user.id, user.name, user.id, 'System Admin', `User ${user.name} (${user.role}) changed their account password.`]
+            `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [user.organization_id || null, 'password_change', user.id, user.name, user.id, 'System Admin', `User ${user.name} (${user.role}) changed their account password.`]
         ).catch(err => console.error('Failed to log password change audit:', err));
 
         res.json({ success: true, message: 'Password updated successfully!' });
@@ -1981,9 +1981,9 @@ app.post('/api/auth/update-email', async (req, res) => {
 
         // 7. Log immutable audit trail
         db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            ['email_update', user.id, user.name, user.id, 'System Security', `User ${user.name} (${user.role}) changed email from ${user.email} to ${cleanEmail}.`]
+            `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [user.organization_id || null, 'email_update', user.id, user.name, user.id, 'System Security', `User ${user.name} (${user.role}) changed email from ${user.email} to ${cleanEmail}.`]
         ).catch(err => console.error('Failed to log email change audit:', err));
 
         console.log(`[ACCOUNT] Email updated for user ${user.name} (${user.id}): ${user.email} -> ${cleanEmail}`);
@@ -2037,9 +2037,9 @@ app.post('/api/users/update-profile-photo', async (req, res) => {
 
         // Audit log
         db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            ['profile_photo_update', user.id, user.name, user.id, 'System', `User ${user.name} (${user.role}) updated their profile picture.`]
+            `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [user.organization_id || null, 'profile_photo_update', user.id, user.name, user.id, 'System', `User ${user.name} (${user.role}) updated their profile picture.`]
         ).catch(err => console.error('Failed to log profile photo update audit:', err));
 
         res.json({
@@ -2099,9 +2099,9 @@ app.post('/api/auth/forgot-password', async (req, res) => {
 
         // Log to Audit trail (in background)
         db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            ['password_reset_request', user.id, user.name, user.id, 'System Admin', `Password reset requested for ${user.name} (${user.email}). Email sent: ${isEmailDelivered}`]
+            `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [user.organization_id || null, 'password_reset_request', user.id, user.name, user.id, 'System Admin', `Password reset requested for ${user.name} (${user.email}). Email sent: ${isEmailDelivered}`]
         ).catch(err => console.error('Failed to log password reset request audit:', err));
 
         res.json({
@@ -2149,9 +2149,9 @@ app.post('/api/auth/reset-password/:token', async (req, res) => {
 
         // Log completion to audit trail (in background)
         db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            ['password_reset_complete', user.id, user.name, user.id, 'System Admin', `Password reset successfully completed for ${user.name} (${user.role}).`]
+            `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [user.organization_id || null, 'password_reset_complete', user.id, user.name, user.id, 'System Admin', `Password reset successfully completed for ${user.name} (${user.role}).`]
         ).catch(err => console.error('Failed to log password reset complete audit:', err));
 
         res.json({ success: true, message: 'Your password has been successfully reset! You can now log in.' });
@@ -2218,9 +2218,9 @@ app.put('/api/users/patient/profile', async (req, res) => {
 
         // Create Audit Log Entry (in background)
         db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            ['profile_update', updatedUser.id, updatedUser.name, updatedUser.id, 'Patient Self', `Patient ${updatedUser.name} updated their personal profile & health vitals.`]
+            `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [updatedUser.organization_id || null, 'profile_update', updatedUser.id, updatedUser.name, updatedUser.id, 'Patient Self', `Patient ${updatedUser.name} updated their personal profile & health vitals.`]
         ).catch(err => console.error('Failed to log profile update audit:', err));
 
         res.json({
@@ -2297,9 +2297,9 @@ app.put('/api/users/doctor/profile', async (req, res) => {
 
         // Create Audit Log Entry (in background)
         db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            ['profile_update', updatedUser.id, 'Doctor Self', updatedUser.id, updatedUser.name, `Dr. ${updatedUser.name} updated their clinical profile details.`]
+            `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [user.organization_id || null, 'profile_update', updatedUser.id, 'Doctor Self', updatedUser.id, updatedUser.name, `Dr. ${updatedUser.name} updated their clinical profile details.`]
         ).catch(err => console.error('Failed to log doctor profile update audit:', err));
 
         res.json({
@@ -2348,9 +2348,10 @@ app.put('/api/users/doctor/availability', async (req, res) => {
 
         // Log the change in the audit trail (in background)
         db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
+            `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
             [
+                doctor.organization_id || null,
                 'availability_update',
                 updatedDoctor.id,
                 updatedDoctor.name,
@@ -2566,9 +2567,9 @@ app.post('/api/appointments/:id/status', async (req, res) => {
         // Audit Log Entry (in background)
         const eventType = status === 'Confirmed' ? 'appointment_confirm' : (status === 'Declined' ? 'appointment_decline' : 'appointment_complete');
         db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [eventType, appointment.patient_id, appointment.patient_name, appointment.doctor_id, appointment.doctor_name, `Appointment status updated to ${status} for ${appointment.patient_name} with Dr. ${appointment.doctor_name}.`]
+            `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+            [appointment.organization_id || null, eventType, appointment.patient_id, appointment.patient_name, appointment.doctor_id, appointment.doctor_name, `Appointment status updated to ${status} for ${appointment.patient_name} with Dr. ${appointment.doctor_name}.`]
         ).catch(err => console.error('Failed to log appointment status update audit:', err));
 
         const responseAppointment = {
@@ -2628,11 +2629,13 @@ app.post('/api/consultations', async (req, res) => {
         const encryptedDiagnosis = encrypt(diagnosis);
         const encryptedTreatment = encrypt(treatment);
 
+        const consultationOrgId = appointment.organization_id || doctor.organization_id || null;
+
         // Create consultation record in PostgreSQL records table
         const { rows: newRecords } = await db.query(
-            `INSERT INTO records (patient_id, doctor_id, doctor_name, diagnosis, treatment, prescriptions, record_type, symptoms, notes, lab_request, consultation_hash, transaction_hash, signature, doctor_public_key, timestamp) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING *`,
-            [appointment.patient_id, appointment.doctor_id, doctor.name, encryptedDiagnosis, encryptedTreatment, JSON.stringify(prescriptionsArray), 'consultation', symptoms, notes, labRequest, consultationHash, transactionHash, signature, doctor.public_key, timestamp]
+            `INSERT INTO records (organization_id, patient_id, doctor_id, doctor_name, diagnosis, treatment, prescriptions, record_type, symptoms, notes, lab_request, consultation_hash, transaction_hash, signature, doctor_public_key, timestamp) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING *`,
+            [consultationOrgId, appointment.patient_id, appointment.doctor_id, doctor.name, encryptedDiagnosis, encryptedTreatment, JSON.stringify(prescriptionsArray), 'consultation', symptoms, notes, labRequest, consultationHash, transactionHash, signature, doctor.public_key, timestamp]
         );
         const newRecord = newRecords[0];
 
@@ -2640,9 +2643,9 @@ app.post('/api/consultations', async (req, res) => {
         await Promise.all([
             db.query("UPDATE appointments SET status = 'Completed' WHERE id = $1", [appointmentId]),
             db.query(
-                `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-                ['consultation_complete', appointment.patient_id, patient.name, appointment.doctor_id, doctor.name, `Dr. ${doctor.name} completed consultation for ${patient.name}.`, timestamp]
+                `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+                [consultationOrgId, 'consultation_complete', appointment.patient_id, patient.name, appointment.doctor_id, doctor.name, `Dr. ${doctor.name} completed consultation for ${patient.name}.`, timestamp]
             )
         ]);
 
@@ -2810,19 +2813,21 @@ app.post('/api/records', async (req, res) => {
         const encryptedDiagnosis = encrypt(diagnosis);
         const encryptedTreatment = encrypt(treatment);
 
+        const recordOrgId = doctor.organization_id || req.user?.organization_id || null;
+
         // Create Record in PostgreSQL
         const { rows: newRecords } = await db.query(
-            `INSERT INTO records (patient_id, doctor_id, doctor_name, diagnosis, treatment, prescriptions, ipfs_hash, signature, doctor_public_key, timestamp, transaction_hash) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-            [patientId, doctorId, doctor.name, encryptedDiagnosis, encryptedTreatment, JSON.stringify(prescriptions), ipfsHash, signature, doctor.public_key, timestamp, transactionHash]
+            `INSERT INTO records (organization_id, patient_id, doctor_id, doctor_name, diagnosis, treatment, prescriptions, ipfs_hash, signature, doctor_public_key, timestamp, transaction_hash) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+            [recordOrgId, patientId, doctorId, doctor.name, encryptedDiagnosis, encryptedTreatment, JSON.stringify(prescriptions), ipfsHash, signature, doctor.public_key, timestamp, transactionHash]
         );
         const newRecord = newRecords[0];
 
         // Create Audit Log Entry (in background)
         db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            ['record_create', patientId, patient.name, doctorId, doctor.name, `Dr. ${doctor.name} added a new diagnosis/treatment record.`, timestamp]
+            `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+            [recordOrgId, 'record_create', patientId, patient.name, doctorId, doctor.name, `Dr. ${doctor.name} added a new diagnosis/treatment record.`, timestamp]
         ).catch(err => console.error('Failed to log record creation audit:', err));
 
         // Add to blockchain's pending record memory list
@@ -2910,13 +2915,14 @@ app.get('/api/records/patient/:id', async (req, res) => {
                 try {
                     const [patientsRes, doctorsRes] = await Promise.all([
                         db.query('SELECT name FROM users WHERE id = $1', [patientId]),
-                        db.query('SELECT name FROM users WHERE id = $1', [requesterId])
+                        db.query('SELECT name, organization_id FROM users WHERE id = $1', [requesterId])
                     ]);
                     if (patientsRes.rows.length > 0 && doctorsRes.rows.length > 0) {
+                        const doctorOrg = doctorsRes.rows[0].organization_id || null;
                         await db.query(
-                            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-                             VALUES ($1, $2, $3, $4, $5, $6)`,
-                            ['record_access', patientId, patientsRes.rows[0].name, requesterId, doctorsRes.rows[0].name, `Dr. ${doctorsRes.rows[0].name} viewed electronic medical records folder.`]
+                            `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+                             VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                            [doctorOrg, 'record_access', patientId, patientsRes.rows[0].name, requesterId, doctorsRes.rows[0].name, `Dr. ${doctorsRes.rows[0].name} viewed electronic medical records folder.`]
                         );
                     }
                 } catch (err) {
@@ -3006,7 +3012,7 @@ app.get('/api/admin/records', async (req, res) => {
 });
 
 // Get system audit logs
-app.get('/api/audit/logs', async (req, res) => {
+app.get(['/api/audit/logs', '/api/audit-logs'], async (req, res) => {
     try {
         const { currentUser, isSuperAdmin, targetOrgId } = getRequesterOrgScope(req);
         const { patientId } = req.query;
@@ -3337,11 +3343,13 @@ app.post('/api/auth/break-glass', async (req, res) => {
         const pName = patientName || patients[0].name;
         const logDetails = `EMERGENCY BREAK-GLASS ACCESS OVERRIDE: Dr. ${dName} initiated emergency override for Patient ${pName}. Justification: ${reason.trim()}`;
 
+        const doctorOrgId = doctors[0].organization_id || req.user?.organization_id || null;
+
         // Create immutable audit log in database
         const { rows: auditRows } = await db.query(
-            `INSERT INTO audit_logs (event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            ['emergency_break_glass', patientId, pName, doctorId, dName, logDetails]
+            `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+            [doctorOrgId, 'emergency_break_glass', patientId, pName, doctorId, dName, logDetails]
         );
 
         console.log(`[ALERT] Break-Glass Emergency Override logged: Dr. ${dName} -> Patient ${pName}`);
