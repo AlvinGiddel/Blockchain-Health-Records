@@ -115,7 +115,8 @@ function createPaymentRouter(blockchainInstance) {
             // Resolve customer email with robust fallbacks
             let customerEmail = providedEmail || currentUser.email;
             if (!customerEmail) {
-                customerEmail = `admin@${organization.slug || 'clinic'}.local`;
+                customerEmail = (process.env.PAYSTACK_EMAIL || '').trim()
+                    || `admin@${organization.slug || 'clinic'}.local`;
             }
 
             // Generate clean, traceable Paystack reference
