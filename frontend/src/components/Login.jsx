@@ -25,11 +25,22 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 
-export default function Login({ onLoginSuccess }) {
-  const [isRegister, setIsRegister] = useState(false);
+export default function Login({ onLoginSuccess, onNavigateHome, initialRegister = false, initialRole = 'patient' }) {
+  const [isRegister, setIsRegister] = useState(() => {
+    if (initialRegister) return true;
+    const params = new URLSearchParams(window.location.search);
+    return params.has('register') || params.get('mode') === 'register';
+  });
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [pendingReview, setPendingReview] = useState(false);
-  const [role, setRole] = useState('patient');
+  const [role, setRole] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const regParam = params.get('register');
+    if (regParam === 'clinic' || regParam === 'hospital') return 'clinic';
+    if (regParam === 'doctor' || regParam === 'practitioner') return 'doctor';
+    if (regParam === 'patient') return 'patient';
+    return initialRole || 'patient';
+  });
   const [clinicName, setClinicName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -59,6 +70,15 @@ export default function Login({ onLoginSuccess }) {
       .then(data => setActiveOrganizations(Array.isArray(data) ? data : []))
       .catch(err => console.error('Failed to load active hospitals:', err));
   }, []);
+
+  useEffect(() => {
+    if (initialRole) {
+      setRole(initialRole);
+    }
+    if (initialRegister) {
+      setIsRegister(true);
+    }
+  }, [initialRegister, initialRole]);
 
   // Patient profile fields
   const [age, setAge] = useState('');
@@ -476,8 +496,22 @@ export default function Login({ onLoginSuccess }) {
 
   return (
     <div className="w-full flex items-center justify-center p-4 sm:p-6">
-      <div className={`w-full ${isRegister ? 'max-w-2xl' : 'max-w-md'} bg-white dark:bg-[#0F243E] border border-[#E2E8F0] dark:border-[#1E3A5F] shadow-sm dark:shadow-2xl rounded-2xl p-6 sm:p-8 transition-all duration-300`}>
+      <div className={`w-full ${isRegister ? 'max-w-2xl' : 'max-w-md'} bg-white dark:bg-[#0F243E] border border-[#E2E8F0] dark:border-[#1E3A5F] shadow-sm dark:shadow-2xl rounded-2xl p-6 sm:p-8 transition-all duration-300 relative`}>
         
+        {/* Back to Home Navigation Link */}
+        {onNavigateHome && (
+          <div className="mb-4">
+            <button
+              type="button"
+              onClick={onNavigateHome}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0F766E] dark:text-[#2DD4BF] hover:underline"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to Home</span>
+            </button>
+          </div>
+        )}
+
         {/* Brand Header */}
         <div className="text-center mb-6">
           <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-[#112239] border border-slate-200/80 dark:border-[#1E3A5F] flex items-center justify-center mx-auto mb-3.5 shadow-none">
