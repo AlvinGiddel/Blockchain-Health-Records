@@ -73,12 +73,16 @@ export function getApiUrl(endpoint) {
 export async function safeFetch(url, options = {}) {
   try {
     const fullUrl = getApiUrl(url);
-    const headers = { ...(options.headers || {}) };
+    const headers = {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      ...(options.headers || {})
+    };
     const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') : null;
     if (token && !headers['Authorization'] && !headers['authorization']) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    const response = await fetch(fullUrl, { ...options, headers });
+    const response = await fetch(fullUrl, { cache: 'no-store', ...options, headers });
     return await parseResponseJson(response);
   } catch (err) {
     if (err.name === 'TypeError' && err.message.toLowerCase().includes('fetch')) {

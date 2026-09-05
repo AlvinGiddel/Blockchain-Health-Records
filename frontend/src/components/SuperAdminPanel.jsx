@@ -21,6 +21,7 @@ export default function SuperAdminPanel({ user }) {
 
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [recovering, setRecovering] = useState(false);
   const [dbPatients, setDbPatients] = useState([]);
   const [dbDoctors, setDbDoctors] = useState([]);
@@ -151,22 +152,42 @@ export default function SuperAdminPanel({ user }) {
         safeFetch('/api/admin/all').catch(() => []),
         safeFetch('/api/admin/doctors/pending').catch(() => []),
         safeFetch('/api/admin/organizations/pending').catch(() => ({ pendingClinics: [] })),
-        fetch(getApiUrl('/api/blockchain/mempool')).then(r => r.ok ? r.json() : []).catch(() => [])
+        safeFetch('/api/blockchain/mempool').catch(() => [])
       ]);
 
-      setBlocks(Array.isArray(blocksData) ? blocksData : []);
-      setDbPatients(Array.isArray(patientsData) ? patientsData : []);
-      setDbDoctors(Array.isArray(doctorsData) ? doctorsData : []);
-      setAllAdmins(Array.isArray(allAdminsData) && allAdminsData.length > 0 ? allAdminsData : [{ id: user.id || user._id, name: user.name, email: user.email, role: user.role, organizationName: 'Global Platform Governance', isApproved: true, createdAt: new Date() }]);
-      setPendingClinics(resPendingClinics?.pendingClinics || []);
-      setPendingAdmins(Array.isArray(pendingData) ? pendingData : []);
-      setPendingDoctors(Array.isArray(pendingDocsData) ? pendingDocsData : []);
-      setMempoolRecords(Array.isArray(mempoolData) ? mempoolData : []);
+      const freshBlocks = Array.isArray(blocksData) ? blocksData : [];
+      const freshPatients = Array.isArray(patientsData) ? patientsData : [];
+      const freshDoctors = Array.isArray(doctorsData) ? doctorsData : [];
+      const freshAllAdmins = Array.isArray(allAdminsData) && allAdminsData.length > 0 ? allAdminsData : [{ id: user.id || user._id, name: user.name, email: user.email, role: user.role, organizationName: 'Global Platform Governance', isApproved: true, createdAt: new Date() }];
+      const rawClinics = Array.isArray(resPendingClinics) ? resPendingClinics : (resPendingClinics?.pendingClinics || []);
+      const freshPendingAdmins = Array.isArray(pendingData) ? pendingData : [];
+      const freshPendingDoctors = Array.isArray(pendingDocsData) ? pendingDocsData : [];
+      const freshMempool = Array.isArray(mempoolData) ? mempoolData : [];
+
+      setBlocks(freshBlocks);
+      setDbPatients(freshPatients);
+      setDbDoctors(freshDoctors);
+      setAllAdmins(freshAllAdmins);
+      setPendingClinics(rawClinics);
+      setPendingAdmins(freshPendingAdmins);
+      setPendingDoctors(freshPendingDoctors);
+      setMempoolRecords(freshMempool);
 
       if (isInitialFetched) {
+        // Toast and alert for new pending clinics
+        const existingClinicIds = pendingClinics.map(c => c.id);
+        const newClinicRequests = rawClinics.filter(c => !existingClinicIds.includes(c.id));
+        newClinicRequests.forEach(newClinic => {
+          setToast({
+            message: `New Clinic Registration: "${newClinic.organizationName}" is awaiting Super Admin approval.`,
+            type: 'warning'
+          });
+          setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] [ALERT] SECURITY: Pending clinic facility request received from ${newClinic.organizationName} (${newClinic.adminEmail || 'No email'})`]);
+        });
+
         // Toast and alert for new admins
         const existingIds = pendingAdmins.map(a => a.id || a._id);
-        const newRequests = (Array.isArray(pendingData) ? pendingData : []).filter(a => !existingIds.includes(a.id || a._id));
+        const newRequests = freshPendingAdmins.filter(a => !existingIds.includes(a.id || a._id));
         newRequests.forEach(newAdmin => {
           setToast({
             message: `New Tenant Admin Request: ${newAdmin.name} (${newAdmin.email}) is awaiting approval.`,
@@ -177,7 +198,7 @@ export default function SuperAdminPanel({ user }) {
 
         // Toast and alert for new doctors
         const existingDocIds = pendingDoctors.map(d => d.id || d._id);
-        const newDocRequests = (Array.isArray(pendingDocsData) ? pendingDocsData : []).filter(d => !existingDocIds.includes(d.id || d._id));
+        const newDocRequests = freshPendingDoctors.filter(d => !existingDocIds.includes(d.id || d._id));
         newDocRequests.forEach(newDoc => {
           setToast({
             message: `New Clinical Node Request: Dr. ${newDoc.name} (${newDoc.email}) is awaiting approval.`,
@@ -188,7 +209,6 @@ export default function SuperAdminPanel({ user }) {
       } else {
         setIsInitialFetched(true);
       }
-      setMempoolRecords(mempoolData);
 
       if (statsData) {
         setStats({
@@ -200,8 +220,21 @@ export default function SuperAdminPanel({ user }) {
           isValid: statsData.isValid
         });
       }
+
+      return {
+        stats: statsData,
+        blocks: freshBlocks,
+        patients: freshPatients,
+        doctors: freshDoctors,
+        pendingAdmins: freshPendingAdmins,
+        allAdmins: freshAllAdmins,
+        pendingDoctors: freshPendingDoctors,
+        pendingClinics: rawClinics,
+        mempool: freshMempool
+      };
     } catch (err) {
       console.error('Error fetching admin stats:', err);
+      return null;
     } finally {
       if (!isBackground) setLoading(false);
     }
@@ -243,14 +276,74 @@ export default function SuperAdminPanel({ user }) {
     setRefreshing(true);
     const minDelay = new Promise(resolve => setTimeout(resolve, 600));
     try {
-      await Promise.all([fetchAdminData(false), minDelay]);
-      setToast({
-        message: 'System metrics and ledger status refreshed successfully.',
-        type: 'success'
-      });
-      setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] [ADMIN] SaaS console metrics manually refreshed.`]);
+      // Trigger child widgets (LicenseControlWidget) to refresh active organizations and licenses
+      setRefreshTrigger(prev => prev + 1);
+
+      const prevPendingClinicsCount = pendingClinics.length;
+      const prevPendingDocsCount = pendingDoctors.length;
+      const prevPendingAdminsCount = pendingAdmins.length;
+      const prevBlocksCount = blocks.length;
+
+      const [freshData] = await Promise.all([fetchAdminData(false), minDelay]);
+
+      if (freshData) {
+        const clinicsCount = freshData.pendingClinics.length;
+        const docsCount = freshData.pendingDoctors.length;
+        const adminsCount = freshData.pendingAdmins.length;
+        const blocksCount = freshData.blocks.length;
+
+        const changes = [];
+        if (clinicsCount !== prevPendingClinicsCount) {
+          changes.push(clinicsCount > prevPendingClinicsCount 
+            ? `${clinicsCount - prevPendingClinicsCount} new pending clinic(s)` 
+            : `clinic approvals updated (${clinicsCount} pending)`);
+        }
+        if (docsCount !== prevPendingDocsCount) {
+          changes.push(docsCount > prevPendingDocsCount 
+            ? `${docsCount - prevPendingDocsCount} new doctor request(s)` 
+            : `doctor queue updated (${docsCount} pending)`);
+        }
+        if (adminsCount !== prevPendingAdminsCount) {
+          changes.push(adminsCount > prevPendingAdminsCount 
+            ? `${adminsCount - prevPendingAdminsCount} new admin request(s)` 
+            : `admin queue updated (${adminsCount} pending)`);
+        }
+        if (blocksCount !== prevBlocksCount) {
+          changes.push(`${blocksCount - prevBlocksCount} new mined block(s)`);
+        }
+
+        if (changes.length > 0) {
+          setToast({
+            message: `Console updated: ${changes.join(', ')} detected and synchronized!`,
+            type: 'warning'
+          });
+          setLogs(prev => [
+            ...prev,
+            `[${new Date().toLocaleTimeString()}] [ADMIN] Manual refresh detected updates: ${changes.join(', ')}.`
+          ]);
+        } else if (clinicsCount > 0) {
+          setToast({
+            message: `Console refreshed: ${clinicsCount} pending clinic application(s) currently awaiting approval.`,
+            type: 'info'
+          });
+          setLogs(prev => [
+            ...prev,
+            `[${new Date().toLocaleTimeString()}] [ADMIN] Console refreshed — ${clinicsCount} pending clinic(s), ${docsCount} pending doctor(s), ${blocksCount} blocks verified.`
+          ]);
+        } else {
+          setToast({
+            message: 'Console refreshed: System metrics, pending clinic queues, and ledger state are fully up to date.',
+            type: 'success'
+          });
+          setLogs(prev => [
+            ...prev,
+            `[${new Date().toLocaleTimeString()}] [ADMIN] SaaS console metrics manually refreshed. All queues synchronized and up to date.`
+          ]);
+        }
+      }
     } catch (err) {
       console.error('Error refreshing console:', err);
+      setToast({ message: 'Failed to refresh console: ' + (err.message || 'Network error'), type: 'error' });
     } finally {
       setRefreshing(false);
     }
@@ -629,7 +722,7 @@ export default function SuperAdminPanel({ user }) {
       </div>
 
       {/* Super Admin Remote Licensing & Kill-Switch Authority Control Center */}
-      <LicenseControlWidget user={user} />
+      <LicenseControlWidget user={user} refreshTrigger={refreshTrigger} />
 
       {/* Cryptographic Ledger Health Header */}
       <div
@@ -1300,8 +1393,8 @@ export default function SuperAdminPanel({ user }) {
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {blocks.map((block) => (
-            <div key={block.index} style={{
+          {blocks.map((block, bIdx) => (
+            <div key={block.id || block.hash || `${block.organizationId || 'org'}_${block.index}_${bIdx}`} style={{
               background: 'rgba(255, 255, 255, 0.02)',
               border: '1px solid var(--glass-border)',
               borderRadius: '10px',

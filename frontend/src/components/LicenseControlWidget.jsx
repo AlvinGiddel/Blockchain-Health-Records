@@ -5,7 +5,7 @@ import PaystackRenewalModal from './PaystackRenewalModal';
 import PaymentHistoryModal from './PaymentHistoryModal';
 import SearchableSelect from './SearchableSelect';
 
-export default function LicenseControlWidget({ user }) {
+export default function LicenseControlWidget({ user, refreshTrigger }) {
   const [licenseInfo, setLicenseInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -264,7 +264,7 @@ export default function LicenseControlWidget({ user }) {
     } else if (user?.role === 'admin') {
       fetchClinicOrg();
     }
-  }, [user]);
+  }, [user, refreshTrigger]);
 
   if (user?.role !== 'super_admin') {
     if (user?.role === 'admin') {

@@ -50,6 +50,7 @@ export default function RegularAdminPanel({ user }) {
   const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [recovering, setRecovering] = useState(false);
   const [dbPatients, setDbPatients] = useState([]);
   const [dbDoctors, setDbDoctors] = useState([]);
@@ -271,9 +272,10 @@ export default function RegularAdminPanel({ user }) {
     setRefreshing(true);
     const minDelay = new Promise(resolve => setTimeout(resolve, 600));
     try {
+      setRefreshTrigger(prev => prev + 1);
       await Promise.all([fetchAdminData(false), minDelay]);
       setToast({
-        message: 'Admin console data and metrics refreshed successfully.',
+        message: 'Admin console data, approval queues, and metrics refreshed successfully.',
         type: 'success'
       });
       setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] [ADMIN] Console metrics manually refreshed.`]);
@@ -560,7 +562,7 @@ export default function RegularAdminPanel({ user }) {
       </div>
 
       {/* Super Admin Remote Licensing & Kill-Switch Authority Control Center */}
-      <LicenseControlWidget user={user} />
+      <LicenseControlWidget user={user} refreshTrigger={refreshTrigger} />
 
       {/* Network Health Header */}
       <div
@@ -1211,8 +1213,8 @@ export default function RegularAdminPanel({ user }) {
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {blocks.map((block) => (
-            <div key={block.index} style={{
+          {blocks.map((block, bIdx) => (
+            <div key={block.id || block.hash || `${block.organizationId || 'org'}_${block.index}_${bIdx}`} style={{
               background: 'rgba(255, 255, 255, 0.02)',
               border: '1px solid var(--glass-border)',
               borderRadius: '12px',

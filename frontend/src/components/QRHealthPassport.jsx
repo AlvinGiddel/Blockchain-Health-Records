@@ -36,7 +36,9 @@ export default function QRHealthPassport({ user, records = [], onClose }) {
 
   // Verification URL that will be encoded inside the physical QR code
   const verificationTargetId = selectedScope || user.id || user._id;
-  const verificationUrl = `${window.location.origin}/?verifyRecordId=${encodeURIComponent(verificationTargetId)}`;
+  const baseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_URL) 
+    || (typeof window !== 'undefined' && window.location?.origin ? window.location.origin : 'https://blockchainrecords.vercel.app');
+  const verificationUrl = `${baseUrl}/?verifyRecordId=${encodeURIComponent(verificationTargetId)}`;
 
   useEffect(() => {
     if (!verificationTargetId) return;

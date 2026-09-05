@@ -1800,11 +1800,12 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                   Loading blockchain...
                 </div>
               ) : (
-                [...allBlocks].reverse().map((block) => {
-                  const isExpanded = expandedBlockIndex === block.index;
+                [...allBlocks].reverse().map((block, bIdx) => {
+                  const blockKey = block.id || block.hash || `${block.organizationId || 'org'}_${block.index}_${bIdx}`;
+                  const isExpanded = expandedBlockIndex === blockKey;
                   return (
                     <div
-                      key={block.index}
+                      key={blockKey}
                       style={{
                         border: '1px solid var(--glass-border)',
                         borderRadius: '12px',
@@ -1814,7 +1815,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                         transition: 'all 0.2s ease',
                         borderLeft: isExpanded ? '4px solid var(--color-warning)' : '1px solid var(--glass-border)'
                       }}
-                      onClick={() => setExpandedBlockIndex(isExpanded ? null : block.index)}
+                      onClick={() => setExpandedBlockIndex(isExpanded ? null : blockKey)}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                         <div>

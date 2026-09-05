@@ -119,7 +119,7 @@ async function getPendingOrganizations(req, res) {
                 u.email as "adminEmail"
             FROM organizations o
             LEFT JOIN users u ON u.organization_id = o.id AND u.role = 'admin'
-            WHERE o.status = 'pending_approval'
+            WHERE o.status IN ('pending_approval', 'pending')
             ORDER BY o.created_at ASC;
         `);
 

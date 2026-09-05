@@ -12,7 +12,14 @@ export default function BlockchainExplorer({ user }) {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [mining, setMining] = useState(false);
-  const [expandedMerkleBlock, setExpandedMerkleBlock] = useState(null);
+  const [expandedMerkleBlocks, setExpandedMerkleBlocks] = useState({});
+
+  const toggleMerkleBlock = (blockKey) => {
+    setExpandedMerkleBlocks(prev => ({
+      ...prev,
+      [blockKey]: !prev[blockKey]
+    }));
+  };
 
   // Tampering states
   const [tamperRecordId, setTamperRecordId] = useState('');
@@ -227,6 +234,9 @@ export default function BlockchainExplorer({ user }) {
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {blocks.map((block, index) => {
+              const blockKey = block.id || block.hash || `${block.organizationId || 'org'}_${block.index}_${index}`;
+              const isMerkleExpanded = !!expandedMerkleBlocks[blockKey];
+
               // Determine if this block is corrupted (only relevant if chain is invalid and this block/subsequent is damaged)
               // Let's write a simple visual checker: a block is broken if it's after/at the tampered block
               let isBlockBroken = false;
@@ -245,7 +255,7 @@ export default function BlockchainExplorer({ user }) {
               }
 
               return (
-                <div key={block.index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', minWidth: 0, maxWidth: '100%' }}>
+                <div key={blockKey} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', minWidth: 0, maxWidth: '100%' }}>
                   
                   {/* The Block Card */}
                   <div
@@ -265,6 +275,11 @@ export default function BlockchainExplorer({ user }) {
                         <Database size={18} color={isBlockBroken ? 'var(--color-error)' : 'var(--color-primary)'} style={{ flexShrink: 0 }} />
                         <h4 style={{ margin: 0, fontSize: '1.1rem', whiteSpace: 'nowrap' }}>Block #{block.index}</h4>
                         {block.index === 0 && <span className="badge badge-success" style={{ fontSize: '0.7rem', padding: '2px 8px', flexShrink: 0 }}>Genesis</span>}
+                        {block.organizationName && (
+                          <span className="badge" style={{ fontSize: '0.7rem', padding: '2px 8px', flexShrink: 0, background: 'rgba(37, 99, 235, 0.12)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
+                            {block.organizationName}
+                          </span>
+                        )}
                       </div>
                       <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>Nonce: {block.nonce}</span>
                     </div>
@@ -323,10 +338,11 @@ export default function BlockchainExplorer({ user }) {
 
                       {/* Merkle Tree Inspection Button */}
                       <button
-                        onClick={() => setExpandedMerkleBlock(expandedMerkleBlock === block.index ? null : block.index)}
+                        type="button"
+                        onClick={() => toggleMerkleBlock(blockKey)}
                         style={{
                           marginTop: '12px',
-                          background: 'rgba(37, 99, 235, 0.08)',
+                          background: isMerkleExpanded ? 'rgba(37, 99, 235, 0.16)' : 'rgba(37, 99, 235, 0.08)',
                           border: '1px solid rgba(37, 99, 235, 0.3)',
                           borderRadius: '6px',
                           padding: '6px 12px',
@@ -339,14 +355,14 @@ export default function BlockchainExplorer({ user }) {
                           gap: '6px',
                           width: '100%',
                           justifyContent: 'center',
-                          transition: 'background 0.2s'
+                          transition: 'all 0.2s ease'
                         }}
                       >
                         <GitFork size={14} />
-                        {expandedMerkleBlock === block.index ? 'Hide Merkle Tree' : 'View Merkle Tree Structure'}
+                        {isMerkleExpanded ? 'Hide Merkle Tree' : 'View Merkle Tree Structure'}
                       </button>
 
-                      {expandedMerkleBlock === block.index && (
+                      {isMerkleExpanded && (
                         <MerkleTreeVisualizer block={block} />
                       )}
                     </div>
