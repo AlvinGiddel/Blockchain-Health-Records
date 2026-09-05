@@ -23,8 +23,12 @@
       "dest": "frontend/assets/$1"
     },
     {
-      "src": "/(.*)",
+      "src": "/((?!api/).*\\.[a-zA-Z0-9]+)$",
       "dest": "frontend/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "frontend/index.html"
     }
   ]
 }
