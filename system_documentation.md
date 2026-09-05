@@ -95,9 +95,10 @@ The system enforces strict multi-tenant isolation across every layer to prevent 
                                     |
                                     v
 +-------------------------------------------------------------------------+
-|         PILLAR 3: APPLICATION-LAYER EXPLICIT TENANT BINDING             |
-|   Hardcoded WHERE organization_id = $tenantId on every SQL query.       |
-|   Defense-in-depth: Application queries never rely on RLS alone.        |
+|     PILLAR 3: APPLICATION-LAYER EXPLICIT PARAMETERIZED SCOPING          |
+|   Explicitly parameterized WHERE organization_id = $1 on every query.   |
+|   Safely bound via PostgreSQL driver ($1, $2)—never string concatenated |
+|   or interpolated. Queries never rely on RLS alone (defense-in-depth).  |
 +-------------------------------------------------------------------------+
 ```
 
@@ -108,8 +109,8 @@ The system enforces strict multi-tenant isolation across every layer to prevent 
    - `enforceTenantLimits`: Blocks patient or doctor onboarding if hospital subscription plan limits are reached.
 2. **Pillar 2: PostgreSQL Row-Level Security (RLS)**:
    - Connection pools execute `SET LOCAL current_app.org_id = $orgId` and `SET LOCAL current_app.user_id = $userId` inside transactions, enforcing row isolation at the database kernel level.
-3. **Pillar 3: Explicit Application-Layer Scoping**:
-   - Every single SQL statement explicitly filters by `organization_id = $x`, ensuring that even without RLS, cross-organization data access is impossible.
+3. **Pillar 3: Explicit Parameterized Application-Layer Scoping**:
+   - Every single SQL statement explicitly filters by `WHERE organization_id = $1` using parameterized positional placeholders (`$1`, `$2`, etc.) bound safely via the `pg` driver. No string interpolation or concatenation is ever used, eliminating SQL injection while ensuring that even without RLS, cross-organization data access is structurally impossible.
 4. **Automated Route Security Scanner**:
    - Pre-deployment and CI/CD security scanner (`backend/scripts/route_security_scanner.js`) that analyzes all registered Express route endpoints using an AST/regex scanner.
    - Enforces a **Default-Deny** standard: any route missing `requireAuth` or appropriate role/tenant middleware fails the build. Currently protecting 81 distinct API routes with 0 security violations.

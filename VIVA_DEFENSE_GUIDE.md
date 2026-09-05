@@ -26,7 +26,7 @@
 > To guarantee ironclad tenant isolation, we implemented **The 3 Pillars of API Security**:  
 > 1. **Pillar 1 (Middleware Defense-in-Depth)**: Requests pass through `requireAuth`, `requireRole`, `requireTenantContext`, and `enforceTenantLimits` guards before reaching any business logic.  
 > 2. **Pillar 2 (PostgreSQL Row-Level Security)**: Database transactions execute with `current_app.org_id` session context, making cross-hospital data leakage physically impossible at the database engine level.  
-> 3. **Pillar 3 (Explicit Query Scoping)**: Every SQL query explicitly binds `WHERE organization_id = $x`, ensuring defense-in-depth even if RLS is bypassed.  
+> 3. **Pillar 3 (Explicit Parameterized Query Scoping)**: Every SQL query explicitly binds `WHERE organization_id = $1` using safe parameter binding via the PostgreSQL driver (`pg`), completely preventing SQL injection and ensuring defense-in-depth even if RLS is bypassed.  
 > 
 > Furthermore, all 81 API routes are automatically protected by our **Route Security Scanner**, enforcing a default-deny posture in CI/CD."*
 
@@ -91,7 +91,7 @@
 > *"We enforce **The 3 Pillars of API Security**:  
 > 1. **Middleware Layer**: Every request requires JWT authentication, role authorization, and tenant membership validation (`requireTenantContext`).  
 > 2. **Database Layer (RLS)**: PostgreSQL Row-Level Security policies restrict row visibility using `SET LOCAL current_app.org_id = $orgId`.  
-> 3. **Application Layer**: Every SQL query hardcodes `WHERE organization_id = $tenantId`.  
+> 3. **Application Layer (Explicit Parameterization)**: Every SQL query explicitly parameterizes `WHERE organization_id = $1` with values bound safely via the `pg` driver (never string-concatenated or interpolated).  
 > 4. **Automated Verification**: Our custom Route Security Scanner verifies all 81 API endpoints during build time to ensure zero unprotected endpoints exist."*
 
 ---
