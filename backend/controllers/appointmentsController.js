@@ -315,8 +315,8 @@ async function updateDoctorAvailability(req, res) {
             [
                 doctor.organization_id || null,
                 'availability_update',
-                updatedDoctor.id,
-                updatedDoctor.name,
+                null,
+                null,
                 updatedDoctor.id,
                 updatedDoctor.name,
                 `Dr. ${updatedDoctor.name} updated availability: Days: ${profile.availability.workingDays.join(', ')}, Hours: ${profile.availability.workingHoursStart} - ${profile.availability.workingHoursEnd}, Status: ${profile.availability.status}.`
@@ -355,7 +355,8 @@ async function completeConsultation(req, res, dependencies = {}) {
             return res.status(403).json({ error: 'Access denied: Only clinical doctors can complete consultations.' });
         }
 
-        const { appointmentId, symptoms, diagnosis, treatment, notes, prescriptions, labRequest } = req.body;
+        const appointmentId = req.body?.appointmentId || req.params?.id;
+        const { symptoms = '', diagnosis = '', treatment = '', notes = '', prescriptions, labRequest } = req.body || {};
         const { rows: appointments } = await db.query('SELECT * FROM appointments WHERE id = $1', [appointmentId]);
         if (appointments.length === 0) {
             return res.status(404).json({ error: 'Appointment not found.' });
@@ -417,6 +418,7 @@ async function completeConsultation(req, res, dependencies = {}) {
         // Construct blockchain pending record payload
         const pendingRecord = {
             recordId: newRecord.id,
+            organizationId: consultationOrgId,
             txType: 'consultation',
             patientId: appointment.patient_id,
             patientName: patient.name,

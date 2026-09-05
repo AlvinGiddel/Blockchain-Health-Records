@@ -3,8 +3,9 @@ const { Pool } = require('pg');
 const { AsyncLocalStorage } = require('async_hooks');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
-// Set default process timezone to East Africa Time (EAT - Kenya)
+// Set default process and PostgreSQL connection timezone to East Africa Time (EAT - Kenya)
 process.env.TZ = 'Africa/Nairobi';
+process.env.PGTZ = 'Africa/Nairobi';
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -25,13 +26,7 @@ const pool = new Pool({
         : { rejectUnauthorized: false }
 });
 
-// Configure PostgreSQL session timezone to Africa/Nairobi whenever a client connects
-pool.on('connect', (client) => {
-    client.query("SET timezone = 'Africa/Nairobi'").catch((err) => {
-        console.warn('Failed to set PostgreSQL timezone to Africa/Nairobi:', err.message);
-    });
-});
-
+// PGTZ natively configures session timezone during connection handshake without racing queries
 pool.on('error', (err) => {
     console.error('Unexpected error on idle database client:', err);
 });

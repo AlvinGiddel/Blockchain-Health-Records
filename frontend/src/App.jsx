@@ -31,10 +31,12 @@ export default function App() {
   const [currentPath, setCurrentPath] = useState(() => {
     return normalizePath(window.location.pathname);
   });
+  const [currentSearch, setCurrentSearch] = useState(() => window.location.search);
 
   useEffect(() => {
     const handlePopState = () => {
       setCurrentPath(normalizePath(window.location.pathname));
+      setCurrentSearch(window.location.search);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
@@ -42,9 +44,11 @@ export default function App() {
 
   const navigate = (path, search = '') => {
     const norm = normalizePath(path);
-    const targetUrl = norm + (search ? (search.startsWith('?') ? search : `?${search}`) : '');
+    const searchStr = search ? (search.startsWith('?') ? search : `?${search}`) : '';
+    const targetUrl = norm + searchStr;
     window.history.pushState({}, '', targetUrl);
     setCurrentPath(norm);
+    setCurrentSearch(searchStr);
   };
 
   // Session storage switched from sessionStorage to localStorage. Note: This is a JWT-in-localStorage tradeoff (XSS exposure) accepted for this project.
@@ -490,6 +494,7 @@ export default function App() {
           {/* Elevated form container */}
           <div className="relative z-10 w-full flex justify-center">
             <Login 
+              key={`${currentPath}${currentSearch}`}
               onLoginSuccess={handleLoginSuccess}
               onNavigateHome={() => navigate('/')}
             />

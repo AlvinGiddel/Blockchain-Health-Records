@@ -255,7 +255,19 @@ async function getPublicHealthAnalytics(req, res) {
             `);
             breakGlassLogs = bgRows;
         } else {
-            return res.status(403).json({ error: 'Organization scope is missing from session.' });
+            return res.json({
+                totalPatients: 0,
+                totalDoctors: 0,
+                totalRecords: 0,
+                totalBlocks: 0,
+                unminedMempool: 0,
+                breakGlassEvents: 0,
+                patientDemographics: { bloodTypes: {}, genders: {} },
+                recentPatients: [],
+                activeDoctors: [],
+                unassignedScope: true,
+                message: 'No healthcare facility currently affiliated with this administrator account. Please register your clinic or contact platform governance.'
+            });
         }
 
         const bloodTypeCounts = {};
@@ -369,6 +381,20 @@ async function getAdminStats(req, res, dependencies = {}) {
             });
         }
 
+        if (currentUser) {
+            return res.json({
+                totalAppointments: 0,
+                pendingAppointments: 0,
+                completedConsultations: 0,
+                blocks: 0,
+                mempool: 0,
+                doctors: 0,
+                patients: 0,
+                admins: 1,
+                isValid: true
+            });
+        }
+
         return res.status(401).json({ error: 'Authentication required.' });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -390,6 +416,8 @@ async function getPendingDoctors(req, res) {
             params = [targetOrgId];
         } else if (isSuperAdmin) {
             query = 'SELECT id, name, email, role, public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'doctor\' AND is_approved = false AND is_rejected = false ORDER BY created_at DESC;';
+        } else if (currentUser) {
+            return res.json([]);
         } else {
             return res.status(401).json({ error: 'Authentication required.' });
         }
@@ -446,7 +474,7 @@ async function approveDoctor(req, res) {
         );
 
         // Log doctor approval in audit trail (in background)
-        logAuditEvent('doctor_approve', updatedDoctor.id, updatedDoctor.name, currentUser.id, currentUser.name || 'Admin', `Doctor registration request for Dr. ${updatedDoctor.name} (${updatedDoctor.email}) approved.`, updatedDoctor.organization_id || targetOrgId);
+        logAuditEvent('doctor_approve', null, null, updatedDoctor.id, updatedDoctor.name, `Doctor registration request for Dr. ${updatedDoctor.name} (${updatedDoctor.email}) approved.`, null, updatedDoctor.organization_id || targetOrgId);
 
         // Send Email notification for approval (asynchronously in background)
         sendDoctorApprovalEmail(updatedDoctor.email, updatedDoctor.name).catch(mailError => {
@@ -501,7 +529,7 @@ async function rejectDoctor(req, res) {
         );
 
         // Log doctor rejection in audit trail (in background)
-        logAuditEvent('doctor_reject', updatedDoctor.id, updatedDoctor.name, currentUser.id, currentUser.name || 'Admin', `Doctor registration request for Dr. ${updatedDoctor.name} (${updatedDoctor.email}) rejected.`, updatedDoctor.organization_id || targetOrgId);
+        logAuditEvent('doctor_reject', null, null, updatedDoctor.id, updatedDoctor.name, `Doctor registration request for Dr. ${updatedDoctor.name} (${updatedDoctor.email}) rejected.`, null, updatedDoctor.organization_id || targetOrgId);
 
         // Send Email notification for rejection (asynchronously in background)
         sendDoctorRejectionEmail(updatedDoctor.email, updatedDoctor.name).catch(mailError => {
@@ -530,6 +558,8 @@ async function getPendingAdmins(req, res) {
             params = [targetOrgId];
         } else if (isSuperAdmin) {
             query = 'SELECT id, name, email, role, public_key as "publicKey", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE role = \'admin\' AND is_approved = false AND is_rejected = false ORDER BY created_at DESC;';
+        } else if (currentUser) {
+            return res.json([]);
         } else {
             return res.status(401).json({ error: 'Authentication required.' });
         }
@@ -611,7 +641,7 @@ async function approveAdmin(req, res) {
         db.query(
             `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [updatedAdmin.organization_id || null, 'admin_approve', updatedAdmin.id, updatedAdmin.name, currentUser.id, currentUser.name || 'Super Admin', `Admin registration request for ${updatedAdmin.name} (${updatedAdmin.email}) approved by Super Admin.`]
+            [updatedAdmin.organization_id || null, 'admin_approve', null, null, currentUser.id, currentUser.name || 'Super Admin', `Admin registration request for ${updatedAdmin.name} (${updatedAdmin.email}) approved by Super Admin.`]
         ).catch(err => console.error('Failed to log admin approval audit:', err));
 
         console.log(`Admin ${updatedAdmin.name} (${updatedAdmin.email}) approved by Super Administrator.`);
@@ -651,7 +681,7 @@ async function rejectAdmin(req, res) {
         db.query(
             `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [updatedAdmin.organization_id || null, 'admin_reject', updatedAdmin.id, updatedAdmin.name, currentUser.id, currentUser.name || 'Super Admin', `Admin registration request for ${updatedAdmin.name} (${updatedAdmin.email}) rejected by Super Admin.`]
+            [updatedAdmin.organization_id || null, 'admin_reject', null, null, currentUser.id, currentUser.name || 'Super Admin', `Admin registration request for ${updatedAdmin.name} (${updatedAdmin.email}) rejected by Super Admin.`]
         ).catch(err => console.error('Failed to log admin rejection audit:', err));
 
         console.log(`Admin ${updatedAdmin.name} (${updatedAdmin.email}) rejected by Super Administrator.`);
@@ -665,18 +695,27 @@ async function rejectAdmin(req, res) {
  * Rebuilds the blockchain from scratch, filtering out records that belong to deleted users.
  * Recalculates hashes and indices to keep the chain valid and secure.
  */
-async function rebuildChainAfterDeletion(dependencies = {}) {
+async function rebuildChainAfterDeletion(targetOrgId, dependencies = {}) {
     const { syncBlockchainWithDatabase = null, healthBlockchain = null } = dependencies;
     try {
-        console.log('Rebuilding blockchain after user deletion...');
+        console.log(`Rebuilding blockchain after user deletion for organization: ${targetOrgId || 'unassigned'}...`);
 
-        const { rows: allDbBlocks } = await db.query('SELECT * FROM blocks ORDER BY index ASC');
+        // If user has no organization scope, skip blockchain rebuilding to avoid touching other tenant chains
+        if (!targetOrgId) {
+            if (syncBlockchainWithDatabase) await syncBlockchainWithDatabase();
+            return;
+        }
+
+        const { rows: allDbBlocks } = await db.query(
+            'SELECT * FROM blocks WHERE organization_id = $1 ORDER BY index ASC',
+            [targetOrgId]
+        );
         if (allDbBlocks.length <= 1) {
             if (syncBlockchainWithDatabase) await syncBlockchainWithDatabase();
             return;
         }
 
-        const newChain = [allDbBlocks[0]]; // start with Genesis block
+        const newChain = [allDbBlocks[0]]; // start with this tenant's Genesis block
 
         for (let i = 1; i < allDbBlocks.length; i++) {
             const dbBlock = allDbBlocks[i];
@@ -707,27 +746,27 @@ async function rebuildChainAfterDeletion(dependencies = {}) {
             }
         }
 
-        // Save new chain to DB
-        await db.query('DELETE FROM blocks');
+        // Save new chain to DB strictly scoped to this organization
+        await db.query('DELETE FROM blocks WHERE organization_id = $1', [targetOrgId]);
         for (const block of newChain) {
             await db.query(
-                'INSERT INTO blocks (index, timestamp, records, previous_hash, nonce, hash) VALUES ($1, $2, $3, $4, $5, $6)',
-                [block.index, block.timestamp, JSON.stringify(block.records), block.previousHash, block.nonce, block.hash]
+                'INSERT INTO blocks (organization_id, index, timestamp, records, previous_hash, nonce, hash) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+                [targetOrgId, block.index, block.timestamp, JSON.stringify(block.records), block.previousHash || block.previous_hash || '0', block.nonce, block.hash]
             );
         }
 
-        // Update remaining records in PostgreSQL with new block index
+        // Update remaining records in PostgreSQL with new block index for this organization
         for (const block of newChain) {
             if (block.index === 0) continue;
             const recordIds = block.records.map(r => r.recordId).filter(Boolean);
             if (recordIds.length > 0) {
-                await db.query('UPDATE records SET is_mined = true, block_index = $1 WHERE id = ANY($2::uuid[])', [block.index, recordIds]);
-                await db.query('UPDATE audit_logs SET is_mined = true, block_index = $1 WHERE patient_id = ANY($2::uuid[])', [block.index, recordIds]);
+                await db.query('UPDATE records SET is_mined = true, block_index = $1 WHERE id = ANY($2::uuid[]) AND organization_id = $3', [block.index, recordIds, targetOrgId]);
+                await db.query('UPDATE audit_logs SET is_mined = true, block_index = $1 WHERE patient_id = ANY($2::uuid[]) AND organization_id = $3', [block.index, recordIds, targetOrgId]);
             }
         }
 
         if (syncBlockchainWithDatabase) await syncBlockchainWithDatabase();
-        console.log('Blockchain successfully rebuilt.');
+        console.log(`Blockchain successfully rebuilt for organization ${targetOrgId}.`);
     } catch (err) {
         console.error('Error rebuilding blockchain after deletion:', err);
     }
@@ -771,11 +810,15 @@ async function deleteUser(req, res, dependencies = {}) {
             return res.status(403).json({ error: 'Cannot delete users outside your organization.' });
         }
 
+        const affectedOrgId = userToDelete.organization_id || targetOrgId || null;
+
         // Delete user (cascade foreign keys will clean up appointments/records/logs automatically)
         await db.query('DELETE FROM users WHERE id = $1', [userId]);
 
-        // Rebuild blockchain to remove the deleted doctor's/patient's records from blocks
-        await rebuildChainAfterDeletion(dependencies);
+        // Rebuild blockchain scoped strictly to the affected organization only
+        if (affectedOrgId) {
+            await rebuildChainAfterDeletion(affectedOrgId, dependencies);
+        }
 
         console.log(`User ${userToDelete.name} (${userToDelete.role}) removed from system database by ${currentUser.email}.`);
         res.json({ success: true, message: `User ${userToDelete.name} successfully removed from the system. Blockchain ledger updated.` });

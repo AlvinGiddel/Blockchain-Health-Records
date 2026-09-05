@@ -59,12 +59,25 @@ function parseJsonIfNeeded(data) {
  * @returns {Promise<any>}
  */
 const logAuditEvent = (eventType, patientId, patientName, doctorId, doctorName, details, customTimestamp = null, organizationId = null) => {
-    const timestamp = customTimestamp || getKenyanTimestamp();
+    let actualTimestamp = customTimestamp;
+    let actualOrgId = organizationId;
+
+    // Detect if caller passed organizationId in 7th argument (UUID format) without customTimestamp
+    if (customTimestamp && typeof customTimestamp === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(customTimestamp) && !actualOrgId) {
+        actualOrgId = customTimestamp;
+        actualTimestamp = null;
+    }
+
+    const timestamp = actualTimestamp || getKenyanTimestamp();
     return db.query(
         `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [organizationId, eventType, patientId, patientName, doctorId, doctorName, details, timestamp]
-    ).catch(err => console.error(`[AUDIT LOG ERROR] Failed to log ${eventType}:`, err.message));
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING *`,
+        [actualOrgId, eventType, patientId, patientName, doctorId, doctorName, details, timestamp]
+    ).then(res => res?.rows?.[0] || null).catch(err => {
+        console.error(`[AUDIT LOG ERROR] Failed to log ${eventType}:`, err.message);
+        return null;
+    });
 };
 
 // Dedicated In-Memory Rate Limiter for Super Admin Login (5 attempts / 15 min window)
@@ -147,12 +160,14 @@ function decrypt(text) {
  * @returns {{ currentUser: object|null, isSuperAdmin: boolean, targetOrgId: string|null }}
  */
 function getRequesterOrgScope(req) {
-    const authHeader = req.headers.authorization || req.headers.Authorization;
-    let currentUser = null;
-    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
-        try {
-            currentUser = jwt.verify(authHeader.substring(7).trim(), JWT_SECRET);
-        } catch (e) { }
+    let currentUser = (req.user && req.user.id) ? req.user : null;
+    if (!currentUser) {
+        const authHeader = req.headers.authorization || req.headers.Authorization;
+        if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+            try {
+                currentUser = jwt.verify(authHeader.substring(7).trim(), JWT_SECRET);
+            } catch (e) { }
+        }
     }
 
     // If super_admin, they can optionally target a specific clinic or see global (null)

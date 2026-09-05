@@ -274,9 +274,11 @@ async function getAdminRecords(req, res) {
             return res.status(403).json({ error: 'Access Denied: Admin role required to access records ledger.' });
         }
 
+        const { currentUser, isSuperAdmin, targetOrgId } = getRequesterOrgScope(req);
         const { recordType } = req.query;
         let query = `
             SELECT r.id, r.patient_id as "patientId", r.doctor_id as "doctorId", r.doctor_name as "doctorName", 
+                   r.organization_id as "organizationId",
                    r.diagnosis, r.treatment, r.prescriptions, r.record_type as "recordType", r.symptoms, 
                    r.notes, r.lab_request as "labRequest", r.consultation_hash as "consultationHash", 
                    r.transaction_hash as "transactionHash", r.ipfs_hash as "ipfsHash", r.signature, 
@@ -286,10 +288,23 @@ async function getAdminRecords(req, res) {
             JOIN users p ON r.patient_id = p.id
             JOIN users d ON r.doctor_id = d.id
         `;
+        let conditions = [];
         let params = [];
+
+        if (targetOrgId) {
+            params.push(targetOrgId);
+            conditions.push(`r.organization_id = $${params.length}`);
+        } else if (!isSuperAdmin) {
+            return res.json([]);
+        }
+
         if (recordType) {
-            query += ' WHERE r.record_type = $1';
             params.push(recordType);
+            conditions.push(`r.record_type = $${params.length}`);
+        }
+
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
         }
         query += ' ORDER BY r.timestamp DESC';
 
@@ -442,13 +457,24 @@ async function addSpecialistNote(req, res) {
         }
 
         const recordId = req.params.id;
-        const { specialistDoctorName, specialistNote } = req.body || {};
+        const { specialistNote } = req.body || {};
 
         if (!specialistNote || !specialistNote.trim()) {
             return res.status(400).json({ error: 'Specialist note content is required.' });
         }
 
-        const effectiveDoctorName = specialistDoctorName || authUser.name || 'Specialist';
+        // Verify record exists and enforce multi-tenant scoping
+        const { rows: existingRecs } = await db.query('SELECT id, organization_id FROM records WHERE id = $1', [recordId]);
+        if (existingRecs.length === 0) {
+            return res.status(404).json({ error: 'Medical record not found.' });
+        }
+        const record = existingRecs[0];
+        if (authUser.role !== 'super_admin' && authUser.organization_id && record.organization_id && authUser.organization_id !== record.organization_id) {
+            return res.status(403).json({ error: 'Access Denied: Cross-tenant modification of records is prohibited.' });
+        }
+
+        // Strict identity binding: Note author bound strictly to authenticated doctor JWT, never unverified req.body
+        const effectiveDoctorName = authUser.name || 'Specialist';
         const formattedNote = `[Specialist Note - Dr. ${effectiveDoctorName}]: ${specialistNote.trim()}`;
 
         const { rows: updatedRecs } = await db.query(
@@ -493,15 +519,21 @@ async function verifyBlockchainProof(req, res) {
         let blockData = null;
 
         if (rec.is_mined && rec.block_index !== null) {
-            const { rows: blockRows } = await db.query(
-                'SELECT * FROM blocks WHERE index = $1',
-                [rec.block_index]
-            );
+            let blockQuery = 'SELECT * FROM blocks WHERE index = $1';
+            const blockParams = [rec.block_index];
+            if (rec.organization_id) {
+                blockQuery += ' AND (organization_id = $2 OR organization_id IS NULL)';
+                blockParams.push(rec.organization_id);
+            }
+            const { rows: blockRows } = await db.query(blockQuery, blockParams);
             if (blockRows.length > 0) {
                 blockData = blockRows[0];
             }
         }
 
+        if (rec.is_mined && !blockData) {
+            return res.json({ verified: false, error: 'Cryptographic block proof not found in tenant ledger.' });
+        }
         const decryptedDiagnosis = decrypt(rec.diagnosis);
         const decryptedTreatment = decrypt(rec.treatment);
 
@@ -776,16 +808,18 @@ async function recoverBlockchain(req, res, dependencies = {}) {
     const { syncBlockchainWithDatabase = null } = dependencies;
     try {
         // 1. Super Admin Role Enforcement
-        const authHeader = req.headers.authorization || req.headers.Authorization;
-        if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ error: 'Authentication token required.' });
-        }
-        const token = authHeader.substring(7).trim();
-        let decoded;
-        try {
-            decoded = jwt.verify(token, JWT_SECRET);
-        } catch (jwtErr) {
-            return res.status(401).json({ error: 'Invalid or expired authentication token.' });
+        let decoded = (req.user && req.user.id) ? req.user : null;
+        if (!decoded) {
+            const authHeader = req.headers.authorization || req.headers.Authorization;
+            if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
+                return res.status(401).json({ error: 'Authentication token required.' });
+            }
+            const token = authHeader.substring(7).trim();
+            try {
+                decoded = jwt.verify(token, JWT_SECRET);
+            } catch (jwtErr) {
+                return res.status(401).json({ error: 'Invalid or expired authentication token.' });
+            }
         }
         if (!decoded || decoded.role !== 'super_admin') {
             return res.status(403).json({ error: 'Access restricted to Super Administrators only.' });
@@ -793,46 +827,64 @@ async function recoverBlockchain(req, res, dependencies = {}) {
 
         console.log('Initiating Ledger Self-Healing Recovery...');
 
-        const { rows: dbBlocks } = await db.query('SELECT * FROM blocks ORDER BY index ASC');
+        let query = 'SELECT * FROM blocks';
+        const params = [];
+        const requestedOrgId = req.headers['x-organization-id'] || req.body?.organizationId || req.query?.orgId || null;
+        if (requestedOrgId) {
+            query += ' WHERE organization_id = $1';
+            params.push(requestedOrgId);
+        }
+        query += ' ORDER BY organization_id, index ASC';
+
+        const { rows: dbBlocks } = await db.query(query, params);
         if (dbBlocks.length <= 1) {
             return res.status(400).json({ error: 'No block data to recover from. Genesis block cannot be repaired.' });
         }
 
-        // Loop through all blocks and restore records
-        for (let i = 1; i < dbBlocks.length; i++) {
-            const block = dbBlocks[i];
-            let cleanRecords = [];
-            const blockRecs = parseJsonIfNeeded(block.records) || [];
+        // Group blocks by organization_id so each hospital's ledger chain is healed independently
+        const orgMap = {};
+        for (const b of dbBlocks) {
+            const orgId = b.organization_id || 'default';
+            if (!orgMap[orgId]) orgMap[orgId] = [];
+            orgMap[orgId].push(b);
+        }
 
-            for (let rec of blockRecs) {
-                const { rows: recRows } = await db.query('SELECT * FROM records WHERE id = $1', [rec.recordId]);
-                if (recRows.length > 0) {
-                    const originalDiagnosis = (rec.diagnosis || '').replace(/ \(HACKED\)/g, '');
+        for (const orgId in orgMap) {
+            const chain = orgMap[orgId];
+            for (let i = 1; i < chain.length; i++) {
+                const block = chain[i];
+                let cleanRecords = [];
+                const blockRecs = parseJsonIfNeeded(block.records) || [];
 
-                    // Encrypt original diagnosis back
-                    await db.query('UPDATE records SET diagnosis = $1 WHERE id = $2', [encrypt(originalDiagnosis), rec.recordId]);
-                    rec.diagnosis = originalDiagnosis;
+                for (let rec of blockRecs) {
+                    const { rows: recRows } = await db.query('SELECT * FROM records WHERE id = $1', [rec.recordId]);
+                    if (recRows.length > 0) {
+                        const originalDiagnosis = (rec.diagnosis || '').replace(/ \(HACKED\)/g, '');
+
+                        // Encrypt original diagnosis back
+                        await db.query('UPDATE records SET diagnosis = $1 WHERE id = $2', [encrypt(originalDiagnosis), rec.recordId]);
+                        rec.diagnosis = originalDiagnosis;
+                    }
+                    cleanRecords.push(rec);
                 }
-                cleanRecords.push(rec);
+
+                const prevBlock = chain[i - 1];
+                block.previous_hash = prevBlock.hash;
+                block.records = cleanRecords;
+
+                // Recompute valid block hash meeting proof-of-work difficulty
+                const b = new Block(
+                    block.index,
+                    block.timestamp,
+                    block.records,
+                    block.previous_hash
+                );
+                b.mineBlock(2); // Fast recovery proof-of-work
+
+                await db.query('UPDATE blocks SET records = $1, previous_hash = $2, nonce = $3, hash = $4 WHERE id = $5', [JSON.stringify(block.records), block.previous_hash, b.nonce, b.hash, block.id]);
+                block.nonce = b.nonce;
+                block.hash = b.hash;
             }
-
-            const prevBlock = dbBlocks[i - 1];
-            block.previous_hash = prevBlock.hash;
-            block.records = cleanRecords;
-
-            // Recompute valid block hash meeting proof-of-work difficulty
-            const b = new Block(
-                block.index,
-                block.timestamp,
-                block.records,
-                block.previous_hash
-            );
-            b.mineBlock(2); // Fast recovery proof-of-work
-
-            await db.query('UPDATE blocks SET records = $1, previous_hash = $2, nonce = $3, hash = $4 WHERE id = $5', [JSON.stringify(block.records), block.previous_hash, b.nonce, b.hash, block.id]);
-            block.nonce = b.nonce;
-            block.hash = b.hash;
-
         }
 
         // Re-sync memory chain

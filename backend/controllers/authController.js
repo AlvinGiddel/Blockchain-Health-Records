@@ -465,6 +465,18 @@ async function login(req, res) {
             }
         }
 
+        // Backfill organization_id from tenant_memberships if missing for non-super_admin accounts
+        if (user.role !== 'super_admin' && !user.organization_id) {
+            const { rows: memRows } = await db.query(
+                "SELECT organization_id FROM tenant_memberships WHERE user_id = $1 AND status = 'active' ORDER BY joined_at ASC LIMIT 1;",
+                [user.id]
+            );
+            if (memRows.length > 0 && memRows[0].organization_id) {
+                user.organization_id = memRows[0].organization_id;
+                await db.query("UPDATE users SET organization_id = $1 WHERE id = $2;", [user.organization_id, user.id]);
+            }
+        }
+
         // Check organization license and suspension status for tenant staff (admins, doctors, nurses)
         // Super Admin always bypasses to maintain platform governance and emergency recovery authority
         let organizationName = null;
@@ -958,8 +970,9 @@ async function breakGlass(req, res) {
             return res.status(404).json({ error: 'Patient record not found.' });
         }
 
-        const dName = doctorName || doctors[0].name;
-        const pName = patientName || patients[0].name;
+        // Strict identity binding: names pulled directly from verified DB records, never unauthenticated req.body
+        const dName = doctors[0].name;
+        const pName = patients[0].name;
         const logDetails = `EMERGENCY BREAK-GLASS ACCESS OVERRIDE: Dr. ${dName} initiated emergency override for Patient ${pName}. Justification: ${reason.trim()}`;
 
         const doctorOrgId = doctors[0].organization_id || authUser.organization_id || null;

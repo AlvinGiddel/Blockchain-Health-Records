@@ -25,22 +25,26 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 
-export default function Login({ onLoginSuccess, onNavigateHome, initialRegister = false, initialRole = 'patient' }) {
-  const [isRegister, setIsRegister] = useState(() => {
-    if (initialRegister) return true;
-    const params = new URLSearchParams(window.location.search);
-    return params.has('register') || params.get('mode') === 'register';
-  });
-  const [isForgotPassword, setIsForgotPassword] = useState(false);
-  const [pendingReview, setPendingReview] = useState(false);
-  const [role, setRole] = useState(() => {
+export default function Login({ onLoginSuccess, onNavigateHome, initialRegister = false, initialRole = null }) {
+  const getInitialRole = () => {
     const params = new URLSearchParams(window.location.search);
     const regParam = params.get('register');
     if (regParam === 'clinic' || regParam === 'hospital') return 'clinic';
     if (regParam === 'doctor' || regParam === 'practitioner') return 'doctor';
     if (regParam === 'patient') return 'patient';
     return initialRole || 'patient';
-  });
+  };
+
+  const getInitialRegister = () => {
+    if (initialRegister) return true;
+    const params = new URLSearchParams(window.location.search);
+    return params.has('register') || params.get('mode') === 'register';
+  };
+
+  const [isRegister, setIsRegister] = useState(getInitialRegister);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [pendingReview, setPendingReview] = useState(false);
+  const [role, setRole] = useState(getInitialRole);
   const [clinicName, setClinicName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -72,12 +76,28 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
   }, []);
 
   useEffect(() => {
-    if (initialRole) {
-      setRole(initialRole);
-    }
-    if (initialRegister) {
-      setIsRegister(true);
-    }
+    const syncFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const regParam = params.get('register');
+      if (regParam === 'clinic' || regParam === 'hospital') {
+        setRole('clinic');
+        setIsRegister(true);
+      } else if (regParam === 'doctor' || regParam === 'practitioner') {
+        setRole('doctor');
+        setIsRegister(true);
+      } else if (regParam === 'patient') {
+        setRole('patient');
+        setIsRegister(true);
+      } else if (params.has('register') || params.get('mode') === 'register') {
+        setIsRegister(true);
+      } else {
+        if (initialRole) setRole(initialRole);
+        if (initialRegister !== undefined) setIsRegister(initialRegister);
+      }
+    };
+    syncFromUrl();
+    window.addEventListener('popstate', syncFromUrl);
+    return () => window.removeEventListener('popstate', syncFromUrl);
   }, [initialRegister, initialRole]);
 
   // Patient profile fields

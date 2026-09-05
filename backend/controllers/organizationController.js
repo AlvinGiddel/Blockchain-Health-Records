@@ -190,7 +190,7 @@ async function approveOrganization(req, res) {
         // 5. Audit log
         await client.query(`
             INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp)
-            VALUES ($1, 'clinic_approved', $2, $3, $2, $3, $4, NOW());
+            VALUES ($1, 'clinic_approved', null, null, $2, $3, $4, NOW());
         `, [id, decoded.id, decoded.name || 'Super Admin', `Clinic "${org.name}" approved by Super Admin. 7-day trial activated.`]);
 
         await client.query('COMMIT;');
@@ -454,7 +454,7 @@ async function provisionTenant(req, res) {
         }
 
         // Record immutable audit log
-        logAuditEvent('tenant_admin_provision', newAdmin[0].id, name, newAdmin[0].id, 'Super Administrator', `New hospital administrator provisioned for "${finalHospitalName || 'Platform'}": ${name} (${email})`, orgId);
+        logAuditEvent('tenant_admin_provision', null, null, newAdmin[0].id, 'Super Administrator', `New hospital administrator provisioned for "${finalHospitalName || 'Platform'}": ${name} (${email})`, null, orgId);
 
         console.log(`[TENANT PROVISION] Hospital Administrator "${name}" for "${finalHospitalName}" created successfully.`);
         res.status(201).json({
