@@ -174,29 +174,6 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
     }
   };
 
-  const handleSimulateKillswitch = async (targetStatus) => {
-    try {
-      const token = localStorage.getItem('token');
-      const data = await safeFetch('/api/license/simulate', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          targetStatus,
-          reason: targetStatus === 'disabled' ? 'Simulated Super Admin Kill-Switch Override' : 'Active Subscription'
-        })
-      });
-      if (data.license) {
-        setLicenseInfo(data.license);
-        setStatusMessage(`✓ Instance state switched to: ${targetStatus.toUpperCase()}`);
-      }
-    } catch (err) {
-      setError(err.message || 'Failed to simulate license state.');
-    }
-  };
-
   const handleAddDoctorSubmit = async (e) => {
     e.preventDefault();
     setAddDoctorError('');
@@ -418,32 +395,23 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
       {/* 3 Interactive Clickable Metric Cards */}
       <div className="grid-3" style={{ gap: '16px', marginBottom: '20px' }}>
         
-        {/* Card 1: License State (Clickable) */}
+        {/* Card 1: Platform License Authority Status */}
         <div
-          onClick={() => setActiveModal('license')}
           style={{
             padding: '18px',
             borderRadius: '10px',
             background: 'rgba(0,0,0,0.25)',
             border: isActive ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
             position: 'relative'
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 16px rgba(15, 118, 110, 0.12)';
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'none';
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
-              Instance License State
+              Platform License Authority
             </div>
-            <span style={{ fontSize: '0.7rem', color: '#0F766E', textDecoration: 'underline' }}>Click to Test / Manage</span>
+            <span className="badge badge-success" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
+              {isActive ? 'Enforced' : 'Suspended'}
+            </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {isActive ? (
@@ -459,7 +427,7 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
             )}
           </div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px' }}>
-            {isActive ? '✓ Full operational access granted to hospital node.' : '⚠️ Kill-switch triggered: Non-Super Admin traffic is blocked.'}
+            {isActive ? '✓ Full operational access verified across registered healthcare facilities.' : '⚠️ Restricted mode: Unauthorized traffic blocked.'}
           </div>
         </div>
 
@@ -831,65 +799,7 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
         </div>
       )}
 
-      {/* MODAL 1: Interactive License & Kill-Switch Controller */}
-      {activeModal === 'license' && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px' }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: '550px', background: 'var(--card)', border: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '14px', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
-                <Key size={20} /> Remote Kill-Switch Controller
-              </h3>
-              <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }} onClick={() => setActiveModal(null)}>✕</button>
-            </div>
 
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: '1.5' }}>
-              As Super Admin, you can instantly test and verify how this hospital deployment reacts when the remote subscription expires or when the kill-switch is triggered.
-            </p>
-
-            <div style={{ padding: '16px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '20px', fontSize: '0.85rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Configured Client ID:</span>
-                <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>knh-hospital-01</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Current Authority State:</span>
-                <span style={{ fontWeight: 700, color: isActive ? '#10b981' : '#ef4444' }}>{isActive ? 'ACTIVE' : 'DISABLED'}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Super Admin Bypass:</span>
-                <span style={{ color: '#10b981', fontWeight: 600 }}>Always Granted (Root Access)</span>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              {isActive ? (
-                <button
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    handleSimulateKillswitch('disabled');
-                    setActiveModal(null);
-                  }}
-                  style={{ background: 'rgba(239, 68, 68, 0.15)', borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <AlertTriangle size={16} /> Simulate Kill-Switch Lock (Disable)
-                </button>
-              ) : (
-                <button
-                  className="btn btn-primary"
-                  onClick={() => {
-                    handleSimulateKillswitch('active');
-                    setActiveModal(null);
-                  }}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <CheckCircle size={16} /> Restore Active License
-                </button>
-              )}
-              <button className="btn btn-secondary" onClick={() => setActiveModal(null)}>Close</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MODAL 2: Fail-Closed Security Matrix Modal */}
       {activeModal === 'security' && (
