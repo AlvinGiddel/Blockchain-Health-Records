@@ -13,7 +13,8 @@ const {
     normalizePhone,
     parseProfile,
     parseJsonIfNeeded,
-    checkSuperAdminRateLimit
+    checkSuperAdminRateLimit,
+    verifyAuthToken
 } = require('../utils/helpers');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
@@ -693,10 +694,15 @@ async function registerClinic(req, res) {
  */
 async function changePassword(req, res) {
     try {
+        const authUser = verifyAuthToken(req);
         const { userId, currentPassword, newPassword } = req.body;
 
         if (!userId || !currentPassword || !newPassword) {
             return res.status(400).json({ error: 'All fields are required.' });
+        }
+
+        if (authUser.id !== userId && authUser.role !== 'super_admin') {
+            return res.status(403).json({ error: 'Access denied: You cannot change the password for another account.' });
         }
 
         const { rows: users } = await db.query('SELECT * FROM users WHERE id = $1', [userId]);
@@ -726,7 +732,7 @@ async function changePassword(req, res) {
         res.json({ success: true, message: 'Password updated successfully!' });
     } catch (err) {
         console.error('Password change error:', err);
-        res.status(500).json({ error: 'Failed to update password.' });
+        res.status(err.statusCode || 500).json({ error: err.message || 'Failed to update password.' });
     }
 }
 
@@ -735,10 +741,15 @@ async function changePassword(req, res) {
  */
 async function updateEmail(req, res) {
     try {
+        const authUser = verifyAuthToken(req);
         const { userId, newEmail, currentPassword } = req.body;
 
         if (!userId || !newEmail || !currentPassword) {
             return res.status(400).json({ error: 'User ID, new email address, and current password are required.' });
+        }
+
+        if (authUser.id !== userId && authUser.role !== 'super_admin') {
+            return res.status(403).json({ error: 'Access denied: You cannot change the email address for another account.' });
         }
 
         const cleanEmail = newEmail.toLowerCase().trim();
@@ -802,7 +813,7 @@ async function updateEmail(req, res) {
         });
     } catch (err) {
         console.error('Email update error:', err);
-        res.status(500).json({ error: err.message || 'Failed to update email address.' });
+        res.status(err.statusCode || err.status || 500).json({ error: err.message || 'Failed to update email address.' });
     }
 }
 
@@ -922,12 +933,22 @@ async function resetPassword(req, res) {
  */
 async function breakGlass(req, res) {
     try {
-        const { doctorId, doctorName, patientId, patientName, reason } = req.body || {};
-        if (!doctorId || !patientId || !reason || reason.trim().length < 10) {
-            return res.status(400).json({ error: 'Valid doctor, patient, and detailed justification reason (10+ chars) are required.' });
+        const authUser = verifyAuthToken(req);
+        if (authUser.role !== 'doctor') {
+            return res.status(403).json({ error: 'Access denied: Only clinical doctors can invoke the emergency break-glass protocol.' });
         }
 
-        const { rows: doctors } = await db.query('SELECT * FROM users WHERE id = $1 AND role = \'doctor\'', [doctorId]);
+        const { doctorId, doctorName, patientId, patientName, reason } = req.body || {};
+        if (doctorId && doctorId !== authUser.id) {
+            return res.status(403).json({ error: 'Access denied: You cannot initiate emergency access on behalf of another doctor.' });
+        }
+        const effectiveDoctorId = authUser.id;
+
+        if (!patientId || !reason || reason.trim().length < 10) {
+            return res.status(400).json({ error: 'Valid patient ID and detailed justification reason (10+ chars) are required.' });
+        }
+
+        const { rows: doctors } = await db.query('SELECT * FROM users WHERE id = $1 AND role = \'doctor\'', [effectiveDoctorId]);
         if (doctors.length === 0) {
             return res.status(404).json({ error: 'Doctor record not found.' });
         }
@@ -941,13 +962,13 @@ async function breakGlass(req, res) {
         const pName = patientName || patients[0].name;
         const logDetails = `EMERGENCY BREAK-GLASS ACCESS OVERRIDE: Dr. ${dName} initiated emergency override for Patient ${pName}. Justification: ${reason.trim()}`;
 
-        const doctorOrgId = doctors[0].organization_id || req.user?.organization_id || null;
+        const doctorOrgId = doctors[0].organization_id || authUser.organization_id || null;
 
         // Create immutable audit log in database
         const { rows: auditRows } = await db.query(
             `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-            [doctorOrgId, 'emergency_break_glass', patientId, pName, doctorId, dName, logDetails]
+            [doctorOrgId, 'emergency_break_glass', patientId, pName, effectiveDoctorId, dName, logDetails]
         );
 
         console.log(`[ALERT] Break-Glass Emergency Override logged: Dr. ${dName} -> Patient ${pName}`);
@@ -958,7 +979,7 @@ async function breakGlass(req, res) {
         });
     } catch (err) {
         console.error('Break-glass error:', err);
-        res.status(500).json({ error: 'Failed to process emergency break-glass protocol.' });
+        res.status(err.statusCode || 500).json({ error: err.message || 'Failed to process emergency break-glass protocol.' });
     }
 }
 
@@ -967,9 +988,17 @@ async function breakGlass(req, res) {
  */
 async function getBreakGlassStatus(req, res) {
     try {
+        const authUser = verifyAuthToken(req);
         const { doctorId, patientId } = req.query;
         if (!doctorId || !patientId) {
             return res.json({ hasBreakGlass: false });
+        }
+
+        if (authUser.role === 'doctor' && authUser.id !== doctorId) {
+            return res.status(403).json({ error: 'Access denied.' });
+        }
+        if (authUser.role === 'patient' && authUser.id !== patientId) {
+            return res.status(403).json({ error: 'Access denied.' });
         }
 
         const { rows } = await db.query(
@@ -996,7 +1025,7 @@ async function getBreakGlassStatus(req, res) {
             remainingSeconds
         });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(err.statusCode || 500).json({ error: err.message || 'Failed to query emergency override status.' });
     }
 }
 

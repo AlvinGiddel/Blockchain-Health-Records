@@ -5,38 +5,31 @@ const paymentsController = require('../controllers/paymentsController');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
 
+const { requireAuth } = require('../middleware/auth');
+
 /**
- * Authentication & Authorization middleware for payments
+ * Enriches req.user with email/organization_id if not present in token
  */
-async function authenticatePaymentUser(req, res, next) {
-    const authHeader = req.headers.authorization || req.headers.Authorization;
-    if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Authentication required for billing operations.' });
-    }
-
-    const token = authHeader.substring(7).trim();
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        req.user = decoded;
-
-        // Ensure email and organization_id exist on req.user
-        if (!req.user.email && req.user.id) {
-            try {
-                const { rows } = await db.query('SELECT email, name, organization_id FROM users WHERE id = $1', [req.user.id]);
-                if (rows.length > 0) {
-                    req.user.email = rows[0].email;
-                    if (!req.user.name) req.user.name = rows[0].name;
-                    if (!req.user.organization_id) req.user.organization_id = rows[0].organization_id;
-                }
-            } catch (queryErr) {
-                console.warn('[PaymentAuth] Could not prefetch user email:', queryErr.message);
+async function enrichPaymentUser(req, res, next) {
+    if (req.user && (!req.user.email || !req.user.organization_id)) {
+        try {
+            const { rows } = await db.query('SELECT email, name, organization_id FROM users WHERE id = $1', [req.user.id]);
+            if (rows.length > 0) {
+                if (!req.user.email) req.user.email = rows[0].email;
+                if (!req.user.name) req.user.name = rows[0].name;
+                if (!req.user.organization_id) req.user.organization_id = rows[0].organization_id;
             }
+        } catch (queryErr) {
+            console.warn('[PaymentAuth] Could not prefetch user email:', queryErr.message);
         }
-        next();
-    } catch (err) {
-        return res.status(401).json({ error: 'Invalid or expired authentication session.' });
     }
+    next();
 }
+
+/**
+ * Standardized payment authentication pipeline using shared requireAuth
+ */
+const authenticatePaymentUser = [requireAuth, enrichPaymentUser];
 
 /**
  * Creates Payment Router with blockchain ledger binding

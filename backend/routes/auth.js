@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const { requireAuth, requireDoctor } = require('../middleware/auth');
 
 /**
  * Authentication and Authorization Routes
@@ -20,13 +21,13 @@ router.post('/login', authController.login);
 router.post('/register-clinic', authController.registerClinic);
 
 // Password & Email management
-router.post('/change-password', authController.changePassword);
-router.post('/update-email', authController.updateEmail);
+router.post('/change-password', requireAuth, authController.changePassword);
+router.post('/update-email', requireAuth, authController.updateEmail);
 router.post('/forgot-password', authController.forgotPassword);
 router.post('/reset-password/:token', authController.resetPassword);
 
 // Emergency Break-Glass Access Protocol (Authorization Override)
-router.post('/break-glass', authController.breakGlass);
-router.get('/break-glass/status', authController.getBreakGlassStatus);
+router.post('/break-glass', requireAuth, requireDoctor, authController.breakGlass);
+router.get('/break-glass/status', requireAuth, authController.getBreakGlassStatus);
 
 module.exports = router;

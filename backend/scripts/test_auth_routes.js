@@ -67,13 +67,13 @@ async function runTests() {
         }
         console.log('✅ Register role restriction verified!');
 
-        console.log('\n--- 5. Testing GET /api/auth/break-glass/status ---');
+        console.log('\n--- 5. Testing GET /api/auth/break-glass/status (Requires Auth) ---');
         const res5 = await request('/api/auth/break-glass/status');
         console.log('Status:', res5.status, 'Body:', res5.body);
-        if (res5.status !== 200 || res5.body.hasBreakGlass !== false) {
-            throw new Error('Break glass status test failed');
+        if (res5.status !== 401) {
+            throw new Error('Break glass status unauthenticated test failed');
         }
-        console.log('✅ Break glass status endpoint verified!');
+        console.log('✅ Break glass status auth guard verified (401)!');
 
         console.log('\n🎉 ALL 5 AUTH ROUTE INTEGRATION TESTS PASSED CLEANLY!\n');
     } finally {

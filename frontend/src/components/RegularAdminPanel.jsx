@@ -67,6 +67,7 @@ export default function RegularAdminPanel({ user }) {
   const [isInitialFetched, setIsInitialFetched] = useState(false);
   
   // Tampering Form
+  const [demoRecords, setDemoRecords] = useState([]);
   const [tamperRecordId, setTamperRecordId] = useState('');
   const [tamperDiagnosis, setTamperDiagnosis] = useState('');
   const [tamperSuccess, setTamperSuccess] = useState('');
@@ -183,6 +184,12 @@ export default function RegularAdminPanel({ user }) {
       setPendingDoctors(Array.isArray(pendingDocsData) ? pendingDocsData : []);
       setMempoolRecords(Array.isArray(mempoolData) ? mempoolData : []);
 
+      // If Super Admin, fetch designated simulation demo records
+      if (user?.role === 'super_admin') {
+        const demoData = await safeFetch('/api/blockchain/demo-records').catch(() => []);
+        setDemoRecords(Array.isArray(demoData) ? demoData : []);
+      }
+
       if (isInitialFetched) {
         // Toast and alert for new admins
         const existingIds = pendingAdmins.map(a => a.id || a._id);
@@ -283,56 +290,48 @@ export default function RegularAdminPanel({ user }) {
     setTamperSuccess('');
 
     if (!tamperRecordId) {
-      setTamperError('Please select a medical record to tamper.');
+      setTamperError('Please select a designated demo record to tamper.');
       return;
     }
 
     try {
-      const res = await fetch(getApiUrl('/api/blockchain/tamper'), {
+      const data = await safeFetch('/api/blockchain/tamper', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recordId: tamperRecordId,
           tamperedDiagnosis: tamperDiagnosis
         })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Tamper failed');
 
       setTamperSuccess(data.message);
       setTamperDiagnosis('');
-      setLogs(prev => [...prev, `[ALERT] SECURITY BREACH: Database modified. Record ID: ${tamperRecordId}`]);
+      setLogs(prev => [...prev, `[SIMULATION AUDIT] Tamper attack lab executed against demo record: ${tamperRecordId}`]);
       fetchAdminData();
     } catch (err) {
       setTamperError(err.message);
     }
   };
 
-  // Self-Healing Recovery: Recovers database using ledger records
+  // Self-Healing Recovery: Recovers database using ledger records (Super Admin only)
   const handleRestoreDatabase = async () => {
     setRecovering(true);
     setLogs(prev => [...prev, '[RECOVERY] Initializing Ledger Repair sequence...']);
     
     try {
-      // In backend we can implement a /api/blockchain/recover endpoint, 
-      // or we can simulate it by repairing the records one by one via a recovery api.
-      // Let's trigger the recovery API on backend. We will define the recover endpoint in server.js.
-      const res = await fetch(getApiUrl('/api/blockchain/recover'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+      await safeFetch('/api/blockchain/recover', {
+        method: 'POST'
       });
-      
-      const data = await res.json();
       
       setTimeout(() => {
         setRecovering(false);
         setLogs(prev => [...prev, '[RECOVERY] All database indexes verified. Ledger synchronization success. Integrity restored.']);
         fetchAdminData();
-      }, 2000);
+      }, 1500);
 
     } catch (err) {
-      console.error(err);
+      console.error('Ledger recovery error:', err);
       setRecovering(false);
+      alert('Ledger recovery failed: ' + err.message);
     }
   };
 
@@ -341,15 +340,10 @@ export default function RegularAdminPanel({ user }) {
     setMining(true);
     setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] [MINER] Starting Proof of Work mining sequence...`]);
     try {
-      const res = await fetch(getApiUrl('/api/blockchain/mine'), {
+      const data = await safeFetch('/api/blockchain/mine', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(data.error || 'Mining failed.');
-      }
       
       setToast({
         message: `Success: Block #${data.block.index} successfully mined! Hash: ${data.block.hash.substring(0, 24)}...`,
@@ -378,20 +372,15 @@ export default function RegularAdminPanel({ user }) {
 
   const executeDeleteUser = async (userId, userName, userRole) => {
     try {
-      const res = await fetch(getApiUrl(`/api/users/${userId}`), {
+      await safeFetch(`/api/users/${userId}`, {
         method: 'DELETE'
       });
-      const data = await res.json();
       
-      if (res.ok) {
-        setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: User ${userName} (${userRole}) removed from database.`]);
-        fetchAdminData();
-      } else {
-        alert(data.error || 'Failed to delete user.');
-      }
+      setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: User ${userName} (${userRole}) removed from database.`]);
+      fetchAdminData();
     } catch (err) {
       console.error(err);
-      alert('Failed to delete user.');
+      alert(err.message || 'Failed to delete user.');
     }
   };
 
@@ -413,13 +402,12 @@ export default function RegularAdminPanel({ user }) {
     } else if (type === 'completed_consultations') {
       try {
         setLoading(true);
-        const res = await fetch(getApiUrl('/api/admin/records?recordType=consultation'));
-        const data = res.ok ? await res.json() : [];
+        const data = await safeFetch('/api/admin/records?recordType=consultation');
         setViewModal({
           isOpen: true,
           title: 'Decrypted Completed Consultations (Read-Only Ledger)',
           type,
-          data
+          data: Array.isArray(data) ? data : []
         });
       } catch (err) {
         console.error('Failed to fetch consultations:', err);
@@ -431,89 +419,69 @@ export default function RegularAdminPanel({ user }) {
 
   const handleApproveAdmin = async (userId, userName) => {
     try {
-      const res = await fetch(getApiUrl(`/api/admin/approve/${userId}`), {
+      await safeFetch(`/api/admin/approve/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      const data = await res.json();
       
-      if (res.ok) {
-        setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Admin "${userName}" registration approved.`]);
-        fetchAdminData();
-      } else {
-        alert(data.error || 'Failed to approve admin request.');
-      }
+      setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Admin "${userName}" registration approved.`]);
+      fetchAdminData();
     } catch (err) {
       console.error(err);
-      alert('Failed to approve admin request.');
+      alert(err.message || 'Failed to approve admin request.');
     }
   };
 
   const handleRejectAdmin = async (userId, userName) => {
     try {
-      const res = await fetch(getApiUrl(`/api/admin/reject/${userId}`), {
+      await safeFetch(`/api/admin/reject/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      const data = await res.json();
       
-      if (res.ok) {
-        setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Admin request for "${userName}" rejected.`]);
-        fetchAdminData();
-      } else {
-        alert(data.error || 'Failed to reject admin request.');
-      }
+      setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Admin request for "${userName}" rejected.`]);
+      fetchAdminData();
     } catch (err) {
       console.error(err);
-      alert('Failed to reject admin request.');
+      alert(err.message || 'Failed to reject admin request.');
     }
   };
 
   const handleApproveDoctor = async (userId, userName) => {
     try {
-      const res = await fetch(getApiUrl(`/api/admin/doctors/approve/${userId}`), {
+      await safeFetch(`/api/admin/doctors/approve/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      const data = await res.json();
       
-      if (res.ok) {
-        setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Doctor "Dr. ${userName}" registration approved.`]);
-        setToast({
-          message: `Success: Doctor Dr. ${userName} has been approved and activated.`,
-          type: 'success'
-        });
-        fetchAdminData();
-      } else {
-        alert(data.error || 'Failed to approve doctor request.');
-      }
+      setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Doctor "Dr. ${userName}" registration approved.`]);
+      setToast({
+        message: `Success: Doctor Dr. ${userName} has been approved and activated.`,
+        type: 'success'
+      });
+      fetchAdminData();
     } catch (err) {
       console.error(err);
-      alert('Failed to approve doctor request.');
+      alert(err.message || 'Failed to approve doctor request.');
     }
   };
 
   const handleRejectDoctor = async (userId, userName) => {
     try {
-      const res = await fetch(getApiUrl(`/api/admin/doctors/reject/${userId}`), {
+      await safeFetch(`/api/admin/doctors/reject/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      const data = await res.json();
       
-      if (res.ok) {
-        setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Doctor "Dr. ${userName}" request rejected.`]);
-        setToast({
-          message: `Success: Doctor Dr. ${userName} request has been rejected.`,
-          type: 'danger'
-        });
-        fetchAdminData();
-      } else {
-        alert(data.error || 'Failed to reject doctor request.');
-      }
+      setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Doctor "Dr. ${userName}" request rejected.`]);
+      setToast({
+        message: `Success: Doctor Dr. ${userName} request has been rejected.`,
+        type: 'danger'
+      });
+      fetchAdminData();
     } catch (err) {
       console.error(err);
-      alert('Failed to reject doctor request.');
+      alert(err.message || 'Failed to reject doctor request.');
     }
   };
 
@@ -626,9 +594,15 @@ export default function RegularAdminPanel({ user }) {
                 <span style={{ fontSize: '0.85rem', opacity: 0.9 }}>Direct database modification detected. Mismatch between database records and block cryptographic hashes.</span>
               </div>
             </div>
-            <button className="btn btn-secondary" onClick={handleRestoreDatabase} disabled={recovering} style={{ background: '#fff', color: '#000', border: 'none', padding: '8px 16px', fontSize: '0.85rem', fontWeight: 600 }}>
-              {recovering ? 'Repairing Database...' : 'Recover from Ledger'}
-            </button>
+            {user?.role === 'super_admin' ? (
+              <button className="btn btn-secondary" onClick={handleRestoreDatabase} disabled={recovering} style={{ background: '#fff', color: '#000', border: 'none', padding: '8px 16px', fontSize: '0.85rem', fontWeight: 600 }}>
+                {recovering ? 'Repairing Database...' : 'Recover from Ledger'}
+              </button>
+            ) : (
+              <span style={{ fontSize: '0.8rem', opacity: 0.9, marginLeft: 'auto', fontWeight: 500 }}>
+                Super Admin authentication required to trigger ledger recovery.
+              </span>
+            )}
           </div>
         )}
       </div>
@@ -824,72 +798,79 @@ export default function RegularAdminPanel({ user }) {
         
         {/* Left Column: Security Lab & Doctor registry */}
         <div>
-          {/* Security Lab */}
-          <div className="glass-card" style={{ border: '1px solid rgba(239, 68, 68, 0.2)', marginBottom: '32px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-error)' }}>
-              <Flame size={22} /> Database Security Attack Simulator
-            </h3>
-            
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-              Simulate an unauthorized database modification (SQL injection bypass). This direct database rewrite changes the medical records without a corresponding signature renewal, causing verification algorithms to instantly fail.
-            </p>
+          {/* Security Lab - Gated to Super Admin Only */}
+          {user?.role === 'super_admin' && (
+            <div className="glass-card" style={{ border: '1px solid rgba(239, 68, 68, 0.2)', marginBottom: '32px', width: '100%', maxWidth: '100%', boxSizing: 'border-box', overflow: 'hidden' }}>
+              <h3 style={{ fontSize: '1.25rem', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-error)' }}>
+                <Flame size={22} /> Database Security Attack Simulator (Super Admin)
+              </h3>
+              
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+                Simulate an unauthorized database intrusion against designated demo records. Real patient records cannot be targeted under any circumstance.
+              </p>
 
-            {tamperError && (
-              <div className="badge-error" style={{ padding: '8px', borderRadius: '6px', marginBottom: '12px', fontSize: '0.85rem', display: 'flex', gap: '6px' }}>
-                <ShieldAlert size={14} /> <span>{tamperError}</span>
-              </div>
-            )}
-
-            {tamperSuccess && (
-              <div className="badge-success" style={{ padding: '8px', borderRadius: '6px', marginBottom: '12px', fontSize: '0.85rem', display: 'flex', gap: '6px' }}>
-                <ShieldCheck size={14} /> <span style={{ wordBreak: 'break-word' }}>{tamperSuccess}</span>
-              </div>
-            )}
-
-            {minedRecords.length === 0 ? (
-              <div style={{ border: '1px dashed rgba(239,68,68,0.2)', borderRadius: '8px', padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                No mined block transactions available to tamper. Mine blocks under Ledger Explorer first.
-              </div>
-            ) : (
-              <form onSubmit={handleTamperDatabase} style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', minWidth: 0 }}>
-                <div className="form-group" style={{ width: '100%', minWidth: 0 }}>
-                  <label>Select Ledger Transaction Record</label>
-                  <SearchableSelect
-                    className="form-control"
-                    value={tamperRecordId}
-                    placeholder="-- Choose Record --"
-                    onChange={(e) => setTamperRecordId(e.target.value)}
-                    required
-                    style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
-                  >
-                    <option value="">-- Choose Record --</option>
-                    {minedRecords.map(mr => (
-                      <option key={mr.id} value={mr.id}>
-                        Block #{mr.blockIndex}: Patient: {mr.patientName} (Old diagnosis: "{mr.diagnosis.substring(0, 15)}...")
-                      </option>
-                    ))}
-                  </SearchableSelect>
+              {tamperError && (
+                <div className="badge-error" style={{ padding: '8px', borderRadius: '6px', marginBottom: '12px', fontSize: '0.85rem', display: 'flex', gap: '6px' }}>
+                  <ShieldAlert size={14} /> <span>{tamperError}</span>
                 </div>
+              )}
 
-                <div className="form-group" style={{ width: '100%', minWidth: 0 }}>
-                  <label>Inject Corrupted Diagnosis</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="e.g. Chronic Bronchitis"
-                    required
-                    value={tamperDiagnosis}
-                    onChange={(e) => setTamperDiagnosis(e.target.value)}
-                    style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
-                  />
+              {tamperSuccess && (
+                <div className="badge-success" style={{ padding: '8px', borderRadius: '6px', marginBottom: '12px', fontSize: '0.85rem', display: 'flex', gap: '6px' }}>
+                  <ShieldCheck size={14} /> <span style={{ wordBreak: 'break-word' }}>{tamperSuccess}</span>
                 </div>
+              )}
 
-                <button type="submit" className="btn btn-danger" style={{ width: '100%', gap: '8px', marginTop: '4px' }}>
-                  <Flame size={16} /> Execute Database Intrusion
-                </button>
-              </form>
-            )}
-          </div>
+              {demoRecords.length === 0 ? (
+                <div style={{ border: '1px dashed rgba(239,68,68,0.2)', borderRadius: '8px', padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  No designated demo simulation records found in system.
+                </div>
+              ) : (
+                <form onSubmit={handleTamperDatabase} style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', minWidth: 0 }}>
+                  <div className="form-group" style={{ width: '100%', minWidth: 0 }}>
+                    <label>Select Designated Demo Record</label>
+                    <SearchableSelect
+                      className="form-control"
+                      value={tamperRecordId}
+                      placeholder="-- Choose Demo Record --"
+                      onChange={(e) => setTamperRecordId(e.target.value)}
+                      required
+                      style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+                    >
+                      <option value="">-- Choose Demo Record --</option>
+                      {demoRecords.map(dr => (
+                        <option key={dr.id} value={dr.id}>
+                          {dr.is_mined ? `Block #${dr.block_index}: ` : 'Pending: '}
+                          {dr.patientName || 'Demo Patient'} (Diagnosis: "{dr.diagnosis.substring(0, 25)}...")
+                        </option>
+                      ))}
+                    </SearchableSelect>
+                    <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: '4px', display: 'block' }}>
+                      Safety Guard: Strictly restricted to designated demo records (is_demo_data = true).
+                    </small>
+                  </div>
+
+                  <div className="form-group" style={{ width: '100%', minWidth: 0 }}>
+                    <label>Inject Corrupted Diagnosis</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="e.g. Chronic Bronchitis"
+                      required
+                      value={tamperDiagnosis}
+                      onChange={(e) => setTamperDiagnosis(e.target.value)}
+                      style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <button type="submit" className="btn btn-danger" style={{ width: '100%', gap: '8px', marginTop: '4px' }}>
+                    <Flame size={16} /> Execute Database Intrusion
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+
 
           {/* Node Operator & Patient Management */}
           <div className="glass-card">

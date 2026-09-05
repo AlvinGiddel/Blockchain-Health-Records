@@ -1,6 +1,9 @@
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const db = require('../db');
 const { getKenyanTimestamp } = require('../blockchain');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
 
 /**
  * Normalizes phone numbers by stripping all non-digit characters.
@@ -92,10 +95,117 @@ function checkSuperAdminRateLimit(ip) {
     return { allowed: true };
 }
 
+const rawEncryptionKey = process.env.ENCRYPTION_KEY || 'f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a09';
+const ENCRYPTION_KEY = Buffer.from(rawEncryptionKey, 'hex'); // 32 bytes
+const IV_LENGTH = 16;
+
+/**
+ * AES-256 field-level encryption helper
+ * @param {string} text
+ * @returns {string}
+ */
+function encrypt(text) {
+    if (!text) return text;
+    try {
+        const iv = crypto.randomBytes(IV_LENGTH);
+        const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+        let encrypted = cipher.update(text, 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+        return iv.toString('hex') + ':' + encrypted;
+    } catch (err) {
+        console.error('Encryption failed:', err);
+        return text;
+    }
+}
+
+/**
+ * AES-256 field-level decryption helper
+ * @param {string} text
+ * @returns {string}
+ */
+function decrypt(text) {
+    if (!text || !text.includes(':')) return text;
+    try {
+        const textParts = text.split(':');
+        const iv = Buffer.from(textParts.shift(), 'hex');
+        const encryptedText = Buffer.from(textParts.join(':'), 'hex');
+        const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
+        let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+        decrypted += decipher.final('utf8');
+        return decrypted;
+    } catch (err) {
+        console.error('Decryption failed:', err);
+        return text;
+    }
+}
+
+/**
+ * Helper to safely extract authenticated user context and organization scope.
+ * Guarantees strict multi-tenant isolation: regular clinic admins are strictly bound
+ * to their organization_id. Only super_admin can view global cross-org data.
+ * @param {import('express').Request} req
+ * @returns {{ currentUser: object|null, isSuperAdmin: boolean, targetOrgId: string|null }}
+ */
+function getRequesterOrgScope(req) {
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    let currentUser = null;
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+        try {
+            currentUser = jwt.verify(authHeader.substring(7).trim(), JWT_SECRET);
+        } catch (e) { }
+    }
+
+    // If super_admin, they can optionally target a specific clinic or see global (null)
+    if (currentUser && currentUser.role === 'super_admin') {
+        const explicitOrg = req.headers['x-organization-id'] || req.query.orgId || req.query.organizationId || null;
+        return { currentUser, isSuperAdmin: true, targetOrgId: explicitOrg };
+    }
+
+    // For all other users (clinic admins, doctors, nurses), strictly scoped to their assigned organization_id
+    const targetOrgId = currentUser ? (currentUser.organization_id || currentUser.organizationId || null) : null;
+    return { currentUser, isSuperAdmin: false, targetOrgId };
+}
+
+/**
+ * Helper to strictly verify Bearer JWT from Authorization header.
+ * Throws an error with statusCode 401 if missing or invalid.
+ * @param {import('express').Request} req
+ * @returns {object} Decoded JWT payload
+ */
+function verifyAuthToken(req) {
+    if (req.user && req.user.id) {
+        return req.user;
+    }
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
+        const error = new Error('Authentication token required.');
+        error.statusCode = 401;
+        throw error;
+    }
+    const token = authHeader.substring(7).trim();
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        decoded.organization_id = decoded.organization_id || decoded.organizationId || null;
+        decoded.organizationId = decoded.organization_id;
+        req.user = decoded;
+        return decoded;
+    } catch (err) {
+        const error = new Error('Invalid or expired authentication session.');
+        error.statusCode = 401;
+        throw error;
+    }
+}
+
 module.exports = {
     normalizePhone,
     parseProfile,
     parseJsonIfNeeded,
     logAuditEvent,
-    checkSuperAdminRateLimit
+    checkSuperAdminRateLimit,
+    encrypt,
+    decrypt,
+    getRequesterOrgScope,
+    verifyAuthToken,
+    getKenyanTimestamp
 };
+

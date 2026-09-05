@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ShieldCheck, Plus, Link2, FileText, AlertCircle, Check, Award, Lock, HelpCircle, Search, ShieldAlert, QrCode } from 'lucide-react';
 import RecordVerificationPortal from './RecordVerificationPortal';
 import RecordPdfExport from './RecordPdfExport';
-import { getApiUrl } from '../utils/api';
+import { getApiUrl, safeFetch } from '../utils/api';
 
 export default function MedicalRecords({ user, selectedPatient, onBackToRegistry }) {
   const [records, setRecords] = useState([]);
@@ -37,10 +37,9 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
     if (user.role === 'doctor' && activePatient) {
       const uId = user.id || user._id;
       const pId = activePatient.id || activePatient._id;
-      fetch(getApiUrl(`/api/auth/break-glass/status?doctorId=${uId}&patientId=${pId}`))
-        .then(res => res.json())
+      safeFetch(`/api/auth/break-glass/status?doctorId=${uId}&patientId=${pId}`)
         .then(data => {
-          if (data.hasBreakGlass) {
+          if (data && data.hasBreakGlass) {
             setBreakGlassInfo(data);
             setRemainingSeconds(data.remainingSeconds || 3600);
           } else {
@@ -109,9 +108,8 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
 
   const fetchPatients = async () => {
     try {
-      const res = await fetch(getApiUrl('/api/users/patients'));
-      if (res.ok) {
-        const data = await res.json();
+      const data = await safeFetch('/api/users/patients');
+      if (Array.isArray(data)) {
         setPatientsList(data);
       }
     } catch (err) {
@@ -123,20 +121,18 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
     try {
       setLoading(true);
       setAccessDenied(false);
-      const uId = user.id || user._id;
-      const res = await fetch(getApiUrl(`/api/records/patient/${patientId}?requesterId=${uId}&requesterRole=${user.role}`));
-      if (res.ok) {
-        const data = await res.json();
+      const data = await safeFetch(`/api/records/patient/${patientId}`);
+      if (Array.isArray(data)) {
         setRecords(data);
-      } else if (res.status === 403) {
-        setAccessDenied(true);
-        setRecords([]);
       } else {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to fetch records');
+        setRecords([]);
       }
     } catch (err) {
       console.error('Error fetching records:', err);
+      if (err.message && (err.message.includes('Access Denied') || err.message.includes('403'))) {
+        setAccessDenied(true);
+      }
+      setRecords([]);
     } finally {
       setLoading(false);
     }
@@ -171,16 +167,11 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
     };
 
     try {
-      const res = await fetch(getApiUrl('/api/records'), {
+      const data = await safeFetch('/api/records', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to create record');
-      }
 
       setFormSuccess('Record created, cryptographically signed, and broadcast to Ledger Pool!');
       setDiagnosis('');

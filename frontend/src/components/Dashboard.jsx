@@ -79,9 +79,8 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
   const fetchPatientRecords = async () => {
     try {
-      const res = await fetch(getApiUrl(`/api/records/patient/${user.id || user._id}?requesterId=${user.id || user._id}&requesterRole=patient`));
-      if (res.ok) {
-        const data = await res.json();
+      const data = await safeFetch(`/api/records/patient/${user.id || user._id}`);
+      if (Array.isArray(data)) {
         setPatientRecords(data);
       }
     } catch (err) {
@@ -165,7 +164,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
     }
 
     try {
-      const res = await fetch(getApiUrl('/api/users/doctor/availability'), {
+      const data = await safeFetch('/api/users/doctor/availability', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -176,8 +175,6 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
           status: availStatus
         })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to update availability.');
 
       setAvailSuccess('Availability settings updated successfully!');
       if (onUpdateUser) {
@@ -268,9 +265,8 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
   const fetchPatients = async () => {
     try {
       setLoading(true);
-      const res = await fetch(getApiUrl('/api/users/patients'));
-      if (res.ok) {
-        const data = await res.json();
+      const data = await safeFetch('/api/users/patients');
+      if (Array.isArray(data)) {
         setPatients(data);
       }
     } catch (err) {
@@ -367,17 +363,12 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
     ));
 
     try {
-      const res = await fetch(getApiUrl(`/api/appointments/${apptId}/status`), {
+      await safeFetch(`/api/appointments/${apptId}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
       });
-      if (!res.ok) {
-        // Rollback state if the request fails
-        fetchAppointments();
-      } else {
-        fetchAppointments();
-      }
+      fetchAppointments();
     } catch (err) {
       console.error('Error updating appointment status:', err);
       fetchAppointments();
@@ -392,7 +383,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
     try {
       setSubmittingConsultation(true);
-      const res = await fetch(getApiUrl('/api/consultations'), {
+      const data = await safeFetch('/api/consultations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -405,8 +396,6 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
           labRequest
         })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to complete consultation.');
 
       setConsultationSuccess('Consultation completed and cryptographically secured in blockchain ledger!');
       setCompletedTxHash(data.record.transactionHash);

@@ -262,11 +262,10 @@ export default function SuperAdminPanel({ user }) {
     setLogs(prev => [...prev, '[RECOVERY] Initializing Cryptographic Ledger Repair sequence...']);
 
     try {
-      const res = await fetch(getApiUrl('/api/blockchain/recover'), {
+      await safeFetch('/api/blockchain/recover', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      await res.json();
 
       setTimeout(() => {
         setRecovering(false);
@@ -277,6 +276,7 @@ export default function SuperAdminPanel({ user }) {
     } catch (err) {
       console.error(err);
       setRecovering(false);
+      alert(err.message || 'Failed to restore database.');
     }
   };
 
@@ -285,15 +285,10 @@ export default function SuperAdminPanel({ user }) {
     setMining(true);
     setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] [MINER] Starting Proof of Work mining sequence...`]);
     try {
-      const res = await fetch(getApiUrl('/api/blockchain/mine'), {
+      const data = await safeFetch('/api/blockchain/mine', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Mining failed.');
-      }
 
       setToast({
         message: `Success: Block #${data.block.index} successfully mined! Hash: ${data.block.hash.substring(0, 24)}...`,
@@ -322,72 +317,57 @@ export default function SuperAdminPanel({ user }) {
 
   const executeDeleteUser = async (userId, userName, userRole) => {
     try {
-      const res = await fetch(getApiUrl(`/api/users/${userId}`), {
+      await safeFetch(`/api/users/${userId}`, {
         method: 'DELETE'
       });
-      const data = await res.json();
 
-      if (res.ok) {
-        setToast({
-          message: `User ${userName} (${userRole}) removed from database.`,
-          type: 'success'
-        });
-        setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: User ${userName} (${userRole}) removed from database.`]);
-        fetchAdminData();
-      } else {
-        alert(data.error || 'Failed to delete user.');
-      }
+      setToast({
+        message: `User ${userName} (${userRole}) removed from database.`,
+        type: 'success'
+      });
+      setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: User ${userName} (${userRole}) removed from database.`]);
+      fetchAdminData();
     } catch (err) {
       console.error(err);
-      alert('Failed to delete user.');
+      alert(err.message || 'Failed to delete user.');
     }
   };
 
   const handleApproveAdmin = async (userId, userName) => {
     try {
-      const res = await fetch(getApiUrl(`/api/admin/approve/${userId}`), {
+      await safeFetch(`/api/admin/approve/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      const data = await res.json();
 
-      if (res.ok) {
-        setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Tenant Admin "${userName}" registration approved.`]);
-        setToast({
-          message: `Tenant Administrator "${userName}" has been approved.`,
-          type: 'success'
-        });
-        fetchAdminData();
-      } else {
-        alert(data.error || 'Failed to approve admin request.');
-      }
+      setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Tenant Admin "${userName}" registration approved.`]);
+      setToast({
+        message: `Tenant Administrator "${userName}" has been approved.`,
+        type: 'success'
+      });
+      fetchAdminData();
     } catch (err) {
       console.error(err);
-      alert('Failed to approve admin request.');
+      alert(err.message || 'Failed to approve admin request.');
     }
   };
 
   const handleRejectAdmin = async (userId, userName) => {
     try {
-      const res = await fetch(getApiUrl(`/api/admin/reject/${userId}`), {
+      await safeFetch(`/api/admin/reject/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      const data = await res.json();
 
-      if (res.ok) {
-        setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Tenant Admin request for "${userName}" rejected.`]);
-        setToast({
-          message: `Tenant Administrator request for "${userName}" rejected.`,
-          type: 'danger'
-        });
-        fetchAdminData();
-      } else {
-        alert(data.error || 'Failed to reject admin request.');
-      }
+      setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Tenant Admin request for "${userName}" rejected.`]);
+      setToast({
+        message: `Tenant Administrator request for "${userName}" rejected.`,
+        type: 'danger'
+      });
+      fetchAdminData();
     } catch (err) {
       console.error(err);
-      alert('Failed to reject admin request.');
+      alert(err.message || 'Failed to reject admin request.');
     }
   };
 
@@ -401,7 +381,7 @@ export default function SuperAdminPanel({ user }) {
 
     setProvisioningLoading(true);
     try {
-      const res = await fetch(getApiUrl('/api/admin/provision-tenant'), {
+      await safeFetch('/api/admin/provision-tenant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -411,10 +391,6 @@ export default function SuperAdminPanel({ user }) {
           password: newAdminPassword
         })
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to provision tenant admin.');
-      }
 
       setToast({
         message: `Success! Tenant Administrator for "${newHospitalName || newAdminName}" provisioned.`,
@@ -442,49 +418,39 @@ export default function SuperAdminPanel({ user }) {
 
   const handleApproveDoctor = async (userId, userName) => {
     try {
-      const res = await fetch(getApiUrl(`/api/admin/doctors/approve/${userId}`), {
+      await safeFetch(`/api/admin/doctors/approve/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      const data = await res.json();
 
-      if (res.ok) {
-        setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Clinical Practitioner "Dr. ${userName}" verified and approved.`]);
-        setToast({
-          message: `Success: Clinical Practitioner Dr. ${userName} has been activated.`,
-          type: 'success'
-        });
-        fetchAdminData();
-      } else {
-        alert(data.error || 'Failed to approve practitioner request.');
-      }
+      setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Clinical Practitioner "Dr. ${userName}" verified and approved.`]);
+      setToast({
+        message: `Success: Clinical Practitioner Dr. ${userName} has been activated.`,
+        type: 'success'
+      });
+      fetchAdminData();
     } catch (err) {
       console.error(err);
-      alert('Failed to approve practitioner request.');
+      alert(err.message || 'Failed to approve practitioner request.');
     }
   };
 
   const handleRejectDoctor = async (userId, userName) => {
     try {
-      const res = await fetch(getApiUrl(`/api/admin/doctors/reject/${userId}`), {
+      await safeFetch(`/api/admin/doctors/reject/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      const data = await res.json();
 
-      if (res.ok) {
-        setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Practitioner request for "Dr. ${userName}" rejected.`]);
-        setToast({
-          message: `Practitioner request for Dr. ${userName} rejected.`,
-          type: 'danger'
-        });
-        fetchAdminData();
-      } else {
-        alert(data.error || 'Failed to reject practitioner request.');
-      }
+      setLogs(prev => [...prev, `[ALERT] SECURITY INTERACTION: Practitioner request for "Dr. ${userName}" rejected.`]);
+      setToast({
+        message: `Practitioner request for Dr. ${userName} rejected.`,
+        type: 'danger'
+      });
+      fetchAdminData();
     } catch (err) {
       console.error(err);
-      alert('Failed to reject practitioner request.');
+      alert(err.message || 'Failed to reject practitioner request.');
     }
   };
 

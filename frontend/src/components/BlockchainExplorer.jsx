@@ -2,11 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { Database, ShieldAlert, Cpu, CheckCircle2, ChevronRight, AlertTriangle, RefreshCw, Flame, HelpCircle, GitFork } from 'lucide-react';
 import MerkleTreeVisualizer from './MerkleTreeVisualizer';
 import SearchableSelect from './SearchableSelect';
-import { getApiUrl } from '../utils/api';
+import { getApiUrl, safeFetch } from '../utils/api';
 
 export default function BlockchainExplorer({ user }) {
   const [blocks, setBlocks] = useState([]);
   const [pendingRecords, setPendingRecords] = useState([]);
+  const [demoRecords, setDemoRecords] = useState([]);
   const [isValid, setIsValid] = useState(true);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -24,15 +25,13 @@ export default function BlockchainExplorer({ user }) {
   const handleRestoreDatabase = async () => {
     setRecovering(true);
     try {
-      const res = await fetch(getApiUrl('/api/blockchain/recover'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+      await safeFetch('/api/blockchain/recover', {
+        method: 'POST'
       });
-      if (res.ok) {
-        fetchBlockchainData();
-      }
+      fetchBlockchainData();
     } catch (err) {
-      console.error(err);
+      console.error('Recovery failed:', err);
+      alert(err.message || 'Recovery failed.');
     } finally {
       setRecovering(false);
     }
@@ -61,6 +60,12 @@ export default function BlockchainExplorer({ user }) {
       const pendingData = pendingRes.ok ? await pendingRes.json() : [];
       setPendingRecords(Array.isArray(pendingData) ? pendingData : []);
 
+      // If Super Admin, fetch designated simulation demo records
+      if (user?.role === 'super_admin') {
+        const demoData = await safeFetch('/api/blockchain/demo-records').catch(() => []);
+        setDemoRecords(Array.isArray(demoData) ? demoData : []);
+      }
+
     } catch (error) {
       console.error('Error fetching explorer data:', error);
     } finally {
@@ -83,15 +88,10 @@ export default function BlockchainExplorer({ user }) {
   const handleMineBlock = async () => {
     setMining(true);
     try {
-      const res = await fetch(getApiUrl('/api/blockchain/mine'), {
+      await safeFetch('/api/blockchain/mine', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
-      const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(data.error || 'Mining failed');
-      }
       
       // Play mining visual delay
       setTimeout(() => {
@@ -110,23 +110,18 @@ export default function BlockchainExplorer({ user }) {
     setTamperSuccess('');
 
     if (!tamperRecordId) {
-      setTamperError('Please select a medical record to tamper.');
+      setTamperError('Please select a designated demo record to tamper.');
       return;
     }
 
     try {
-      const res = await fetch(getApiUrl('/api/blockchain/tamper'), {
+      const data = await safeFetch('/api/blockchain/tamper', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           recordId: tamperRecordId,
           tamperedDiagnosis: tamperDiagnosis
         })
       });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Tampering failed');
-      }
 
       setTamperSuccess(data.message);
       setTamperDiagnosis('');
@@ -211,10 +206,14 @@ export default function BlockchainExplorer({ user }) {
                 <span style={{ fontSize: '0.85rem', opacity: 0.9 }}>The database has been tampered with. Cryptographic hashes of Block records do not match the chain state!</span>
               </div>
             </div>
-            {user.role !== 'patient' && (
+            {user?.role === 'super_admin' ? (
               <button className="btn btn-secondary" onClick={handleRestoreDatabase} disabled={recovering} style={{ background: '#fff', color: '#000', border: 'none', padding: '8px 16px', fontSize: '0.85rem', fontWeight: 600 }}>
                 {recovering ? 'Repairing Ledger...' : 'Recover from Ledger'}
               </button>
+            ) : (
+              <span style={{ fontSize: '0.8rem', opacity: 0.9, marginLeft: 'auto', fontWeight: 500 }}>
+                Contact Super Admin to initiate ledger self-healing recovery.
+              </span>
             )}
           </div>
         )}
@@ -417,15 +416,15 @@ export default function BlockchainExplorer({ user }) {
             )}
           </div>
 
-          {/* Tamper Workshop */}
-          {user.role === 'doctor' && (
+          {/* Tamper Workshop - Super Admin Only with Designated Demo Records */}
+          {user?.role === 'super_admin' && (
             <div className="glass-card" style={{ border: '1px solid rgba(239, 68, 68, 0.2)' }}>
               <h3 style={{ fontSize: '1.2rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-error)' }}>
-                <Flame size={20} /> Security Attack Lab
+                <Flame size={20} /> Security Attack Lab (Super Admin)
               </h3>
               
               <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '16px' }}>
-                Simulate a database intrusion. Directly edit a medical record stored in the database to demonstrate how blockchain instantly flags database tampering.
+                Simulate a database intrusion against designated demo records. Real patient records are strictly protected.
               </p>
 
               {tamperError && (
@@ -440,28 +439,32 @@ export default function BlockchainExplorer({ user }) {
                 </div>
               )}
 
-              {minedRecords.length === 0 ? (
+              {demoRecords.length === 0 ? (
                 <div style={{ border: '1px dashed rgba(239,68,68,0.2)', borderRadius: '8px', padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                  No mined blocks available to tamper. Mine a block first.
+                  No designated demo simulation records available to tamper.
                 </div>
               ) : (
                 <form onSubmit={handleTamperDatabase}>
                   <div className="form-group" style={{ marginBottom: '12px' }}>
-                    <label>Select Mined Record</label>
+                    <label>Select Designated Demo Record</label>
                     <SearchableSelect
                       className="form-control"
                       value={tamperRecordId}
-                      placeholder="-- Choose Record --"
+                      placeholder="-- Select Demo Record --"
                       onChange={(e) => setTamperRecordId(e.target.value)}
                       required
                     >
-                      <option value="">-- Choose Record --</option>
-                      {minedRecords.map(mr => (
-                        <option key={mr.id} value={mr.id}>
-                          Block #{mr.blockIndex}: {mr.patientName} ({mr.diagnosis.substring(0, 15)}...)
+                      <option value="">-- Select Demo Record --</option>
+                      {demoRecords.map(dr => (
+                        <option key={dr.id} value={dr.id}>
+                          {dr.is_mined ? `Block #${dr.block_index}: ` : 'Pending: '}
+                          {dr.patientName || 'Demo Patient'} - "{dr.diagnosis.substring(0, 30)}..."
                         </option>
                       ))}
                     </SearchableSelect>
+                    <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: '4px', display: 'block' }}>
+                      Safety Guard: Strictly restricted to designated demo records (is_demo_data = true).
+                    </small>
                   </div>
 
                   <div className="form-group" style={{ marginBottom: '16px' }}>
