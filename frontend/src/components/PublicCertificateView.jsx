@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, CheckCircle2, AlertTriangle, Printer, Lock, ArrowLeft, ExternalLink, QrCode, FileText } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, AlertTriangle, Printer, Lock, ArrowLeft, ExternalLink, QrCode, FileText, Download } from 'lucide-react';
 import logoSvg from '../assets/logo.svg';
 import { getApiUrl } from '../utils/api';
 
@@ -210,10 +210,10 @@ export default function PublicCertificateView({ recordId, onDismiss }) {
         {/* Certificate Title */}
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <h1 style={{ margin: 0, fontSize: 'clamp(1.1rem, 2.5vw, 1.35rem)', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#1e293b' }}>
-            Official Medical Consultation Certificate & Prescription
+            {data.isPassport ? 'Universal Cryptographic Health Passport & Attestation' : 'Official Medical Consultation Certificate & Prescription'}
           </h1>
           <p style={{ margin: '4px 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
-            Issued in accordance with the Kenya Medical Practitioners and Dentists Act (Cap 253)
+            Issued in accordance with the Kenya Medical Practitioners and Dentists Act (Cap 253) & Kenya Data Protection Act 2019
           </p>
         </div>
 
@@ -232,7 +232,7 @@ export default function PublicCertificateView({ recordId, onDismiss }) {
               <strong>Age / Gender:</strong> {profile.age ? `${profile.age} Yrs` : 'Adult'} &bull; {profile.gender || 'Unspecified'}
             </p>
             <p style={{ margin: '0 0 5px 0', fontSize: '0.9rem' }}>
-              <strong>Blood Group:</strong> {profile.bloodType || 'O+ (Standard)'}
+              <strong>Blood Group:</strong> <span style={{ color: '#dc2626', fontWeight: 700 }}>{profile.bloodType || 'O+ (Standard)'}</span>
             </p>
             {profile.allergies && (
               <p style={{ margin: 0, fontSize: '0.9rem', color: '#b91c1c' }}>
@@ -242,10 +242,19 @@ export default function PublicCertificateView({ recordId, onDismiss }) {
           </div>
 
           <div>
-            <h4 style={{ margin: '0 0 10px 0', fontSize: '0.82rem', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>Attending Physician</h4>
-            <p style={{ margin: '0 0 5px 0', fontSize: '0.95rem' }}><strong>Practitioner:</strong> Dr. {data.doctorName.replace(/^Dr\.?\s*/i, '')}</p>
-            <p style={{ margin: '0 0 5px 0', fontSize: '0.9rem' }}><strong>KMPDC License:</strong> {docProfile.licenseNumber || 'Verified Practitioner'}</p>
-            <p style={{ margin: '0 0 5px 0', fontSize: '0.9rem' }}><strong>Clinical Facility:</strong> {docProfile.hospital || 'Kenyatta National Hospital'}</p>
+            <h4 style={{ margin: '0 0 10px 0', fontSize: '0.82rem', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.05em' }}>
+              {data.isPassport && !data.doctorId ? 'Issuing Authority & Node' : 'Attending Physician'}
+            </h4>
+            <p style={{ margin: '0 0 5px 0', fontSize: '0.95rem' }}>
+              <strong>{data.isPassport && !data.doctorId ? 'Issuing Authority:' : 'Practitioner:'}</strong>{' '}
+              {data.doctorName ? (data.doctorName.toLowerCase().startsWith('dr.') || (data.isPassport && !data.doctorId) ? data.doctorName : `Dr. ${data.doctorName.replace(/^Dr\.?\s*/i, '')}`) : 'Licensed Medical Officer'}
+            </p>
+            <p style={{ margin: '0 0 5px 0', fontSize: '0.9rem' }}>
+              <strong>KMPDC License:</strong> {docProfile.licenseNumber || (data.isPassport && !data.doctorId ? 'MOH-BHC-ORACLE' : 'Verified Practitioner')}
+            </p>
+            <p style={{ margin: '0 0 5px 0', fontSize: '0.9rem' }}>
+              <strong>Clinical Facility:</strong> {data.hospitalName || docProfile.hospital || 'Blockchain Health Records Network'}
+            </p>
             <p style={{ margin: 0, fontSize: '0.9rem' }}><strong>Date of Service:</strong> {formattedDate}</p>
           </div>
         </div>

@@ -1926,7 +1926,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
 
       {/* QR Passport Modal */}
       {showQRPassportModal && (
-        <QRHealthPassport user={user} onClose={() => setShowQRPassportModal(false)} />
+        <QRHealthPassport user={user} records={patientRecords} onClose={() => setShowQRPassportModal(false)} />
       )}
 
       {/* Record Verification Portal Modal */}

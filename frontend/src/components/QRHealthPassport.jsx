@@ -1,8 +1,12 @@
-import React, { useRef } from 'react';
-import { QrCode, Shield, Download, Printer, Heart, Activity, AlertTriangle, User, Key } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import QRCode from 'qrcode';
+import { 
+  QrCode, ShieldCheck, Printer, Download, ExternalLink, Copy, Check, 
+  Heart, Activity, AlertTriangle, User, Key, Building2, Calendar, FileText, CheckCircle2 
+} from 'lucide-react';
 import logoSvg from '../assets/logo.svg';
 
-export default function QRHealthPassport({ user, onClose }) {
+export default function QRHealthPassport({ user, records = [], onClose }) {
   const cardRef = useRef(null);
 
   const patientProfile = user.patientProfile || {};
@@ -14,61 +18,65 @@ export default function QRHealthPassport({ user, onClose }) {
     ? patientProfile.allergies.join(', ')
     : (patientProfile.allergies || 'None Reported');
 
-  // Payload encoded in QR representation
-  const qrDataPayload = JSON.stringify({
-    system: 'BlockchainHealthLedger',
-    patientId: user.id || user._id,
-    name: user.name,
-    bloodType,
-    allergies,
-    publicKey: (user.publicKey || '').slice(0, 32) + '...'
+  // Scope selection: allows proving a specific clinical visit record OR the universal patient identity
+  const [selectedScope, setSelectedScope] = useState(() => {
+    if (records && records.length > 0) {
+      return records[0].id;
+    }
+    return user.id || user._id || '';
   });
 
-  // SVG QR Code generator function
-  const renderSvgQr = (data) => {
-    // Generate a deterministic 21x21 grid pattern from text data
-    let hash = 0;
-    for (let i = 0; i < data.length; i++) {
-      hash = (hash << 5) - hash + data.charCodeAt(i);
-      hash |= 0;
-    }
-    
-    const size = 21;
-    const cells = [];
-    for (let r = 0; r < size; r++) {
-      for (let c = 0; c < size; c++) {
-        // Corner alignment boxes (standard QR pattern)
-        const isTopLeft = r < 7 && c < 7;
-        const isTopRight = r < 7 && c >= size - 7;
-        const isBottomLeft = r >= size - 7 && c < 7;
-        
-        let isDark = false;
-        if (isTopLeft || isTopRight || isBottomLeft) {
-          const localR = isBottomLeft ? r - (size - 7) : r;
-          const localC = isTopRight ? c - (size - 7) : c;
-          if (localR === 0 || localR === 6 || localC === 0 || localC === 6) isDark = true;
-          else if (localR >= 2 && localR <= 4 && localC >= 2 && localC <= 4) isDark = true;
-        } else {
-          // Pseudorandom grid based on hash
-          const val = Math.abs((hash * (r * size + c + 1) + (r ^ c)) % 100);
-          isDark = val % 2 === 0;
-        }
-        if (isDark) {
-          cells.push(<rect key={`${r}-${c}`} x={c * 10} y={r * 10} width={10} height={10} fill="var(--color-primary, #0B2545)" />);
-        }
-      }
-    }
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [qrLoading, setQrLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+  const [qrError, setQrError] = useState('');
 
-    return (
-      <svg viewBox="0 0 210 210" width="160" height="160" style={{ background: '#ffffff', padding: '8px', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-        {cells}
-      </svg>
-    );
+  // Selected record metadata (if scoped to a specific clinical record)
+  const activeRecord = (records || []).find(r => r.id === selectedScope);
+
+  // Verification URL that will be encoded inside the physical QR code
+  const verificationTargetId = selectedScope || user.id || user._id;
+  const verificationUrl = `${window.location.origin}/?verifyRecordId=${encodeURIComponent(verificationTargetId)}`;
+
+  useEffect(() => {
+    if (!verificationTargetId) return;
+
+    setQrLoading(true);
+    setQrError('');
+
+    QRCode.toDataURL(verificationUrl, {
+      width: 260,
+      margin: 2,
+      errorCorrectionLevel: 'M',
+      color: {
+        dark: '#0f172a',
+        light: '#ffffff'
+      }
+    })
+      .then(url => {
+        setQrDataUrl(url);
+        setQrLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to generate scannable QR code:', err);
+        setQrError('Failed to generate cryptographic QR code image.');
+        setQrLoading(false);
+      });
+  }, [verificationUrl, verificationTargetId]);
+
+  const handleCopyLink = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(verificationUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
   };
 
   const handlePrint = () => {
     window.print();
   };
+
+  const isRevoked = user.is_rejected || user.isRejected;
 
   return (
     <div style={{
@@ -77,7 +85,7 @@ export default function QRHealthPassport({ user, onClose }) {
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      backgroundColor: 'rgba(0, 0, 0, 0.82)',
       backdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
@@ -86,18 +94,26 @@ export default function QRHealthPassport({ user, onClose }) {
       padding: '16px'
     }}>
       <div className="glass-card modal-dialog" style={{
-        maxWidth: '560px',
+        maxWidth: '620px',
         width: '100%',
-        maxHeight: '90vh',
+        maxHeight: '92vh',
         overflowY: 'auto',
         boxSizing: 'border-box',
         padding: '24px',
         position: 'relative'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src={logoSvg} alt="Logo" style={{ width: '28px', height: '28px' }} />
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>Cryptographic Health Passport</h3>
+            <img src={logoSvg} alt="Logo" style={{ width: '30px', height: '30px' }} />
+            <div>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)' }}>
+                Universal Cryptographic Health Passport
+              </h3>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                Decentralized Patient Identity & Proof-of-Work Attested Ledger
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -107,9 +123,9 @@ export default function QRHealthPassport({ user, onClose }) {
               border: 'none',
               color: 'var(--text-secondary)',
               cursor: 'pointer',
-              fontSize: '1.2rem',
-              minWidth: '44px',
-              minHeight: '44px',
+              fontSize: '1.3rem',
+              minWidth: '40px',
+              minHeight: '40px',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -119,67 +135,270 @@ export default function QRHealthPassport({ user, onClose }) {
           </button>
         </div>
 
+        {/* Multi-Tenant Record Selector (if patient has multiple clinic visits) */}
+        {records && records.length > 0 && (
+          <div style={{ 
+            marginBottom: '16px', 
+            padding: '12px 14px', 
+            backgroundColor: 'var(--bg-secondary, rgba(15, 118, 110, 0.05))', 
+            borderRadius: '10px', 
+            border: '1px solid var(--border, rgba(15, 118, 110, 0.15))' 
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Building2 size={14} color="var(--color-primary)" /> Verification Scope & Hospital Visit:
+              </label>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                {records.length} visit{records.length === 1 ? '' : 's'} recorded
+              </span>
+            </div>
+            <select
+              value={selectedScope}
+              onChange={(e) => setSelectedScope(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid var(--border, #cbd5e1)',
+                backgroundColor: 'var(--card, #ffffff)',
+                color: 'var(--text-primary, #0f172a)',
+                fontSize: '0.85rem',
+                fontWeight: 500,
+                outline: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <option value={user.id || user._id}>
+                Universal Patient Identity Node (All Clinics & Emergency Vitals)
+              </option>
+              {records.map((rec, idx) => (
+                <option key={rec.id} value={rec.id}>
+                  Visit #{records.length - idx}: {rec.doctorName || 'Attending Physician'} &bull; {rec.diagnosis ? rec.diagnosis.slice(0, 30) : 'Clinical Consultation'} ({new Date(rec.timestamp).toLocaleDateString()})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Passport Card Content */}
         <div ref={cardRef} style={{
           background: 'linear-gradient(135deg, rgba(15, 118, 110, 0.08) 0%, rgba(29, 158, 117, 0.06) 100%)',
-          border: '1px solid var(--glass-border)',
+          border: '1px solid var(--glass-border, rgba(15, 118, 110, 0.2))',
           borderRadius: '16px',
           padding: '20px',
-          marginBottom: '20px'
+          marginBottom: '16px'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-            <div style={{ flex: '1 1 200px', minWidth: '180px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <Shield size={20} color="var(--color-primary)" />
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--color-primary)' }}>
-                  Verified Patient Node
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+            {/* Patient Vitals & Identification */}
+            <div style={{ flex: '1 1 240px', minWidth: '220px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <ShieldCheck size={20} color="var(--color-primary, #0F766E)" />
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--color-primary, #0F766E)' }}>
+                  {activeRecord ? 'Cryptographically Sealed Record' : 'Verified Sovereign Patient Node'}
                 </span>
               </div>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '4px', wordBreak: 'break-word' }}>{user.name}</h2>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '16px', wordBreak: 'break-all' }}>
-                ID: {user.id || user._id}
+              <h2 style={{ fontSize: '1.45rem', fontWeight: 800, marginBottom: '4px', wordBreak: 'break-word', color: 'var(--text-primary)' }}>
+                {user.name}
+              </h2>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '14px', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                ID: {verificationTargetId}
               </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '12px', fontSize: '0.85rem' }}>
-                <div>
-                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>Blood Group</span>
-                  <strong style={{ color: '#ef4444', fontSize: '1rem' }}>{bloodType}</strong>
+              {/* Vitals Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '10px', fontSize: '0.85rem' }}>
+                <div style={{ padding: '8px 10px', backgroundColor: 'rgba(255, 255, 255, 0.7)', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.05)' }}>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem', textTransform: 'uppercase' }}>Blood Group</span>
+                  <strong style={{ color: '#dc2626', fontSize: '1.1rem' }}>{bloodType}</strong>
                 </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>Age / Gender</span>
-                  <strong>{age} yrs / {gender}</strong>
+                <div style={{ padding: '8px 10px', backgroundColor: 'rgba(255, 255, 255, 0.7)', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.05)' }}>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem', textTransform: 'uppercase' }}>Age &bull; Gender</span>
+                  <strong style={{ color: 'var(--text-primary)' }}>{age} yrs &bull; {gender}</strong>
                 </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>Contact Phone</span>
-                  <strong style={{ wordBreak: 'break-all' }}>{phone}</strong>
+                <div style={{ padding: '8px 10px', backgroundColor: 'rgba(255, 255, 255, 0.7)', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.05)' }}>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem', textTransform: 'uppercase' }}>Emergency Phone</span>
+                  <strong style={{ wordBreak: 'break-all', color: 'var(--text-primary)' }}>{phone}</strong>
                 </div>
-                <div>
-                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.75rem' }}>Allergies</span>
-                  <strong style={{ color: allergies !== 'None Reported' ? '#f59e0b' : 'inherit', wordBreak: 'break-word' }}>{allergies}</strong>
+                <div style={{ padding: '8px 10px', backgroundColor: 'rgba(255, 255, 255, 0.7)', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.05)' }}>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: '0.72rem', textTransform: 'uppercase' }}>Known Allergies</span>
+                  <strong style={{ color: allergies !== 'None Reported' ? '#d97706' : 'var(--text-primary)', wordBreak: 'break-word' }}>
+                    {allergies}
+                  </strong>
                 </div>
               </div>
+
+              {activeRecord && (
+                <div style={{ marginTop: '12px', padding: '10px', backgroundColor: 'rgba(15, 118, 110, 0.08)', borderRadius: '8px', fontSize: '0.8rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: 'var(--color-primary)' }}>
+                    <FileText size={14} /> Attested Clinical Dossier
+                  </div>
+                  <div style={{ color: 'var(--text-secondary)', marginTop: '2px' }}>
+                    Doctor: Dr. {activeRecord.doctorName ? activeRecord.doctorName.replace(/^Dr\.?\s*/i, '') : 'Attending Physician'}
+                  </div>
+                  <div style={{ color: 'var(--text-secondary)', marginTop: '2px' }}>
+                    Diagnosis: <strong>{activeRecord.diagnosis || 'Clinical evaluation'}</strong>
+                  </div>
+                </div>
+              )}
             </div>
 
+            {/* Real Scannable QR Code Column */}
             <div style={{ margin: '0 auto', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
-              {renderSvgQr(qrDataPayload)}
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <QrCode size={12} /> Scan to Verify Key
+              <div style={{ 
+                position: 'relative', 
+                width: '180px', 
+                height: '180px', 
+                background: '#ffffff', 
+                padding: '6px', 
+                borderRadius: '12px', 
+                boxShadow: '0 8px 24px rgba(11, 37, 69, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {qrLoading ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: '#64748b' }}>
+                    <div style={{ width: '32px', height: '32px', border: '3px solid #cbd5e1', borderTopColor: '#0F766E', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    <span style={{ fontSize: '0.72rem' }}>Generating QR...</span>
+                  </div>
+                ) : qrError ? (
+                  <div style={{ color: '#ef4444', fontSize: '0.75rem', padding: '10px' }}>
+                    {qrError}
+                  </div>
+                ) : (
+                  <img
+                    src={qrDataUrl}
+                    alt="Verifiable Cryptographic Health Passport QR Code"
+                    style={{ width: '100%', height: '100%', display: 'block', borderRadius: '8px' }}
+                  />
+                )}
+              </div>
+              <span style={{ 
+                fontSize: '0.72rem', 
+                color: 'var(--text-secondary)', 
+                marginTop: '10px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '4px',
+                fontWeight: 600
+              }}>
+                <QrCode size={14} color="var(--color-primary)" /> Scan with any phone camera
               </span>
             </div>
           </div>
 
-          <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: '1px solid var(--glass-border)', fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>Digital Health Passport & Verification QR</span>
-            <span className="badge badge-success" style={{ fontSize: '0.75rem', padding: '3px 8px' }}>Active & Verified</span>
+          {/* Footer of Card */}
+          <div style={{ 
+            marginTop: '18px', 
+            paddingTop: '12px', 
+            borderTop: '1px solid var(--glass-border, rgba(0,0,0,0.1))', 
+            fontSize: '0.8rem', 
+            color: 'var(--text-secondary)', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '8px'
+          }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Key size={14} color="var(--color-primary)" />
+              Key Fingerprint: {((user.publicKey || '')).slice(0, 24)}...
+            </span>
+            {isRevoked ? (
+              <span className="badge" style={{ backgroundColor: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontSize: '0.75rem', padding: '3px 8px', fontWeight: 700 }}>
+                ⚠️ Verification Revoked
+              </span>
+            ) : (
+              <span className="badge" style={{ backgroundColor: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', fontSize: '0.75rem', padding: '3px 8px', fontWeight: 700 }}>
+                ✓ Active & Blockchain Attested
+              </span>
+            )}
           </div>
         </div>
 
+        {/* Verification Link Action Box */}
+        <div style={{ 
+          marginBottom: '18px', 
+          padding: '10px 14px', 
+          backgroundColor: 'var(--bg-main, #f8fafc)', 
+          borderRadius: '10px', 
+          border: '1px solid var(--border, #e2e8f0)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '10px',
+          flexWrap: 'wrap'
+        }}>
+          <div style={{ flex: 1, minWidth: '180px', overflow: 'hidden' }}>
+            <span style={{ display: 'block', fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+              Encoded Blockchain Verification URL
+            </span>
+            <span style={{ 
+              display: 'block', 
+              fontSize: '0.78rem', 
+              color: 'var(--color-primary, #0F766E)', 
+              fontFamily: 'monospace', 
+              whiteSpace: 'nowrap', 
+              overflow: 'hidden', 
+              textOverflow: 'ellipsis' 
+            }}>
+              {verificationUrl}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+            <button
+              onClick={handleCopyLink}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: '1px solid var(--border, #cbd5e1)',
+                backgroundColor: 'var(--card, #ffffff)',
+                color: 'var(--text-primary, #0f172a)',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+              title="Copy verification link to clipboard"
+            >
+              {copied ? <Check size={14} color="#059669" /> : <Copy size={14} />}
+              {copied ? 'Copied!' : 'Copy Link'}
+            </button>
+
+            <a
+              href={verificationUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                backgroundColor: 'var(--color-primary, #0F766E)',
+                color: '#ffffff',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                textDecoration: 'none',
+                cursor: 'pointer'
+              }}
+              title="Open Public Verification Page"
+            >
+              <ExternalLink size={14} /> Open Page
+            </a>
+          </div>
+        </div>
+
+        {/* Modal Buttons */}
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button
             className="btn btn-secondary"
             style={{ flex: 1, minWidth: '120px', minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             onClick={onClose}
           >
-            Close
+            Close Passport
           </button>
           <button
             className="btn btn-primary"
