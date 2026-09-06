@@ -279,7 +279,7 @@ async function rejectOrganization(req, res) {
         // 5. Audit log
         await client.query(`
             INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp)
-            VALUES ($1, 'clinic_rejected', $2, $3, $2, $3, $4, NOW());
+            VALUES ($1, 'clinic_rejected', null, null, $2, $3, $4, NOW());
         `, [id, decoded.id, decoded.name || 'Super Admin', `Clinic "${org.name}" registration rejected by Super Admin.${reason ? ` Reason: ${reason}` : ''}`]);
 
         await client.query('COMMIT;');
@@ -363,8 +363,8 @@ async function updateOrganizationStatus(req, res) {
 
             // Audit logging with full administrative details
             await client.query(`
-                INSERT INTO audit_logs (organization_id, event_type, doctor_id, doctor_name, patient_id, patient_name, details, timestamp)
-                VALUES ($1, 'license_status_update', $2, 'Super Administrator', $2, 'Platform Governance', $3, $4);
+                INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp)
+                VALUES ($1, 'license_status_update', null, null, $2, 'Super Administrator', $3, $4);
             `, [id, decoded.id, `Organization status updated to "${status}". Expiry: ${updatedOrg.license_expires_at}. Modified by Super Admin.`, getKenyanTimestamp()]);
 
             await client.query('COMMIT;');

@@ -949,10 +949,11 @@ async function updateProfilePhoto(req, res) {
         );
         const updatedUser = updatedRows[0];
 
+        const isPat = user.role === 'patient';
         db.query(
             `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [user.organization_id || null, 'profile_photo_update', user.id, user.name, user.id, 'System', `User ${user.name} (${user.role}) updated their profile picture.`]
+            [user.organization_id || null, 'profile_photo_update', isPat ? user.id : null, isPat ? user.name : null, !isPat ? user.id : null, !isPat ? user.name : null, `User ${user.name} (${user.role}) updated their profile picture.`]
         ).catch(err => console.error('Failed to log profile photo update audit:', err));
 
         res.json({
@@ -1033,7 +1034,7 @@ async function updatePatientProfile(req, res) {
         db.query(
             `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [updatedUser.organization_id || null, 'profile_update', updatedUser.id, updatedUser.name, updatedUser.id, 'Patient Self', `Patient ${updatedUser.name} updated their personal profile & health vitals.`]
+            [updatedUser.organization_id || null, 'profile_update', updatedUser.id, updatedUser.name, null, null, `Patient ${updatedUser.name} updated their personal profile & health vitals.`]
         ).catch(err => console.error('Failed to log profile update audit:', err));
 
         res.json({
@@ -1123,7 +1124,7 @@ async function updateDoctorProfile(req, res) {
         db.query(
             `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [user.organization_id || null, 'profile_update', updatedUser.id, 'Doctor Self', updatedUser.id, updatedUser.name, `Dr. ${updatedUser.name} updated their clinical profile details.`]
+            [user.organization_id || null, 'profile_update', null, null, updatedUser.id, updatedUser.name, `Dr. ${updatedUser.name} updated their clinical profile details.`]
         ).catch(err => console.error('Failed to log doctor profile update audit:', err));
 
         res.json({

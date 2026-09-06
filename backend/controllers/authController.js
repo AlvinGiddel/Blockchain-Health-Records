@@ -268,7 +268,7 @@ async function register(req, res) {
                 await client.query(
                     `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
                      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                    [targetOrg.id, 'patient_registration', user.id, user.name, user.id, 'System', `New patient registered and affiliated with ${targetOrg.name}.`, createdAt]
+                    [targetOrg.id, 'patient_registration', user.id, user.name, null, null, `New patient registered and affiliated with ${targetOrg.name}.`, createdAt]
                 );
             } else if (role === 'doctor' && targetOrg) {
                 // Link doctor to their selected facility via tenant_memberships with pending approval status
@@ -281,7 +281,7 @@ async function register(req, res) {
                 await client.query(
                     `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
                      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                    [targetOrg.id, 'doctor_registration_request', user.id, user.name, user.id, 'System', `Dr. ${user.name} (${user.email}) requested clinical node affiliation with ${targetOrg.name}. Pending administrative approval.`, createdAt]
+                    [targetOrg.id, 'doctor_registration_request', null, null, user.id, user.name, `Dr. ${user.name} (${user.email}) requested clinical node affiliation with ${targetOrg.name}. Pending administrative approval.`, createdAt]
                 );
             }
 
@@ -674,7 +674,7 @@ async function registerClinic(req, res) {
         // 8. Log audit trail
         await client.query(`
             INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp)
-            VALUES ($1, 'clinic_registration_submitted', $2, $3, $2, $3, $4, $5);
+            VALUES ($1, 'clinic_registration_submitted', null, null, $2, $3, $4, $5);
         `, [newOrg.id, newAdmin.id, cleanAdminName, `New clinic registration for "${cleanOrgName}" submitted by ${cleanAdminName}. Pending Super Admin review.`, createdAt]);
 
         await client.query('COMMIT;');
@@ -735,10 +735,11 @@ async function changePassword(req, res) {
         await db.query('UPDATE users SET password = $1 WHERE id = $2', [hashedPassword, userId]);
 
         // Log the password change in the audit trail (in background)
+        const isPatPwd = user.role === 'patient';
         db.query(
             `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [user.organization_id || null, 'password_change', user.id, user.name, user.id, 'System Admin', `User ${user.name} (${user.role}) changed their account password.`]
+            [user.organization_id || null, 'password_change', isPatPwd ? user.id : null, isPatPwd ? user.name : null, !isPatPwd ? user.id : null, !isPatPwd ? user.name : null, `User ${user.name} (${user.role}) changed their account password.`]
         ).catch(err => console.error('Failed to log password change audit:', err));
 
         res.json({ success: true, message: 'Password updated successfully!' });
@@ -805,10 +806,11 @@ async function updateEmail(req, res) {
         const token = jwt.sign({ id: updatedUser.id, role: updatedUser.role }, JWT_SECRET, { expiresIn: '1d' });
 
         // 7. Log immutable audit trail
+        const isPatEmail = user.role === 'patient';
         db.query(
             `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [user.organization_id || null, 'email_update', user.id, user.name, user.id, 'System Security', `User ${user.name} (${user.role}) changed email from ${user.email} to ${cleanEmail}.`]
+            [user.organization_id || null, 'email_update', isPatEmail ? user.id : null, isPatEmail ? user.name : null, !isPatEmail ? user.id : null, !isPatEmail ? user.name : null, `User ${user.name} (${user.role}) changed email from ${user.email} to ${cleanEmail}.`]
         ).catch(err => console.error('Failed to log email change audit:', err));
 
         console.log(`[ACCOUNT] Email updated for user ${user.name} (${user.id}): ${user.email} -> ${cleanEmail}`);
@@ -871,10 +873,11 @@ async function forgotPassword(req, res) {
         const isEmailDelivered = mailResult && mailResult.success;
 
         // Log to Audit trail (in background)
+        const isPatReset = user.role === 'patient';
         db.query(
             `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [user.organization_id || null, 'password_reset_request', user.id, user.name, user.id, 'System Admin', `Password reset requested for ${user.name} (${user.email}). Email sent: ${isEmailDelivered}`]
+            [user.organization_id || null, 'password_reset_request', isPatReset ? user.id : null, isPatReset ? user.name : null, !isPatReset ? user.id : null, !isPatReset ? user.name : null, `Password reset requested for ${user.name} (${user.email}). Email sent: ${isEmailDelivered}`]
         ).catch(err => console.error('Failed to log password reset request audit:', err));
 
         res.json({
@@ -923,10 +926,11 @@ async function resetPassword(req, res) {
         );
 
         // Log completion to audit trail (in background)
+        const isPatComplete = user.role === 'patient';
         db.query(
             `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [user.organization_id || null, 'password_reset_complete', user.id, user.name, user.id, 'System Admin', `Password reset successfully completed for ${user.name} (${user.role}).`]
+            [user.organization_id || null, 'password_reset_complete', isPatComplete ? user.id : null, isPatComplete ? user.name : null, !isPatComplete ? user.id : null, !isPatComplete ? user.name : null, `Password reset successfully completed for ${user.name} (${user.role}).`]
         ).catch(err => console.error('Failed to log password reset complete audit:', err));
 
         res.json({ success: true, message: 'Your password has been successfully reset! You can now log in.' });
