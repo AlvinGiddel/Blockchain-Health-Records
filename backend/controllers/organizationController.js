@@ -41,6 +41,26 @@ function verifySuperAdminToken(req) {
 }
 
 /**
+ * Resolves the authenticated administrator's real name from token or database
+ */
+async function resolveAdminName(userId, tokenName, queryRunner = db) {
+    if (tokenName && typeof tokenName === 'string' && tokenName.trim()) {
+        return tokenName.trim();
+    }
+    if (userId) {
+        try {
+            const { rows } = await queryRunner.query('SELECT name FROM users WHERE id = $1', [userId]);
+            if (rows.length > 0 && rows[0].name && rows[0].name.trim()) {
+                return rows[0].name.trim();
+            }
+        } catch (e) {
+            // fallback if lookup fails
+        }
+    }
+    return 'Super Administrator';
+}
+
+/**
  * 1. Public list of active healthcare facilities (for registration and booking dropdowns)
  * GET /api/organizations/active
  */
@@ -188,10 +208,11 @@ async function approveOrganization(req, res) {
         `, [id]);
 
         // 5. Audit log
+        const adminActorName = await resolveAdminName(decoded.id, decoded.name, client);
         await client.query(`
             INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp)
             VALUES ($1, 'clinic_approved', null, null, $2, $3, $4, NOW());
-        `, [id, decoded.id, decoded.name || 'Super Admin', `Clinic "${org.name}" approved by Super Admin. 7-day trial activated.`]);
+        `, [id, decoded.id, adminActorName, `Clinic "${org.name}" approved by ${adminActorName}. 7-day trial activated.`]);
 
         await client.query('COMMIT;');
 
@@ -277,10 +298,11 @@ async function rejectOrganization(req, res) {
         `, [id]);
 
         // 5. Audit log
+        const adminActorName = await resolveAdminName(decoded.id, decoded.name, client);
         await client.query(`
             INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp)
             VALUES ($1, 'clinic_rejected', null, null, $2, $3, $4, NOW());
-        `, [id, decoded.id, decoded.name || 'Super Admin', `Clinic "${org.name}" registration rejected by Super Admin.${reason ? ` Reason: ${reason}` : ''}`]);
+        `, [id, decoded.id, adminActorName, `Clinic "${org.name}" registration rejected by ${adminActorName}.${reason ? ` Reason: ${reason}` : ''}`]);
 
         await client.query('COMMIT;');
 
@@ -362,10 +384,11 @@ async function updateOrganizationStatus(req, res) {
             `, [status, updatedOrg.license_expires_at, id]);
 
             // Audit logging with full administrative details
+            const adminActorName = await resolveAdminName(decoded.id, decoded.name, client);
             await client.query(`
                 INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp)
-                VALUES ($1, 'license_status_update', null, null, $2, 'Super Administrator', $3, $4);
-            `, [id, decoded.id, `Organization status updated to "${status}". Expiry: ${updatedOrg.license_expires_at}. Modified by Super Admin.`, getKenyanTimestamp()]);
+                VALUES ($1, 'license_status_update', null, null, $2, $3, $4, $5);
+            `, [id, decoded.id, adminActorName, `Organization status updated to "${status}". Expiry: ${updatedOrg.license_expires_at}. Modified by ${adminActorName}.`, getKenyanTimestamp()]);
 
             await client.query('COMMIT;');
 
@@ -396,7 +419,7 @@ async function updateOrganizationStatus(req, res) {
  */
 async function provisionTenant(req, res) {
     try {
-        verifySuperAdminToken(req);
+        const decoded = verifySuperAdminToken(req);
 
         const { hospitalName, name, email, password } = req.body;
         if (!name || !email || !password) {
@@ -454,7 +477,8 @@ async function provisionTenant(req, res) {
         }
 
         // Record immutable audit log
-        logAuditEvent('tenant_admin_provision', null, null, newAdmin[0].id, 'Super Administrator', `New hospital administrator provisioned for "${finalHospitalName || 'Platform'}": ${name} (${email})`, null, orgId);
+        const adminActorName = await resolveAdminName(decoded?.id, decoded?.name, db);
+        logAuditEvent('tenant_admin_provision', null, null, decoded?.id || null, adminActorName, `New hospital administrator provisioned for "${finalHospitalName || 'Platform'}": ${name} (${email}) by ${adminActorName}`, null, orgId);
 
         console.log(`[TENANT PROVISION] Hospital Administrator "${name}" for "${finalHospitalName}" created successfully.`);
         res.status(201).json({
@@ -471,6 +495,163 @@ async function provisionTenant(req, res) {
     }
 }
 
+/**
+ * 7. Aggregated Patient Counts by Organization (Super Admin Privacy-by-Design default view)
+ * GET /api/admin/organizations/patient-counts
+ * 
+ * Returns aggregate metrics ONLY: organization name, status, doctor count, patient count.
+ * Explicitly exposes ZERO patient names, emails, phones, or PII.
+ */
+async function getOrganizationPatientCounts(req, res) {
+    try {
+        verifySuperAdminToken(req);
+
+        const { rows: orgs } = await db.query(`
+            SELECT 
+                o.id,
+                o.name,
+                o.slug,
+                o.status,
+                o.license_expires_at as "licenseExpiresAt",
+                COUNT(DISTINCT CASE WHEN tm.role IN ('doctor', 'nurse') THEN tm.user_id END) as "doctorCount",
+                COUNT(DISTINCT p.user_id) as "patientCount"
+            FROM organizations o
+            LEFT JOIN tenant_memberships tm ON o.id = tm.organization_id
+            LEFT JOIN (
+                SELECT organization_id, user_id FROM tenant_memberships WHERE role = 'patient'
+                UNION
+                SELECT organization_id, id as user_id FROM users WHERE organization_id IS NOT NULL AND role = 'patient'
+                UNION
+                SELECT organization_id, patient_id as user_id FROM records WHERE organization_id IS NOT NULL
+                UNION
+                SELECT organization_id, patient_id as user_id FROM appointments WHERE organization_id IS NOT NULL
+            ) p ON o.id = p.organization_id
+            WHERE LOWER(o.name) NOT LIKE '%unassigned%'
+            GROUP BY o.id
+            ORDER BY o.name ASC;
+        `);
+
+        res.json({
+            success: true,
+            organizations: orgs
+        });
+    } catch (err) {
+        console.error('Error fetching organization patient counts:', err);
+        res.status(err.statusCode || 500).json({ error: err.message || 'Failed to fetch patient counts.' });
+    }
+}
+
+/**
+ * 8. Organization Patient List Drill-Down with Mandatory Audit Justification
+ * POST /api/admin/organizations/:id/patients
+ * 
+ * Requires free-text justification reason (minimum 5 characters).
+ * Writes immutable audit log with event_type = 'admin_patient_list_view'.
+ * Returns demographic & account metadata ONLY — strictly excludes all clinical records,
+ * diagnoses, treatments, allergies, and encrypted medical data.
+ */
+async function getOrganizationPatientsWithAudit(req, res) {
+    try {
+        const adminUser = verifySuperAdminToken(req);
+        const { id: orgId } = req.params;
+        const { reason } = req.body || {};
+
+        // Privacy-by-design guardrail: mandatory non-blank justification reason (min 5 chars)
+        const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+        if (!trimmedReason || trimmedReason.length < 5) {
+            return res.status(400).json({
+                error: 'A justified operational access reason is required (minimum 5 characters).'
+            });
+        }
+
+        // Verify target organization exists
+        const { rows: orgRows } = await db.query(
+            'SELECT id, name, status FROM organizations WHERE id = $1',
+            [orgId]
+        );
+
+        if (orgRows.length === 0) {
+            return res.status(404).json({ error: 'Healthcare organization facility not found.' });
+        }
+
+        const org = orgRows[0];
+        const kenyanTimestamp = getKenyanTimestamp();
+        const logDetails = `Super Admin viewed patient directory for ${org.name}. Access Reason: "${trimmedReason}" (Admin: ${adminUser.email || adminUser.name || adminUser.id})`;
+
+        // 1. Immutable Break-Glass Audit Log
+        let effectiveAdminId = null;
+        let effectiveAdminName = adminUser.name;
+        if (adminUser.id) {
+            try {
+                const { rows: uCheck } = await db.query('SELECT id, name FROM users WHERE id = $1', [adminUser.id]);
+                if (uCheck.length > 0) {
+                    effectiveAdminId = uCheck[0].id;
+                    if (!effectiveAdminName && uCheck[0].name) {
+                        effectiveAdminName = uCheck[0].name;
+                    }
+                }
+            } catch (uErr) {
+                // In case token ID is not UUID or not in database, fallback to null
+            }
+        }
+        if (!effectiveAdminName) effectiveAdminName = 'Super Administrator';
+
+        await logAuditEvent(
+            'admin_patient_list_view',
+            null,
+            null,
+            effectiveAdminId,
+            effectiveAdminName,
+            logDetails,
+            kenyanTimestamp,
+            org.id
+        );
+
+        console.log(`[AUDIT] admin_patient_list_view recorded by Super Admin (${adminUser.email}) for "${org.name}". Reason: "${trimmedReason}"`);
+
+        // 2. Query demographic & account info strictly (EXCLUDING ALL CLINICAL DATA)
+        const { rows: patients } = await db.query(`
+            SELECT DISTINCT
+                u.id,
+                u.name,
+                u.email,
+                u.created_at as "registeredAt",
+                u.is_approved as "isApproved",
+                COALESCE(tm.status, 'active') as "membershipStatus",
+                COALESCE(tm.joined_at, u.created_at) as "joinedAt",
+                u.patient_profile->>'phone' as "phone"
+            FROM users u
+            LEFT JOIN tenant_memberships tm ON u.id = tm.user_id AND tm.organization_id = $1
+            LEFT JOIN records r ON u.id = r.patient_id AND r.organization_id = $1
+            LEFT JOIN appointments a ON u.id = a.patient_id AND a.organization_id = $1
+            WHERE (
+                tm.organization_id = $1 OR 
+                u.organization_id = $1 OR 
+                r.organization_id = $1 OR 
+                a.organization_id = $1
+            ) AND u.role = 'patient'
+            ORDER BY u.name ASC;
+        `, [org.id]);
+
+        res.json({
+            success: true,
+            organization: {
+                id: org.id,
+                name: org.name,
+                status: org.status
+            },
+            auditLogged: true,
+            eventType: 'admin_patient_list_view',
+            timestamp: kenyanTimestamp,
+            patientCount: patients.length,
+            patients
+        });
+    } catch (err) {
+        console.error('Error fetching organization patients with audit:', err);
+        res.status(err.statusCode || 500).json({ error: err.message || 'Failed to retrieve patient directory.' });
+    }
+}
+
 module.exports = {
     getActiveOrganizations,
     getAdminOrganizations,
@@ -478,5 +659,7 @@ module.exports = {
     approveOrganization,
     rejectOrganization,
     updateOrganizationStatus,
-    provisionTenant
+    provisionTenant,
+    getOrganizationPatientCounts,
+    getOrganizationPatientsWithAudit
 };

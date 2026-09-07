@@ -45,6 +45,8 @@ const PUBLIC_ALLOWLIST = new Set([
     'GET /api/practitioners/nck/verify',
     'GET /api/kmpdc/practitioners',
     'GET /api/practitioners/kmpdc',
+    'GET /api/nck/practitioners',
+    'GET /api/practitioners/nck',
     'GET /api/practitioners',
     
     // Public healthcare facilities directory

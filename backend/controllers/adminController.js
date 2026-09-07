@@ -637,11 +637,21 @@ async function approveAdmin(req, res) {
         }
         const updatedAdmin = updatedAdmins[0];
 
+        // Resolve administrator's real name
+        let adminActorName = currentUser.name;
+        if (!adminActorName && currentUser.id) {
+            try {
+                const { rows: uRows } = await db.query('SELECT name FROM users WHERE id = $1', [currentUser.id]);
+                if (uRows.length > 0 && uRows[0].name) adminActorName = uRows[0].name;
+            } catch (e) { }
+        }
+        if (!adminActorName) adminActorName = 'Super Administrator';
+
         // Log admin approval in audit trail (in background)
         db.query(
             `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [updatedAdmin.organization_id || null, 'admin_approve', null, null, currentUser.id, currentUser.name || 'Super Admin', `Admin registration request for ${updatedAdmin.name} (${updatedAdmin.email}) approved by Super Admin.`]
+            [updatedAdmin.organization_id || null, 'admin_approve', null, null, currentUser.id, adminActorName, `Admin registration request for ${updatedAdmin.name} (${updatedAdmin.email}) approved by ${adminActorName}.`]
         ).catch(err => console.error('Failed to log admin approval audit:', err));
 
         console.log(`Admin ${updatedAdmin.name} (${updatedAdmin.email}) approved by Super Administrator.`);
@@ -677,11 +687,21 @@ async function rejectAdmin(req, res) {
         }
         const updatedAdmin = updatedAdmins[0];
 
+        // Resolve administrator's real name
+        let adminActorName = currentUser.name;
+        if (!adminActorName && currentUser.id) {
+            try {
+                const { rows: uRows } = await db.query('SELECT name FROM users WHERE id = $1', [currentUser.id]);
+                if (uRows.length > 0 && uRows[0].name) adminActorName = uRows[0].name;
+            } catch (e) { }
+        }
+        if (!adminActorName) adminActorName = 'Super Administrator';
+
         // Log admin rejection in audit trail (in background)
         db.query(
             `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details) 
              VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-            [updatedAdmin.organization_id || null, 'admin_reject', null, null, currentUser.id, currentUser.name || 'Super Admin', `Admin registration request for ${updatedAdmin.name} (${updatedAdmin.email}) rejected by Super Admin.`]
+            [updatedAdmin.organization_id || null, 'admin_reject', null, null, currentUser.id, adminActorName, `Admin registration request for ${updatedAdmin.name} (${updatedAdmin.email}) rejected by ${adminActorName}.`]
         ).catch(err => console.error('Failed to log admin rejection audit:', err));
 
         console.log(`Admin ${updatedAdmin.name} (${updatedAdmin.email}) rejected by Super Administrator.`);

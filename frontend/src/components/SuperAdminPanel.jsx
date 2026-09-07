@@ -7,6 +7,7 @@ import {
   CheckCircle, XCircle
 } from 'lucide-react';
 import LicenseControlWidget from './LicenseControlWidget';
+import PatientsByOrgWidget from './PatientsByOrgWidget';
 import { getApiUrl, safeFetch } from '../utils/api';
 
 export default function SuperAdminPanel({ user }) {
@@ -723,6 +724,9 @@ export default function SuperAdminPanel({ user }) {
 
       {/* Super Admin Remote Licensing & Kill-Switch Authority Control Center */}
       <LicenseControlWidget user={user} refreshTrigger={refreshTrigger} />
+
+      {/* Patients by Organization with Privacy-by-Design Access Controls & Audited Directory */}
+      <PatientsByOrgWidget user={user} refreshTrigger={refreshTrigger} />
 
       {/* Cryptographic Ledger Health Header */}
       <div

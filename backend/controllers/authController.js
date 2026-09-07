@@ -370,7 +370,7 @@ async function register(req, res) {
             db.query(
                 `INSERT INTO audit_logs (organization_id, event_type, patient_id, patient_name, doctor_id, doctor_name, details, timestamp) 
                  VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-                [user.organization_id || null, 'doctor_request', user.id, user.name, user.id, 'System Admin', `New practitioner registration request submitted by ${user.name} (${user.email}). Pending approval.`, createdAt]
+                [user.organization_id || null, 'doctor_request', null, null, user.id, user.name, `New practitioner registration request submitted by ${user.name} (${user.email}). Pending approval.`, createdAt]
             ).catch(err => console.error('Failed to log doctor request audit:', err));
 
             return res.status(202).json({
@@ -387,6 +387,7 @@ async function register(req, res) {
 
         const token = jwt.sign({
             id: user.id,
+            name: user.name,
             email: user.email,
             role: user.role,
             organization_id: user.organization_id || null,
@@ -529,6 +530,7 @@ async function login(req, res) {
 
         const token = jwt.sign({
             id: user.id,
+            name: user.name,
             email: user.email,
             role: user.role,
             organization_id: user.organization_id || null,
@@ -803,7 +805,7 @@ async function updateEmail(req, res) {
         const updatedUser = updatedRows[0];
 
         // 6. Generate fresh session token
-        const token = jwt.sign({ id: updatedUser.id, role: updatedUser.role }, JWT_SECRET, { expiresIn: '1d' });
+        const token = jwt.sign({ id: updatedUser.id, name: updatedUser.name, role: updatedUser.role }, JWT_SECRET, { expiresIn: '1d' });
 
         // 7. Log immutable audit trail
         const isPatEmail = user.role === 'patient';
