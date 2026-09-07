@@ -30,4 +30,8 @@ router.post('/reset-password/:token', authController.resetPassword);
 router.post('/break-glass', requireAuth, requireDoctor, authController.breakGlass);
 router.get('/break-glass/status', requireAuth, authController.getBreakGlassStatus);
 
+// Centralized domain error handler for isolated router testing
+const errorHandler = require('../middleware/errorHandler');
+router.use(errorHandler);
+
 module.exports = router;

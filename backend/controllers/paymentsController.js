@@ -1,5 +1,8 @@
 const crypto = require('crypto');
-const db = require('../db');
+const paymentsRepository = require('../repositories/paymentsRepository');
+const catchAsync = require('../utils/catchAsync');
+const AppError = require('../utils/AppError');
+const errorHandler = require('../middleware/errorHandler');
 const { 
     initializeTransaction, 
     verifyTransaction, 
@@ -22,142 +25,112 @@ function getPlans(req, res) {
 /**
  * 1b. Get authenticated clinic organization license status
  */
-async function getClinicLicense(req, res) {
-    try {
-        const orgId = req.user.organization_id || req.headers['x-organization-id'];
-        if (!orgId) {
-            return res.status(400).json({ error: 'No clinic organization associated with user.' });
-        }
-        const { rows } = await db.query(
-            'SELECT id, name, slug, status, license_expires_at, max_doctors, max_patients, created_at FROM organizations WHERE id = $1',
-            [orgId]
-        );
-        if (rows.length === 0) {
-            return res.status(404).json({ error: 'Clinic organization not found.' });
-        }
-        return res.json({ success: true, organization: rows[0] });
-    } catch (err) {
-        return res.status(500).json({ error: err.message });
+const getClinicLicense = catchAsync(async (req, res) => {
+    const orgId = req.user.organization_id || req.headers['x-organization-id'];
+    if (!orgId) {
+        throw new AppError('No clinic organization associated with user.', 400);
     }
-}
+
+    const organization = await paymentsRepository.findOrganizationById(orgId);
+    if (!organization) {
+        throw new AppError('Clinic organization not found.', 404);
+    }
+    return res.json({ success: true, organization });
+});
 
 /**
  * 2. Initialize a Paystack renewal transaction
  */
-async function initializePayment(req, res) {
-    try {
-        const { planId = 'plan_1m', organizationId: requestedOrgId, email: providedEmail } = req.body;
-        const currentUser = req.user;
+const initializePayment = catchAsync(async (req, res) => {
+    const { planId = 'plan_1m', organizationId: requestedOrgId, email: providedEmail } = req.body;
+    const currentUser = req.user;
 
-        // Resolve target organization with strict multi-tenant scoping
-        let targetOrgId = null;
-        if (currentUser.role === 'super_admin') {
-            targetOrgId = requestedOrgId || req.headers['x-organization-id'] || currentUser.organization_id;
-        } else if (currentUser.role === 'admin' || currentUser.role === 'doctor') {
-            targetOrgId = currentUser.organization_id || req.headers['x-organization-id'];
-        }
-
-        if (!targetOrgId) {
-            return res.status(400).json({ error: 'No organization specified or associated with your user account.' });
-        }
-
-        // Fetch organization details
-        const { rows: orgRows } = await db.query(
-            'SELECT id, name, slug, status, license_expires_at FROM organizations WHERE id = $1',
-            [targetOrgId]
-        );
-
-        if (orgRows.length === 0) {
-            return res.status(404).json({ error: 'Target health organization not found.' });
-        }
-        const organization = orgRows[0];
-
-        // Resolve selected subscription plan
-        const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId) || SUBSCRIPTION_PLANS[0];
-
-        // Resolve customer email with robust fallbacks
-        let customerEmail = providedEmail || currentUser.email;
-        if (!customerEmail) {
-            customerEmail = (process.env.PAYSTACK_EMAIL || '').trim()
-                || `admin@${organization.slug || 'clinic'}.local`;
-        }
-
-        // Generate clean, traceable Paystack reference
-        const safeOrgSlug = (organization.slug || organization.name.toLowerCase().replace(/[^a-z0-9]/g, '-')).slice(0, 15);
-        const reference = `bhc_${safeOrgSlug}_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
-
-        // Save initial payment row as 'pending'
-        await db.query(`
-            INSERT INTO payments (
-                organization_id,
-                user_id,
-                reference,
-                amount,
-                amount_subunits,
-                currency,
-                purpose,
-                plan_days,
-                plan_name,
-                status,
-                customer_email
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10)
-        `, [
-            organization.id,
-            currentUser.id,
-            reference,
-            plan.amountKES,
-            Math.round(plan.amountKES * 100),
-            'KES',
-            'license_renewal',
-            plan.days,
-            plan.name,
-            customerEmail
-        ]);
-
-        // Call Paystack API
-        const paystackResult = await initializeTransaction({
-            email: customerEmail,
-            amountInKES: plan.amountKES,
-            reference: reference,
-            metadata: {
-                organization_id: organization.id,
-                organization_name: organization.name,
-                plan_id: plan.id,
-                plan_days: plan.days,
-                user_id: currentUser.id,
-                user_email: customerEmail,
-                purpose: 'license_renewal'
-            }
-        });
-
-        return res.json({
-            success: true,
-            reference: reference,
-            access_code: paystackResult.access_code,
-            authorization_url: paystackResult.authorization_url,
-            publicKey: (process.env.PAYSTACK_PUBLIC_KEY || '').trim(),
-            amountKES: plan.amountKES,
-            plan: plan,
-            organization: {
-                id: organization.id,
-                name: organization.name,
-                license_expires_at: organization.license_expires_at
-            }
-        });
-    } catch (err) {
-        console.error('[Payments API] Failed to initialize payment:', err);
-        return res.status(500).json({ error: err.message || 'Failed to initialize payment.' });
+    // Resolve target organization with strict multi-tenant scoping
+    let targetOrgId = null;
+    if (currentUser.role === 'super_admin') {
+        targetOrgId = requestedOrgId || req.headers['x-organization-id'] || currentUser.organization_id;
+    } else if (currentUser.role === 'admin' || currentUser.role === 'doctor') {
+        targetOrgId = currentUser.organization_id || req.headers['x-organization-id'];
     }
-}
+
+    if (!targetOrgId) {
+        throw new AppError('No organization specified or associated with your user account.', 400);
+    }
+
+    // Fetch organization details via repository
+    const organization = await paymentsRepository.findOrganizationById(targetOrgId);
+    if (!organization) {
+        throw new AppError('Target health organization not found.', 404);
+    }
+
+    // Resolve selected subscription plan
+    const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId) || SUBSCRIPTION_PLANS[0];
+
+    // Resolve customer email with robust fallbacks
+    let customerEmail = providedEmail || currentUser.email;
+    if (!customerEmail) {
+        customerEmail = (process.env.PAYSTACK_EMAIL || '').trim()
+            || `admin@${organization.slug || 'clinic'}.local`;
+    }
+
+    // Generate clean, traceable Paystack reference
+    const safeOrgSlug = (organization.slug || organization.name.toLowerCase().replace(/[^a-z0-9]/g, '-')).slice(0, 15);
+    const reference = `bhc_${safeOrgSlug}_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
+
+    // Save initial payment row as 'pending' via repository
+    await paymentsRepository.createPendingPayment({
+        organizationId: organization.id,
+        userId: currentUser.id,
+        reference,
+        amount: plan.amountKES,
+        amountSubunits: Math.round(plan.amountKES * 100),
+        currency: 'KES',
+        purpose: 'license_renewal',
+        planDays: plan.days,
+        planName: plan.name,
+        customerEmail
+    });
+
+    // Call Paystack API
+    const paystackResult = await initializeTransaction({
+        email: customerEmail,
+        amountInKES: plan.amountKES,
+        reference: reference,
+        metadata: {
+            organization_id: organization.id,
+            organization_name: organization.name,
+            plan_id: plan.id,
+            plan_days: plan.days,
+            user_id: currentUser.id,
+            user_email: customerEmail,
+            purpose: 'license_renewal'
+        }
+    });
+
+    return res.json({
+        success: true,
+        reference: reference,
+        access_code: paystackResult.access_code,
+        authorization_url: paystackResult.authorization_url,
+        publicKey: (process.env.PAYSTACK_PUBLIC_KEY || '').trim(),
+        amountKES: plan.amountKES,
+        plan: plan,
+        organization: {
+            id: organization.id,
+            name: organization.name,
+            license_expires_at: organization.license_expires_at
+        }
+    });
+});
 
 /**
  * 3. Verify payment (Called immediately by client when Paystack popup succeeds)
  */
-async function verifyPayment(req, res, blockchainInstance = null) {
+async function verifyPayment(req, res, blockchainInstance = null, next = null) {
     try {
         const { reference } = req.params;
         if (!reference) {
-            return res.status(400).json({ error: 'Payment reference is required.' });
+            throw new AppError('Payment reference is required.', 400);
         }
 
         // Verify with Paystack
@@ -180,11 +153,8 @@ async function verifyPayment(req, res, blockchainInstance = null) {
                 organization: settlement.organization
             });
         } else {
-            // Mark failed in DB
-            await db.query(
-                "UPDATE payments SET status = 'failed', updated_at = NOW() WHERE reference = $1 AND status = 'pending'",
-                [reference]
-            );
+            // Mark failed in DB via repository
+            await paymentsRepository.markPaymentFailed(reference);
 
             return res.status(400).json({
                 success: false,
@@ -192,8 +162,8 @@ async function verifyPayment(req, res, blockchainInstance = null) {
             });
         }
     } catch (err) {
-        console.error('[Payments API] Verification error:', err);
-        return res.status(500).json({ error: err.message || 'Payment verification failed.' });
+        if (next) return next(err);
+        return errorHandler(err, req, res);
     }
 }
 
@@ -241,51 +211,20 @@ async function handleWebhook(req, res, blockchainInstance = null) {
 /**
  * 5. Payment history
  */
-async function getHistory(req, res) {
-    try {
-        const currentUser = req.user;
-        let query = `
-            SELECT 
-                p.id,
-                p.reference,
-                p.amount,
-                p.currency,
-                p.plan_days,
-                p.plan_name,
-                p.status,
-                p.channel,
-                p.customer_email,
-                p.blockchain_tx_hash,
-                p.paid_at,
-                p.created_at,
-                o.id as organization_id,
-                o.name as organization_name
-            FROM payments p
-            LEFT JOIN organizations o ON p.organization_id = o.id
-        `;
-        const params = [];
+const getHistory = catchAsync(async (req, res) => {
+    const currentUser = req.user;
+    const isSuperAdmin = currentUser.role === 'super_admin';
+    const orgId = isSuperAdmin
+        ? (req.query.orgId || req.query.organizationId)
+        : (currentUser.organization_id || req.headers['x-organization-id']);
 
-        if (currentUser.role !== 'super_admin') {
-            const orgId = currentUser.organization_id || req.headers['x-organization-id'];
-            if (!orgId) {
-                return res.json({ success: true, payments: [] });
-            }
-            query += ' WHERE p.organization_id = $1';
-            params.push(orgId);
-        } else if (req.query.orgId || req.query.organizationId) {
-            query += ' WHERE p.organization_id = $1';
-            params.push(req.query.orgId || req.query.organizationId);
-        }
-
-        query += ' ORDER BY p.created_at DESC LIMIT 50';
-
-        const { rows: payments } = await db.query(query, params);
-        return res.json({ success: true, payments });
-    } catch (err) {
-        console.error('[Payments API] Error fetching payment history:', err);
-        return res.status(500).json({ error: 'Failed to retrieve payment records.' });
-    }
-}
+    const payments = await paymentsRepository.getPaymentHistory({
+        orgId,
+        isSuperAdmin,
+        limit: 50
+    });
+    return res.json({ success: true, payments });
+});
 
 module.exports = {
     getPlans,

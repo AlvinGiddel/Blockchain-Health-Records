@@ -21,6 +21,8 @@ const createAdminRouter = require('./routes/admin');
 // Background Jobs & Workers (Phase 7)
 const { autoMinerJob, licenseCheckJob } = require('./jobs');
 const { initDatabaseSchema } = require('./services/dbInit');
+const errorHandler = require('./middleware/errorHandler');
+const AppError = require('./utils/AppError');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -189,21 +191,12 @@ bootstrapServices();
 // ==================== ERROR HANDLING ====================
 
 // Global 404 handler for unmatched API routes
-app.use((req, res) => {
-    res.status(404).json({ error: `API endpoint ${req.originalUrl} not found.` });
+app.use((req, res, next) => {
+    next(new AppError(`API endpoint ${req.originalUrl} not found.`, 404));
 });
 
-// Global Express error handling middleware
-app.use((err, req, res, next) => {
-    const statusCode = err.status || err.statusCode || 500;
-    if (statusCode >= 500) {
-        console.error('[SYS ERROR] Unhandled API Express error:', err);
-    }
-    res.status(statusCode).json({ 
-        error: err.expose || statusCode < 500 ? (err.message || 'Request failed.') : 'Internal server error occurred.', 
-        message: err.message 
-    });
-});
+// Centralized Express error handling middleware
+app.use(errorHandler);
 
 // Global process exception handlers to prevent Node server crashes
 process.on('uncaughtException', (err) => {

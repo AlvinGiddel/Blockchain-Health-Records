@@ -23,4 +23,8 @@ router.post('/admin/organizations/:id/patients', requireAuth, requireSuperAdmin,
 // Super Admin Hospital Tenant Provisioning
 router.post('/admin/provision-tenant', requireAuth, requireSuperAdmin, organizationController.provisionTenant);
 
+// Centralized domain error handler for isolated router testing
+const errorHandler = require('../middleware/errorHandler');
+router.use(errorHandler);
+
 module.exports = router;

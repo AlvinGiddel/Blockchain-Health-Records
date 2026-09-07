@@ -1,6 +1,7 @@
 const express = require('express');
 const recordsController = require('../controllers/recordsController');
 const { requireAuth, requireDoctor, requireAdmin, requireSuperAdmin } = require('../middleware/auth');
+const errorHandler = require('../middleware/errorHandler');
 
 /**
  * Factory function creating Medical Records & Blockchain Express Router
@@ -17,8 +18,8 @@ function createRecordsRouter(dependencies = {}) {
     const router = express.Router();
 
     // 1. Add new medical record (requires Doctor)
-    router.post('/records', requireAuth, requireDoctor, (req, res) => {
-        recordsController.createRecord(req, res, dependencies);
+    router.post('/records', requireAuth, requireDoctor, (req, res, next) => {
+        recordsController.createRecord(req, res, dependencies).catch(next);
     });
 
     // 2. Get records for a specific patient (Authenticated patient, treating doctor, or org admin)
@@ -43,30 +44,33 @@ function createRecordsRouter(dependencies = {}) {
     });
 
     // 8. Mine pending records into a block (Manual Admin Trigger)
-    router.post('/blockchain/mine', requireAuth, requireAdmin, (req, res) => {
-        recordsController.mineBlock(req, res, dependencies);
+    router.post('/blockchain/mine', requireAuth, requireAdmin, (req, res, next) => {
+        recordsController.mineBlock(req, res, dependencies).catch(next);
     });
 
     // 9. Get all blocks (Public ledger)
     router.get('/blockchain/blocks', recordsController.getBlocks);
 
     // 10. Validate chain integrity (Public verification)
-    router.get('/blockchain/validate', (req, res) => {
-        recordsController.validateChain(req, res, dependencies);
+    router.get('/blockchain/validate', (req, res, next) => {
+        recordsController.validateChain(req, res, dependencies).catch(next);
     });
 
     // 11. Tamper simulation (Super Admin only, demo records only)
-    router.post('/blockchain/tamper', requireAuth, requireSuperAdmin, (req, res) => {
-        recordsController.tamperRecord(req, res, dependencies);
+    router.post('/blockchain/tamper', requireAuth, requireSuperAdmin, (req, res, next) => {
+        recordsController.tamperRecord(req, res, dependencies).catch(next);
     });
 
     // 12. Self-Healing recovery from blocks (Super Admin only)
-    router.post('/blockchain/recover', requireAuth, requireSuperAdmin, (req, res) => {
-        recordsController.recoverBlockchain(req, res, dependencies);
+    router.post('/blockchain/recover', requireAuth, requireSuperAdmin, (req, res, next) => {
+        recordsController.recoverBlockchain(req, res, dependencies).catch(next);
     });
 
     // 13. Designated simulation demo records (Super Admin only)
     router.get('/blockchain/demo-records', requireAuth, requireSuperAdmin, recordsController.getDemoRecords);
+
+    // Centralized domain error handler for isolated router testing
+    router.use(errorHandler);
 
     return router;
 }

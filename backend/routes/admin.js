@@ -1,6 +1,7 @@
 const express = require('express');
 const adminController = require('../controllers/adminController');
 const { requireAuth, requireAdmin, requireSuperAdmin } = require('../middleware/auth');
+const errorHandler = require('../middleware/errorHandler');
 
 /**
  * Factory function creating Admin & User Management Express Router
@@ -26,8 +27,8 @@ function createAdminRouter(dependencies = {}) {
     router.get('/analytics/public-health', requireAuth, requireAdmin, adminController.getPublicHealthAnalytics);
 
     // 4. Admin Dashboard Metrics (Clinic Admin or Super Admin)
-    router.get('/admin/stats', requireAuth, requireAdmin, (req, res) => {
-        adminController.getAdminStats(req, res, dependencies);
+    router.get('/admin/stats', requireAuth, requireAdmin, (req, res, next) => {
+        adminController.getAdminStats(req, res, dependencies).catch(next);
     });
 
     // 5. Doctor Approval Queue (Super Admin Only)
@@ -42,8 +43,8 @@ function createAdminRouter(dependencies = {}) {
     router.post('/admin/reject/:id', requireAuth, requireSuperAdmin, adminController.rejectAdmin);
 
     // 7. User Deletion & Blockchain Rebuild (Super Admin Only)
-    router.delete('/users/:id', requireAuth, requireSuperAdmin, (req, res) => {
-        adminController.deleteUser(req, res, dependencies);
+    router.delete('/users/:id', requireAuth, requireSuperAdmin, (req, res, next) => {
+        adminController.deleteUser(req, res, dependencies).catch(next);
     });
 
     // 8. User Directories & Profiles (Authenticated users)
@@ -52,6 +53,9 @@ function createAdminRouter(dependencies = {}) {
     router.post('/users/update-profile-photo', requireAuth, adminController.updateProfilePhoto);
     router.put('/users/patient/profile', requireAuth, adminController.updatePatientProfile);
     router.put('/users/doctor/profile', requireAuth, adminController.updateDoctorProfile);
+
+    // Centralized domain error handler for isolated router testing
+    router.use(errorHandler);
 
     return router;
 }

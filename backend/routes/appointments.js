@@ -1,6 +1,7 @@
 const express = require('express');
 const appointmentsController = require('../controllers/appointmentsController');
 const { requireAuth, requireDoctor } = require('../middleware/auth');
+const errorHandler = require('../middleware/errorHandler');
 
 /**
  * Factory function creating the Appointments & Consultations Express Router
@@ -26,17 +27,20 @@ function createAppointmentsRouter(dependencies = {}) {
     router.put('/appointments/doctor/availability', requireAuth, requireDoctor, appointmentsController.updateDoctorAvailability);
 
     // 5. Complete a consultation (Doctor only)
-    router.post('/consultations', requireAuth, requireDoctor, (req, res) => {
-        appointmentsController.completeConsultation(req, res, dependencies);
+    router.post('/consultations', requireAuth, requireDoctor, (req, res, next) => {
+        appointmentsController.completeConsultation(req, res, dependencies).catch(next);
     });
-    router.post('/appointments/consultations', requireAuth, requireDoctor, (req, res) => {
-        appointmentsController.completeConsultation(req, res, dependencies);
+    router.post('/appointments/consultations', requireAuth, requireDoctor, (req, res, next) => {
+        appointmentsController.completeConsultation(req, res, dependencies).catch(next);
     });
 
     // Flexible fallback routes if router is mounted directly at `/api/appointments`
     router.post('/', requireAuth, appointmentsController.bookAppointment);
     router.get('/', requireAuth, appointmentsController.getAppointments);
     router.post('/:id/status', requireAuth, appointmentsController.updateAppointmentStatus);
+
+    // Centralized domain error handler for isolated router testing
+    router.use(errorHandler);
 
     return router;
 }

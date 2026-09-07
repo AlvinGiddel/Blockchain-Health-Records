@@ -44,4 +44,8 @@ router.get('/practitioners/nck', practitionersController.getNckPractitioners);
 router.post('/practitioners/nck', requireAuth, requireSuperAdmin, practitionersController.addNckPractitioner);
 router.get('/practitioners', practitionersController.getKmpdcPractitioners);
 
+// Centralized error handler mounted on router
+const errorHandler = require('../middleware/errorHandler');
+router.use(errorHandler);
+
 module.exports = router;
