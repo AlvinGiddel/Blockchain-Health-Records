@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Shield, Server, RefreshCw, AlertTriangle, CheckCircle, Clock, Lock, Key, Plus, Stethoscope, UserCheck, X, Activity, ToggleLeft, ToggleRight, Building2, Ban, Check, CreditCard, Search } from 'lucide-react';
 import { safeFetch } from '../utils/api';
 import PaystackRenewalModal from './PaystackRenewalModal';
@@ -41,6 +41,62 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
   const [addDoctorError, setAddDoctorError] = useState('');
   const [addDoctorSuccess, setAddDoctorSuccess] = useState('');
 
+  // Live Pre-flight Duplicate & Portal Verification Inspection States
+  const debounceTimerRef = useRef(null);
+  const [checkingLicense, setCheckingLicense] = useState(false);
+  const [licenseDuplicate, setLicenseDuplicate] = useState(null);
+  const [liveVerification, setLiveVerification] = useState(null);
+  const [confirmOverwrite, setConfirmOverwrite] = useState(false);
+
+  const checkLicensePreflight = async (licVal, docName) => {
+    const cleanLic = (licVal || '').trim().toUpperCase();
+    if (!cleanLic || cleanLic.length < 3) {
+      setLicenseDuplicate(null);
+      setLiveVerification(null);
+      setCheckingLicense(false);
+      setConfirmOverwrite(false);
+      return;
+    }
+
+    setCheckingLicense(true);
+    try {
+      const token = localStorage.getItem('token');
+      const data = await safeFetch(`/api/kmpdc/inspect?license=${encodeURIComponent(cleanLic)}&name=${encodeURIComponent(docName || '')}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (data.existsLocally && data.existingRecord) {
+        setLicenseDuplicate({
+          isDuplicate: true,
+          record: data.existingRecord
+        });
+      } else {
+        setLicenseDuplicate(null);
+        setConfirmOverwrite(false);
+      }
+
+      setLiveVerification({
+        formatValid: data.formatValid,
+        liveVerified: data.liveVerified,
+        liveRecord: data.liveRecord,
+        nameMatchScore: data.nameMatchScore,
+        nameMismatch: data.nameMismatch,
+        referenceName: data.referenceName
+      });
+    } catch (err) {
+      console.warn('Pre-flight license check notice:', err.message);
+    } finally {
+      setCheckingLicense(false);
+    }
+  };
+
+  const debouncedCheckLicense = (licVal, docName) => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      checkLicensePreflight(licVal, docName);
+    }, 350);
+  };
+
   const resetAddDoctorForm = () => {
     setNewLicense('');
     setNewName('');
@@ -51,6 +107,11 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
     setNewFacility('');
     setAddDoctorError('');
     setAddDoctorSuccess('');
+    setLicenseDuplicate(null);
+    setLiveVerification(null);
+    setCheckingLicense(false);
+    setConfirmOverwrite(false);
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
   };
 
   // Paystack Renewal & Billing States
@@ -193,6 +254,11 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
     setAddDoctorError('');
     setAddDoctorSuccess('');
 
+    if (licenseDuplicate?.isDuplicate && !confirmOverwrite) {
+      setAddDoctorError(`License ${newLicense} already exists for '${licenseDuplicate.record?.fullName}'. Please check 'Confirm Overwrite / Update Existing Record' to proceed.`);
+      return;
+    }
+
     // Determine final facility string & organization ID
     let finalFacility = '';
     let targetOrgId = null;
@@ -234,7 +300,8 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
           specialization: newSpec,
           facility: finalFacility,
           organizationId: targetOrgId,
-          status: 'active'
+          status: 'active',
+          confirmOverwrite: !!confirmOverwrite
         })
       });
 
@@ -246,6 +313,12 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
         setAddDoctorSuccess('');
       }, 1500);
     } catch (err) {
+      if (err.isDuplicate || err.status === 409) {
+        setLicenseDuplicate({
+          isDuplicate: true,
+          record: err.existingRecord || { licenseNumber: newLicense }
+        });
+      }
       setAddDoctorError(err.message || 'Failed to add doctor to KMPDC registry.');
     } finally {
       setAddDoctorLoading(false);
@@ -952,23 +1025,98 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
 
             <form onSubmit={handleAddDoctorSubmit}>
               <div className="form-group" style={{ marginBottom: '14px' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                  KMPDC License Number (e.g. A12345 or B10234)
-                </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
+                    KMPDC License Number (e.g. A12345 or B10234) <span style={{ color: 'var(--color-error, #ef4444)' }}>*</span>
+                  </label>
+                  {checkingLicense && (
+                    <span style={{ fontSize: '0.72rem', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <RefreshCw size={12} className="spinning" /> Verifying against KMPDC portal...
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
                   className="form-control"
                   placeholder="e.g. A88990"
                   required
                   value={newLicense}
-                  onChange={e => setNewLicense(e.target.value.toUpperCase())}
-                  style={{ width: '100%', fontFamily: 'monospace' }}
+                  onChange={e => {
+                    const val = e.target.value.toUpperCase();
+                    setNewLicense(val);
+                    debouncedCheckLicense(val, newName);
+                  }}
+                  style={{
+                    width: '100%',
+                    fontFamily: 'monospace',
+                    borderColor: licenseDuplicate?.isDuplicate ? '#f59e0b' : (liveVerification?.liveVerified ? '#10b981' : undefined)
+                  }}
                 />
+
+                {/* Duplicate License Warning Banner with Explicit Overwrite Confirmation */}
+                {licenseDuplicate?.isDuplicate && (
+                  <div style={{ padding: '10px 14px', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.35)', color: '#fbbf24', fontSize: '0.82rem', marginTop: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <AlertTriangle size={17} style={{ flexShrink: 0, marginTop: '2px', color: '#f59e0b' }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, color: '#fef3c7', marginBottom: '2px' }}>
+                          Duplicate License Detected in Registry
+                        </div>
+                        <div>
+                          License <code>{newLicense}</code> is already registered on file to:
+                          <div style={{ margin: '4px 0', padding: '4px 8px', background: 'rgba(0,0,0,0.25)', borderRadius: '4px', borderLeft: '3px solid #f59e0b' }}>
+                            <strong>{licenseDuplicate.record?.fullName}</strong> &bull; {licenseDuplicate.record?.facility} ({licenseDuplicate.record?.cadre}, Status: {(licenseDuplicate.record?.status || 'active').toUpperCase()})
+                          </div>
+                        </div>
+                        <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(245, 158, 11, 0.25)' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: 600, color: '#fef3c7', userSelect: 'none' }}>
+                            <input
+                              type="checkbox"
+                              checked={confirmOverwrite}
+                              onChange={e => setConfirmOverwrite(e.target.checked)}
+                              style={{ width: '16px', height: '16px', accentColor: '#f59e0b', cursor: 'pointer' }}
+                            />
+                            Confirm Overwrite / Update Existing Registry Record
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Live Portal Resolution Badge */}
+                {liveVerification?.liveVerified && (
+                  <div style={{ padding: '7px 12px', borderRadius: '6px', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399', fontSize: '0.78rem', marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <CheckCircle size={14} />
+                      <span>Live KMPDC Portal: <strong>{liveVerification.liveRecord?.fullName}</strong> ({liveVerification.liveRecord?.status?.toUpperCase() || 'ACTIVE'})</span>
+                    </div>
+                    {!newName && liveVerification.liveRecord?.fullName && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewName(liveVerification.liveRecord.fullName);
+                          debouncedCheckLicense(newLicense, liveVerification.liveRecord.fullName);
+                        }}
+                        style={{ background: 'rgba(16, 185, 129, 0.2)', border: '1px solid rgba(16, 185, 129, 0.4)', color: '#34d399', borderRadius: '4px', padding: '2px 8px', fontSize: '0.72rem', cursor: 'pointer' }}
+                      >
+                        Auto-fill Name
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Format warning if invalid format */}
+                {liveVerification && !liveVerification.formatValid && (
+                  <div style={{ fontSize: '0.75rem', color: '#f87171', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    ⚠️ Non-standard license format. Expected Kenyan council series (e.g. A12345 for Medical Officer, B10234 for Dentist).
+                  </div>
+                )}
               </div>
 
               <div className="form-group" style={{ marginBottom: '14px' }}>
                 <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                  Doctor Full Name (as on Council Certificate)
+                  Doctor Full Name (as on Council Certificate) <span style={{ color: 'var(--color-error, #ef4444)' }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -976,9 +1124,30 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
                   placeholder="e.g. Dr. Mark Mwangi Mutuku"
                   required
                   value={newName}
-                  onChange={e => setNewName(e.target.value)}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setNewName(val);
+                    debouncedCheckLicense(newLicense, val);
+                  }}
                   style={{ width: '100%' }}
                 />
+
+                {/* Name Mismatch Warning */}
+                {liveVerification?.nameMismatch && (
+                  <div style={{ padding: '8px 12px', borderRadius: '6px', background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', fontSize: '0.78rem', marginTop: '6px', display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                    <AlertTriangle size={15} style={{ flexShrink: 0, marginTop: '2px', color: '#ef4444' }} />
+                    <div>
+                      <strong>Council Identity Discrepancy:</strong> Council records list "<strong>{liveVerification.referenceName}</strong>", but you entered "<strong>{newName}</strong>". (Super Admin override permitted).
+                    </div>
+                  </div>
+                )}
+
+                {/* Name Match Success */}
+                {liveVerification && !liveVerification.nameMismatch && liveVerification.referenceName && newName.trim().length >= 4 && (
+                  <div style={{ fontSize: '0.76rem', color: '#34d399', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <Check size={13} /> Name matches official council certificate on file.
+                  </div>
+                )}
               </div>
 
               <div className="grid-2" style={{ gap: '12px', marginBottom: '14px' }}>
@@ -1073,8 +1242,17 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => { setShowAddDoctorModal(false); resetAddDoctorForm(); }}>Cancel</button>
-                <button type="submit" className="btn btn-primary" disabled={addDoctorLoading}>
-                  {addDoctorLoading ? 'Registering...' : 'Register Practitioner'}
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={addDoctorLoading || (licenseDuplicate?.isDuplicate && !confirmOverwrite)}
+                  style={licenseDuplicate?.isDuplicate && !confirmOverwrite ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+                >
+                  {addDoctorLoading ? 'Registering...' : (
+                    licenseDuplicate?.isDuplicate
+                      ? (confirmOverwrite ? 'Overwrite & Save Practitioner' : 'Confirm Overwrite to Proceed')
+                      : 'Register Practitioner'
+                  )}
                 </button>
               </div>
             </form>

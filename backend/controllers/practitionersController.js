@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const db = require('../db');
-const { verifyKmpdcLicense } = require('../services/kmpdcVerification');
+const { verifyKmpdcLicense, inspectKmpdcLicense } = require('../services/kmpdcVerification');
 const { verifyNckLicense } = require('../services/nckVerification');
 const { verifyPractitioner } = require('../services/practitionerAttestation');
 
@@ -120,6 +120,25 @@ async function getKmpdcPractitioners(req, res) {
 }
 
 /**
+ * Super Admin Pre-flight Inspection of KMPDC License
+ * GET /api/kmpdc/inspect?license=A12345&name=Dr.+John+Doe
+ */
+async function inspectKmpdc(req, res) {
+    try {
+        const { license, name } = req.query;
+        if (!license) {
+            return res.status(400).json({ error: 'License parameter is required' });
+        }
+
+        const result = await inspectKmpdcLicense(String(license), name ? String(name) : undefined);
+        res.json({ success: true, ...result });
+    } catch (err) {
+        console.error('KMPDC inspection error:', err);
+        res.status(500).json({ error: 'Failed to inspect KMPDC license.' });
+    }
+}
+
+/**
  * Super Admin Add Practitioner to Master KMPDC Registry
  * POST /api/kmpdc/practitioners
  */
@@ -135,7 +154,7 @@ async function addKmpdcPractitioner(req, res) {
             return res.status(403).json({ error: 'Access restricted to Super Administrators only.' });
         }
 
-        const { licenseNumber, fullName, cadre, specialization, facility, organizationId, status } = req.body;
+        const { licenseNumber, fullName, cadre, specialization, facility, organizationId, status, confirmOverwrite } = req.body;
         if (!licenseNumber || !fullName) {
             return res.status(400).json({ error: 'licenseNumber and fullName are required.' });
         }
@@ -145,6 +164,33 @@ async function addKmpdcPractitioner(req, res) {
         const cleanCadre = cadre || 'Medical Practitioner';
         const cleanSpec = specialization || 'General Practice';
         const cleanStatus = status || 'active';
+
+        // 1. Check if practitioner license already exists in registry (Duplicate Safeguard)
+        const { rows: existingRows } = await db.query(
+            `SELECT k.*, o.name as "organizationName"
+             FROM kmpdc_registry k
+             LEFT JOIN organizations o ON k.organization_id = o.id
+             WHERE UPPER(k.license_number) = $1`,
+            [cleanLicense]
+        );
+
+        const isDuplicate = existingRows.length > 0;
+        if (isDuplicate && !confirmOverwrite) {
+            const ex = existingRows[0];
+            return res.status(409).json({
+                error: `Practitioner license ${cleanLicense} already exists on record for '${ex.full_name}' at '${ex.facility}'. Explicit confirmation is required to overwrite this record.`,
+                isDuplicate: true,
+                existingRecord: {
+                    licenseNumber: ex.license_number,
+                    fullName: ex.full_name,
+                    facility: ex.facility,
+                    cadre: ex.cadre,
+                    specialization: ex.specialization,
+                    status: ex.status,
+                    organizationName: ex.organizationName
+                }
+            });
+        }
 
         let targetOrgId = null;
         let cleanFacility = facility ? facility.trim() : 'Kenyatta National Hospital';
@@ -175,9 +221,11 @@ async function addKmpdcPractitioner(req, res) {
             [cleanLicense, cleanName, cleanCadre, cleanSpec, cleanFacility, targetOrgId, cleanStatus]
         );
 
+        const actionText = isDuplicate ? 'updated' : 'registered';
         res.status(201).json({
             success: true,
-            message: `Practitioner ${cleanName} (${cleanLicense}) successfully registered in KMPDC Oracle!`,
+            message: `Practitioner ${cleanName} (${cleanLicense}) successfully ${actionText} in KMPDC Oracle!`,
+            isDuplicate,
             practitioner: rows[0]
         });
     } catch (err) {
@@ -191,5 +239,6 @@ module.exports = {
     verifyNck,
     verifyPractitionerHandler,
     getKmpdcPractitioners,
+    inspectKmpdc,
     addKmpdcPractitioner
 };

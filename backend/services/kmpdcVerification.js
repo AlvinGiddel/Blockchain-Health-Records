@@ -163,9 +163,165 @@ async function verifyKmpdcLicense(licenseNumber, doctorName) {
     }
 }
 
+/**
+ * Query the live KMPDC portal (https://osp.kmpdc.go.ke or https://kmpdc.go.ke/registers-practitioners-php/)
+ * 
+ * @param {string} searchText - License number or practitioner name to search
+ * @returns {Promise<Array<{ fullName: string, licenseNumber: string, status: string, facility?: string, specialization?: string }>>}
+ */
+async function queryLiveKmpdcPortal(searchText) {
+    const https = require('https');
+    const querystring = require('querystring');
+
+    return new Promise((resolve) => {
+        const cleanSearch = (searchText || '').trim();
+        if (!cleanSearch) return resolve([]);
+
+        const postData = querystring.stringify({
+            search_register: '1',
+            search_text: cleanSearch
+        });
+
+        const options = {
+            hostname: 'osp.kmpdc.go.ke',
+            port: 443,
+            path: '/ajax/search',
+            method: 'POST',
+            timeout: 3500, // 3.5s timeout for fast UI feedback
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Content-Length': Buffer.byteLength(postData),
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            }
+        };
+
+        const req = https.request(options, (res) => {
+            if (res.statusCode !== 200) {
+                return resolve([]);
+            }
+            let body = '';
+            res.on('data', chunk => { body += chunk; });
+            res.on('end', () => {
+                try {
+                    const results = [];
+                    const rowRegex = /<tr[^>]*>[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>[\s\S]*?<td[^>]*>([\s\S]*?)<\/td>/gi;
+                    let match;
+                    while ((match = rowRegex.exec(body)) !== null) {
+                        const rawName = match[1].replace(/<[^>]+>/g, '').trim();
+                        const rawLicense = match[2].replace(/<[^>]+>/g, '').trim();
+                        const rawStatus = match[3].replace(/<[^>]+>/g, '').trim();
+
+                        if (rawName && rawLicense && !rawName.toLowerCase().includes('name')) {
+                            const isActive = rawStatus.toLowerCase().includes('active') || !rawStatus.toLowerCase().includes('inactive');
+                            results.push({
+                                fullName: rawName,
+                                licenseNumber: rawLicense,
+                                status: isActive ? 'active' : 'inactive'
+                            });
+                        }
+                    }
+                    resolve(results);
+                } catch (e) {
+                    resolve([]);
+                }
+            });
+        });
+
+        req.on('error', () => {
+            resolve([]);
+        });
+
+        req.on('timeout', () => {
+            req.destroy();
+            resolve([]);
+        });
+
+        req.write(postData);
+        req.end();
+    });
+}
+
+/**
+ * Pre-flight inspection of a KMPDC license for Super Admin modal
+ * 1. Checks local duplicate in kmpdc_registry
+ * 2. Checks live portal for registered practitioner
+ * 3. Compares candidate doctor name against council records for identity matching
+ */
+async function inspectKmpdcLicense(licenseNumber, candidateName) {
+    if (!licenseNumber || typeof licenseNumber !== 'string' || !licenseNumber.trim()) {
+        return {
+            formatValid: false,
+            error: 'License number is required.'
+        };
+    }
+
+    const cleanLicense = licenseNumber.trim().toUpperCase();
+    const formatValid = validateLicenseFormat(cleanLicense);
+
+    // 1. Check local kmpdc_registry for existing duplicate
+    const { rows: localRows } = await db.query(
+        `SELECT k.*, o.name as "organizationName"
+         FROM kmpdc_registry k
+         LEFT JOIN organizations o ON k.organization_id = o.id
+         WHERE UPPER(k.license_number) = $1`,
+        [cleanLicense]
+    );
+
+    const existsLocally = localRows.length > 0;
+    const existingRecord = existsLocally ? {
+        licenseNumber: localRows[0].license_number,
+        fullName: localRows[0].full_name,
+        cadre: localRows[0].cadre,
+        specialization: localRows[0].specialization,
+        facility: localRows[0].facility,
+        status: localRows[0].status,
+        retentionYear: localRows[0].retention_year,
+        organizationId: localRows[0].organization_id,
+        organizationName: localRows[0].organizationName
+    } : null;
+
+    // 2. Query Live External Portal
+    const liveResults = await queryLiveKmpdcPortal(cleanLicense);
+    const liveMatch = liveResults.find(r => r.licenseNumber.toUpperCase() === cleanLicense);
+
+    const liveRecord = liveMatch ? {
+        licenseNumber: liveMatch.licenseNumber,
+        fullName: liveMatch.fullName,
+        status: liveMatch.status,
+        facility: liveMatch.facility || null,
+        specialization: liveMatch.specialization || null
+    } : null;
+
+    // 3. Name Similarity / Matching
+    let nameMatchScore = null;
+    let nameMismatch = false;
+    const referenceName = liveRecord ? liveRecord.fullName : (existingRecord ? existingRecord.fullName : null);
+
+    if (candidateName && typeof candidateName === 'string' && candidateName.trim() && referenceName) {
+        nameMatchScore = calculateNameSimilarity(candidateName, referenceName);
+        if (nameMatchScore < 0.5) {
+            nameMismatch = true;
+        }
+    }
+
+    return {
+        licenseNumber: cleanLicense,
+        formatValid,
+        existsLocally,
+        existingRecord,
+        liveVerified: !!liveRecord,
+        liveRecord,
+        referenceName,
+        nameMatchScore,
+        nameMismatch
+    };
+}
+
 module.exports = {
     validateLicenseFormat,
     normalizeName,
     calculateNameSimilarity,
-    verifyKmpdcLicense
+    verifyKmpdcLicense,
+    queryLiveKmpdcPortal,
+    inspectKmpdcLicense
 };
