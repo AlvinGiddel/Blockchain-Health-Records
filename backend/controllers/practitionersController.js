@@ -106,7 +106,12 @@ async function verifyPractitionerHandler(req, res) {
  */
 async function getKmpdcPractitioners(req, res) {
     try {
-        const { rows } = await db.query('SELECT * FROM kmpdc_registry ORDER BY full_name ASC');
+        const { rows } = await db.query(`
+            SELECT k.*, o.name as "organizationName"
+            FROM kmpdc_registry k
+            LEFT JOIN organizations o ON k.organization_id = o.id
+            ORDER BY k.full_name ASC
+        `);
         res.json({ success: true, practitioners: rows });
     } catch (err) {
         console.error('Failed to query KMPDC practitioners:', err);
@@ -130,7 +135,7 @@ async function addKmpdcPractitioner(req, res) {
             return res.status(403).json({ error: 'Access restricted to Super Administrators only.' });
         }
 
-        const { licenseNumber, fullName, cadre, specialization, facility, status } = req.body;
+        const { licenseNumber, fullName, cadre, specialization, facility, organizationId, status } = req.body;
         if (!licenseNumber || !fullName) {
             return res.status(400).json({ error: 'licenseNumber and fullName are required.' });
         }
@@ -139,21 +144,35 @@ async function addKmpdcPractitioner(req, res) {
         const cleanName = fullName.trim();
         const cleanCadre = cadre || 'Medical Practitioner';
         const cleanSpec = specialization || 'General Practice';
-        const cleanFacility = facility || 'Kenyatta National Hospital';
         const cleanStatus = status || 'active';
 
+        let targetOrgId = null;
+        let cleanFacility = facility ? facility.trim() : 'Kenyatta National Hospital';
+
+        if (organizationId && organizationId !== 'other') {
+            const { rows: orgRows } = await db.query(
+                'SELECT id, name FROM organizations WHERE id = $1',
+                [organizationId]
+            );
+            if (orgRows.length > 0) {
+                targetOrgId = orgRows[0].id;
+                cleanFacility = orgRows[0].name; // Ensure consistent canonical name
+            }
+        }
+
         const { rows } = await db.query(
-            `INSERT INTO kmpdc_registry (license_number, full_name, cadre, specialization, facility, status, retention_year)
-             VALUES ($1, $2, $3, $4, $5, $6, 2026)
+            `INSERT INTO kmpdc_registry (license_number, full_name, cadre, specialization, facility, organization_id, status, retention_year)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 2026)
              ON CONFLICT (license_number) DO UPDATE
              SET full_name = EXCLUDED.full_name,
                  cadre = EXCLUDED.cadre,
                  specialization = EXCLUDED.specialization,
                  facility = EXCLUDED.facility,
+                 organization_id = EXCLUDED.organization_id,
                  status = EXCLUDED.status,
                  updated_at = NOW()
              RETURNING *`,
-            [cleanLicense, cleanName, cleanCadre, cleanSpec, cleanFacility, cleanStatus]
+            [cleanLicense, cleanName, cleanCadre, cleanSpec, cleanFacility, targetOrgId, cleanStatus]
         );
 
         res.status(201).json({

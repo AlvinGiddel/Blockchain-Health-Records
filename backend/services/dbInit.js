@@ -25,6 +25,17 @@ async function initKmpdcRegistry() {
                 last_verified_at TIMESTAMPTZ DEFAULT NOW()
             );
 
+            -- Ensure organization_id column exists to tie practitioners to multi-tenant client facilities
+            ALTER TABLE kmpdc_registry ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL;
+            CREATE INDEX IF NOT EXISTS idx_kmpdc_org_id ON kmpdc_registry(organization_id);
+
+            -- Backfill organization_id where facility text clearly matches an existing client organization
+            UPDATE kmpdc_registry k
+            SET organization_id = o.id
+            FROM organizations o
+            WHERE k.organization_id IS NULL
+              AND LOWER(TRIM(k.facility)) = LOWER(TRIM(o.name));
+
             INSERT INTO kmpdc_registry (license_number, full_name, cadre, specialization, status, retention_year, facility)
             VALUES 
                 ('A12345', 'Dr. Alvin Giddel Mutuku', 'Medical Practitioner', 'Cardiology & Internal Medicine', 'active', 2026, 'Kenyatta National Hospital'),

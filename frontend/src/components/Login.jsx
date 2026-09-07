@@ -150,7 +150,20 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
         if (data.practitioner?.specialization && !specialization) {
           setSpecialization(data.practitioner.specialization);
         }
-        if (data.practitioner?.facility && !hospital) {
+        
+        // Auto-fill healthcare facility:
+        // When organizationId exists, link directly to that organization record without fragile string matching
+        if (data.practitioner?.organizationId) {
+          setDoctorOrgId(data.practitioner.organizationId);
+          const matchedOrg = activeOrganizations.find(o => o.id === data.practitioner.organizationId);
+          if (matchedOrg) {
+            setHospital(matchedOrg.name);
+          } else if (data.practitioner?.facility) {
+            setHospital(data.practitioner.facility);
+          }
+          setCustomHospitalName('');
+        } else if (data.practitioner?.facility && !hospital) {
+          // If organizationId is null ("Other / Not yet on platform"), fall back to the current text-based behavior as-is
           setHospital(data.practitioner.facility);
         }
       } else {

@@ -34,10 +34,24 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
   const [newName, setNewName] = useState('');
   const [newCadre, setNewCadre] = useState('Medical Practitioner');
   const [newSpec, setNewSpec] = useState('General Practice');
-  const [newFacility, setNewFacility] = useState('Kenyatta National Hospital');
+  const [selectedOrgId, setSelectedOrgId] = useState('');
+  const [customFacilityName, setCustomFacilityName] = useState('');
+  const [newFacility, setNewFacility] = useState('');
   const [addDoctorLoading, setAddDoctorLoading] = useState(false);
   const [addDoctorError, setAddDoctorError] = useState('');
   const [addDoctorSuccess, setAddDoctorSuccess] = useState('');
+
+  const resetAddDoctorForm = () => {
+    setNewLicense('');
+    setNewName('');
+    setNewCadre('Medical Practitioner');
+    setNewSpec('General Practice');
+    setSelectedOrgId('');
+    setCustomFacilityName('');
+    setNewFacility('');
+    setAddDoctorError('');
+    setAddDoctorSuccess('');
+  };
 
   // Paystack Renewal & Billing States
   const [paystackModalOrg, setPaystackModalOrg] = useState(null);
@@ -178,6 +192,31 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
     e.preventDefault();
     setAddDoctorError('');
     setAddDoctorSuccess('');
+
+    // Determine final facility string & organization ID
+    let finalFacility = '';
+    let targetOrgId = null;
+
+    if (selectedOrgId === 'other') {
+      finalFacility = customFacilityName.trim();
+      targetOrgId = null;
+      if (!finalFacility) {
+        setAddDoctorError('Please specify the external healthcare facility name.');
+        return;
+      }
+    } else if (selectedOrgId) {
+      const selectedOrg = organizations.find(o => o.id === selectedOrgId);
+      finalFacility = selectedOrg ? selectedOrg.name : newFacility.trim();
+      targetOrgId = selectedOrgId;
+    } else {
+      finalFacility = newFacility.trim();
+    }
+
+    if (!finalFacility) {
+      setAddDoctorError('Please select a healthcare facility or choose "Other / Not yet on platform".');
+      return;
+    }
+
     setAddDoctorLoading(true);
 
     try {
@@ -193,14 +232,14 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
           fullName: newName,
           cadre: newCadre,
           specialization: newSpec,
-          facility: newFacility,
+          facility: finalFacility,
+          organizationId: targetOrgId,
           status: 'active'
         })
       });
 
       setAddDoctorSuccess(data.message);
-      setNewLicense('');
-      setNewName('');
+      resetAddDoctorForm();
       fetchPractitioners();
       setTimeout(() => {
         setShowAddDoctorModal(false);
@@ -360,7 +399,10 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
 
           <button
             className="btn btn-secondary"
-            onClick={() => setShowAddDoctorModal(true)}
+            onClick={() => {
+              if (organizations.length === 0) fetchOrganizations();
+              setShowAddDoctorModal(true);
+            }}
             style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '8px 14px', background: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399' }}
           >
             <Plus size={15} /> Add Doctor to KMPDC Oracle
@@ -581,7 +623,17 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
                   <td style={{ padding: '8px 6px', fontFamily: 'monospace', color: 'var(--color-primary)', fontWeight: 600 }}>{doc.license_number}</td>
                   <td style={{ padding: '8px 6px', fontWeight: 500 }}>{doc.full_name}</td>
                   <td style={{ padding: '8px 6px', color: 'var(--text-secondary)' }}>{doc.specialization} ({doc.cadre})</td>
-                  <td style={{ padding: '8px 6px', color: 'var(--text-muted)' }}>{doc.facility}</td>
+                  <td style={{ padding: '8px 6px', color: 'var(--text-muted)' }}>
+                    {doc.organization_id || doc.organizationName ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#10b981', fontWeight: 500 }} title="Verified Multi-Tenant Facility">
+                        🏥 {doc.facility}
+                      </span>
+                    ) : (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="External Facility (Not yet on platform)">
+                        🏢 {doc.facility}
+                      </span>
+                    )}
+                  </td>
                   <td style={{ padding: '8px 6px' }}>
                     <span className="badge badge-success" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
                       {doc.status.toUpperCase()}
@@ -883,7 +935,7 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
               <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
                 <Plus size={20} /> Add Doctor to Master KMPDC Oracle
               </h3>
-              <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }} onClick={() => setShowAddDoctorModal(false)}>✕</button>
+              <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }} onClick={() => { setShowAddDoctorModal(false); resetAddDoctorForm(); }}>✕</button>
             </div>
 
             {addDoctorSuccess && (
@@ -957,20 +1009,70 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
                 </div>
               </div>
 
-              <div className="form-group" style={{ marginBottom: '20px' }}>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Clinical Facility</label>
-                <input
-                  type="text"
+              <div className="form-group" style={{ marginBottom: selectedOrgId === 'other' ? '12px' : '20px' }}>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                  Clinical Facility <span style={{ color: 'var(--color-error, #ef4444)' }}>*</span>
+                </label>
+                <SearchableSelect
                   className="form-control"
-                  placeholder="e.g. Nairobi Hospital"
-                  value={newFacility}
-                  onChange={e => setNewFacility(e.target.value)}
+                  value={selectedOrgId}
+                  placeholder="-- Select Clinical Facility --"
+                  onChange={e => {
+                    const val = e.target.value;
+                    setSelectedOrgId(val);
+                    if (val && val !== 'other') {
+                      const found = organizations.find(o => o.id === val);
+                      if (found) setNewFacility(found.name);
+                      setCustomFacilityName('');
+                    } else if (val === 'other') {
+                      setNewFacility(customFacilityName);
+                    } else {
+                      setNewFacility('');
+                    }
+                  }}
                   style={{ width: '100%' }}
-                />
+                  required
+                >
+                  <option value="">-- Select Clinical Facility --</option>
+                  {organizations.map(org => (
+                    <option key={org.id} value={org.id}>
+                      🏥 {org.name}
+                    </option>
+                  ))}
+                  <option value="other">➕ Other / Not yet on platform (External Facility)</option>
+                </SearchableSelect>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
+                  {selectedOrgId && selectedOrgId !== 'other'
+                    ? '✓ Practitioner will be tied directly to this registered healthcare tenant record.'
+                    : 'Select an enrolled hospital or choose "Other" for broader national registry entries.'}
+                </span>
               </div>
 
+              {selectedOrgId === 'other' && (
+                <div className="form-group" style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                    External Facility Name <span style={{ color: 'var(--color-error, #ef4444)' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="e.g. Gertrude's Children's Hospital"
+                    required
+                    value={customFacilityName}
+                    onChange={e => {
+                      setCustomFacilityName(e.target.value);
+                      setNewFacility(e.target.value);
+                    }}
+                    style={{ width: '100%' }}
+                  />
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginTop: '3px' }}>
+                    This facility is not yet a BHC tenant, but will be saved as the practitioner's official council facility.
+                  </span>
+                </div>
+              )}
+
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddDoctorModal(false)}>Cancel</button>
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowAddDoctorModal(false); resetAddDoctorForm(); }}>Cancel</button>
                 <button type="submit" className="btn btn-primary" disabled={addDoctorLoading}>
                   {addDoctorLoading ? 'Registering...' : 'Register Practitioner'}
                 </button>

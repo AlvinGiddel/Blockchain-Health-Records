@@ -150,6 +150,7 @@ async function verifyKmpdcLicense(licenseNumber, doctorName) {
                 status: councilRecord.status,
                 retentionYear: councilRecord.retention_year,
                 facility: councilRecord.facility,
+                organizationId: councilRecord.organization_id,
                 lastVerifiedAt: councilRecord.last_verified_at
             }
         };
