@@ -67,15 +67,51 @@ async function initUserSchemaExtensions() {
 }
 
 /**
+ * Initialize NCK Council Registry Table & Ensure organization_id linkage
+ */
+async function initNckRegistry() {
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS nck_registry (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                license_number VARCHAR(50) UNIQUE NOT NULL,
+                full_name VARCHAR(255) NOT NULL,
+                cadre VARCHAR(100) NOT NULL DEFAULT 'nurse',
+                status VARCHAR(50) NOT NULL DEFAULT 'active',
+                valid_till DATE,
+                facility VARCHAR(255),
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                last_verified_at TIMESTAMPTZ DEFAULT NOW()
+            );
+
+            ALTER TABLE nck_registry ADD COLUMN IF NOT EXISTS organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL;
+            CREATE INDEX IF NOT EXISTS idx_nck_org_id ON nck_registry(organization_id);
+
+            UPDATE nck_registry n
+            SET organization_id = o.id
+            FROM organizations o
+            WHERE n.organization_id IS NULL
+              AND n.facility IS NOT NULL
+              AND LOWER(TRIM(n.facility)) = LOWER(TRIM(o.name));
+        `);
+        console.log('[NCK Service] Nurse registry verified and linked.');
+    } catch (err) {
+        console.warn('[NCK Service] Registry init notice:', err.message);
+    }
+}
+
+/**
  * Bootstraps all database extensions and foundational reference tables
  */
 async function initDatabaseSchema() {
     await initUserSchemaExtensions();
     await initKmpdcRegistry();
+    await initNckRegistry();
 }
 
 module.exports = {
     initDatabaseSchema,
     initKmpdcRegistry,
+    initNckRegistry,
     initUserSchemaExtensions
 };

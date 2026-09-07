@@ -11,7 +11,7 @@ export default function RecordPdfExport({ record, patient, user, onClose }) {
 
     // Construct verification payload URL encoded in the QR code
     const baseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_APP_URL) 
-      || (typeof window !== 'undefined' && window.location?.origin ? window.location.origin : 'https://blockchainrecords.vercel.app');
+      || (typeof window !== 'undefined' && window.location?.origin ? window.location.origin : 'https://blockhealthrecords.online');
     const verificationUrl = `${baseUrl}/?verifyRecordId=${encodeURIComponent(record.id || '')}&blockIndex=${record.blockIndex || 0}&blockHash=${encodeURIComponent(record.blockHash || '')}`;
 
     QRCode.toDataURL(verificationUrl, {

@@ -196,6 +196,7 @@ async function verifyNckLicense(licenseNumber, nurseName, cadre = 'nurse') {
                 fullName: councilRecord.full_name,
                 cadre: councilRecord.cadre || cadre,
                 status: councilRecord.status,
+                organizationId: councilRecord.organization_id || null,
                 facility: councilRecord.facility || 'NCK Certified Facility',
                 lastVerifiedAt: councilRecord.last_verified_at
             }
@@ -210,8 +211,87 @@ async function verifyNckLicense(licenseNumber, nurseName, cadre = 'nurse') {
     }
 }
 
+/**
+ * Pre-flight inspection of an NCK nurse/midwife license for Super Admin modal
+ * 1. Checks syntactic format against NCK rules (numeric or prefix like KRCHN/BSN)
+ * 2. Checks local duplicate in nck_registry
+ * 3. Checks live portal for registered practitioner (osp.nckenya.com)
+ * 4. Compares candidate nurse name against council records for identity matching
+ * 
+ * @param {string} licenseNumber - The NCK license or registration number
+ * @param {string} [candidateName] - The practitioner full name entered in the form
+ */
+async function inspectNckLicense(licenseNumber, candidateName) {
+    if (!licenseNumber || typeof licenseNumber !== 'string' || !licenseNumber.trim()) {
+        return {
+            formatValid: false,
+            error: 'License number is required.'
+        };
+    }
+
+    const cleanLicense = licenseNumber.trim().toUpperCase();
+    const formatValid = validateNckLicenseFormat(cleanLicense);
+
+    // 1. Check local nck_registry for existing duplicate
+    const { rows: localRows } = await db.pool.query(
+        `SELECT n.*, o.name as "organizationName"
+         FROM nck_registry n
+         LEFT JOIN organizations o ON n.organization_id = o.id
+         WHERE UPPER(n.license_number) = $1`,
+        [cleanLicense]
+    );
+
+    const existsLocally = localRows.length > 0;
+    const existingRecord = existsLocally ? {
+        licenseNumber: localRows[0].license_number,
+        fullName: localRows[0].full_name,
+        cadre: localRows[0].cadre,
+        facility: localRows[0].facility,
+        status: localRows[0].status,
+        validTill: localRows[0].valid_till,
+        organizationId: localRows[0].organization_id,
+        organizationName: localRows[0].organizationName
+    } : null;
+
+    // 2. Query Live External Portal
+    const liveResults = await queryLiveNckPortal(cleanLicense);
+    const liveMatch = liveResults.find(r => r.licenseNumber.toUpperCase() === cleanLicense);
+
+    const liveRecord = liveMatch ? {
+        licenseNumber: liveMatch.licenseNumber,
+        fullName: liveMatch.fullName,
+        status: liveMatch.status,
+        validTill: liveMatch.validTill || null
+    } : null;
+
+    // 3. Name Similarity / Matching
+    let nameMatchScore = null;
+    let nameMismatch = false;
+    const referenceName = liveRecord ? liveRecord.fullName : (existingRecord ? existingRecord.fullName : null);
+
+    if (candidateName && typeof candidateName === 'string' && candidateName.trim() && referenceName) {
+        nameMatchScore = calculateNameSimilarity(candidateName, referenceName);
+        if (nameMatchScore < 0.5) {
+            nameMismatch = true;
+        }
+    }
+
+    return {
+        licenseNumber: cleanLicense,
+        formatValid,
+        existsLocally,
+        existingRecord,
+        liveVerified: !!liveRecord,
+        liveRecord,
+        referenceName,
+        nameMatchScore,
+        nameMismatch
+    };
+}
+
 module.exports = {
     validateNckLicenseFormat,
     queryLiveNckPortal,
-    verifyNckLicense
+    verifyNckLicense,
+    inspectNckLicense
 };

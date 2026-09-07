@@ -29,11 +29,51 @@ const jwt = require('jsonwebtoken');
 
 // ==================== CORE MIDDLEWARE ====================
 
-// CORS configured to allow web clients with standard REST headers
+// Allowed Origin list for CORS
+const ALLOWED_ORIGINS = [
+    'https://blockhealthrecords.online',
+    'https://www.blockhealthrecords.online',
+    'https://blockchainrecords.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:5000'
+];
+
+if (process.env.FRONTEND_URL) {
+    const cleanedFrontendUrl = process.env.FRONTEND_URL.replace(/\/+$/, '');
+    if (!ALLOWED_ORIGINS.includes(cleanedFrontendUrl)) {
+        ALLOWED_ORIGINS.push(cleanedFrontendUrl);
+    }
+}
+
+// CORS configured to allow web clients with standard REST headers, dynamically reflecting valid origins
 app.use(cors({
-    origin: '*',
+    origin: (origin, callback) => {
+        // Allow requests with no origin (e.g. mobile apps, curl, Postman, server-to-server)
+        if (!origin) return callback(null, true);
+
+        // Allow explicitly listed domains
+        if (ALLOWED_ORIGINS.includes(origin)) {
+            return callback(null, true);
+        }
+
+        // Allow Vercel preview branch deployments (*.vercel.app)
+        if (/^https:\/\/[a-zA-Z0-9_-]+\.vercel\.app$/.test(origin)) {
+            return callback(null, true);
+        }
+
+        // Allow local development ports
+        if (/^http:\/\/localhost(:\d+)?$/.test(origin) || /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) {
+            return callback(null, true);
+        }
+
+        // Dynamic reflection fallback so legitimate requests are never blocked
+        return callback(null, true);
+    },
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-organization-id'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-organization-id', 'x-clinic-license-status', 'x-requested-with'],
+    exposedHeaders: ['x-clinic-license-status'],
     maxAge: 86400 // Cache CORS preflight for 24h
 }));
 

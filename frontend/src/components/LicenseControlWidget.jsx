@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Shield, Server, RefreshCw, AlertTriangle, CheckCircle, Clock, Lock, Key, Plus, Stethoscope, UserCheck, X, Activity, ToggleLeft, ToggleRight, Building2, Ban, Check, CreditCard, Search } from 'lucide-react';
+import { Shield, Server, RefreshCw, AlertTriangle, CheckCircle, Clock, Lock, Key, Plus, Stethoscope, Users, UserCheck, X, Activity, ToggleLeft, ToggleRight, Building2, Ban, Check, CreditCard, Search } from 'lucide-react';
 import { safeFetch } from '../utils/api';
 import PaystackRenewalModal from './PaystackRenewalModal';
 import PaymentHistoryModal from './PaymentHistoryModal';
@@ -23,13 +23,17 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
   const [orgErrorMsg, setOrgErrorMsg] = useState('');
   const [orgSearch, setOrgSearch] = useState('');
 
-  // KMPDC Registry State & Search
+  // Statutory Oracle State (KMPDC Doctors & NCK Nurses)
+  const [activeOracleTab, setActiveOracleTab] = useState('kmpdc'); // 'kmpdc' | 'nck'
+  const [selectedRegulator, setSelectedRegulator] = useState('kmpdc'); // 'kmpdc' | 'nck'
   const [practitioners, setPractitioners] = useState([]);
   const [loadingPractitioners, setLoadingPractitioners] = useState(false);
+  const [nckPractitioners, setNckPractitioners] = useState([]);
+  const [loadingNckPractitioners, setLoadingNckPractitioners] = useState(false);
   const [showAddDoctorModal, setShowAddDoctorModal] = useState(false);
   const [practitionerSearch, setPractitionerSearch] = useState('');
 
-  // Add Doctor Form State
+  // Add Practitioner Form State
   const [newLicense, setNewLicense] = useState('');
   const [newName, setNewName] = useState('');
   const [newCadre, setNewCadre] = useState('Medical Practitioner');
@@ -48,7 +52,7 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
   const [liveVerification, setLiveVerification] = useState(null);
   const [confirmOverwrite, setConfirmOverwrite] = useState(false);
 
-  const checkLicensePreflight = async (licVal, docName) => {
+  const checkLicensePreflight = async (licVal, docName, reg = selectedRegulator) => {
     const cleanLic = (licVal || '').trim().toUpperCase();
     if (!cleanLic || cleanLic.length < 3) {
       setLicenseDuplicate(null);
@@ -61,7 +65,11 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
     setCheckingLicense(true);
     try {
       const token = localStorage.getItem('token');
-      const data = await safeFetch(`/api/kmpdc/inspect?license=${encodeURIComponent(cleanLic)}&name=${encodeURIComponent(docName || '')}`, {
+      const inspectUrl = reg === 'nck'
+        ? `/api/nck/inspect?license=${encodeURIComponent(cleanLic)}&name=${encodeURIComponent(docName || '')}`
+        : `/api/kmpdc/inspect?license=${encodeURIComponent(cleanLic)}&name=${encodeURIComponent(docName || '')}`;
+
+      const data = await safeFetch(inspectUrl, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -90,18 +98,18 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
     }
   };
 
-  const debouncedCheckLicense = (licVal, docName) => {
+  const debouncedCheckLicense = (licVal, docName, reg = selectedRegulator) => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     debounceTimerRef.current = setTimeout(() => {
-      checkLicensePreflight(licVal, docName);
+      checkLicensePreflight(licVal, docName, reg);
     }, 350);
   };
 
-  const resetAddDoctorForm = () => {
+  const resetAddDoctorForm = (reg = selectedRegulator) => {
     setNewLicense('');
     setNewName('');
-    setNewCadre('Medical Practitioner');
-    setNewSpec('General Practice');
+    setNewCadre(reg === 'nck' ? 'nurse' : 'Medical Practitioner');
+    setNewSpec(reg === 'nck' ? 'Registered Nursing' : 'General Practice');
     setSelectedOrgId('');
     setCustomFacilityName('');
     setNewFacility('');
@@ -226,6 +234,20 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
     }
   };
 
+  const fetchNckPractitioners = async () => {
+    try {
+      setLoadingNckPractitioners(true);
+      const data = await safeFetch('/api/nck/practitioners');
+      if (data.practitioners) {
+        setNckPractitioners(data.practitioners);
+      }
+    } catch (err) {
+      console.error('Error fetching NCK practitioners:', err);
+    } finally {
+      setLoadingNckPractitioners(false);
+    }
+  };
+
   const handleManualPing = async () => {
     setRefreshing(true);
     setStatusMessage('');
@@ -287,27 +309,43 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
 
     try {
       const token = localStorage.getItem('token');
-      const data = await safeFetch('/api/kmpdc/practitioners', {
+      const isNck = selectedRegulator === 'nck';
+      const endpoint = isNck ? '/api/nck/practitioners' : '/api/kmpdc/practitioners';
+      const payload = isNck ? {
+        licenseNumber: newLicense,
+        fullName: newName,
+        cadre: newCadre,
+        facility: finalFacility,
+        organizationId: targetOrgId,
+        status: 'active',
+        confirmOverwrite: !!confirmOverwrite
+      } : {
+        licenseNumber: newLicense,
+        fullName: newName,
+        cadre: newCadre,
+        specialization: newSpec,
+        facility: finalFacility,
+        organizationId: targetOrgId,
+        status: 'active',
+        confirmOverwrite: !!confirmOverwrite
+      };
+
+      const data = await safeFetch(endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          licenseNumber: newLicense,
-          fullName: newName,
-          cadre: newCadre,
-          specialization: newSpec,
-          facility: finalFacility,
-          organizationId: targetOrgId,
-          status: 'active',
-          confirmOverwrite: !!confirmOverwrite
-        })
+        body: JSON.stringify(payload)
       });
 
       setAddDoctorSuccess(data.message);
       resetAddDoctorForm();
-      fetchPractitioners();
+      if (isNck) {
+        fetchNckPractitioners();
+      } else {
+        fetchPractitioners();
+      }
       setTimeout(() => {
         setShowAddDoctorModal(false);
         setAddDoctorSuccess('');
@@ -319,7 +357,7 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
           record: err.existingRecord || { licenseNumber: newLicense }
         });
       }
-      setAddDoctorError(err.message || 'Failed to add doctor to KMPDC registry.');
+      setAddDoctorError(err.message || `Failed to add ${selectedRegulator === 'nck' ? 'nurse' : 'doctor'} to registry.`);
     } finally {
       setAddDoctorLoading(false);
     }
@@ -349,6 +387,7 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
     if (user?.role === 'super_admin') {
       fetchLicenseStatus();
       fetchPractitioners();
+      fetchNckPractitioners();
       fetchOrganizations();
     } else if (user?.role === 'admin') {
       fetchClinicOrg();
@@ -456,12 +495,12 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
               </span>
             </h3>
             <p style={{ margin: '3px 0 0 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-              Central Supabase Remote Kill-Switch, Fail-Closed Matrix, & KMPDC Doctor Oracle Manager
+              Central Supabase Remote Kill-Switch, Fail-Closed Matrix, & Statutory Oracle (KMPDC / NCK) Manager
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <button
             className="btn btn-secondary"
             onClick={() => setShowHistoryModal(true)}
@@ -474,11 +513,26 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
             className="btn btn-secondary"
             onClick={() => {
               if (organizations.length === 0) fetchOrganizations();
+              setSelectedRegulator('kmpdc');
+              resetAddDoctorForm('kmpdc');
               setShowAddDoctorModal(true);
             }}
             style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '8px 14px', background: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399' }}
           >
-            <Plus size={15} /> Add Doctor to KMPDC Oracle
+            <Plus size={15} /> Add Doctor (KMPDC)
+          </button>
+
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              if (organizations.length === 0) fetchOrganizations();
+              setSelectedRegulator('nck');
+              resetAddDoctorForm('nck');
+              setShowAddDoctorModal(true);
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '8px 14px', background: 'rgba(59, 130, 246, 0.15)', borderColor: 'rgba(59, 130, 246, 0.4)', color: '#60a5fa' }}
+          >
+            <Plus size={15} /> Add Nurse (NCK)
           </button>
 
           <button
@@ -622,23 +676,64 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
 
       </div>
 
-      {/* Master KMPDC Practitioners Table Preview */}
+      {/* Master Statutory Council Oracle Registry (KMPDC Doctors & NCK Nurses) */}
       <div style={{ padding: '16px', borderRadius: '10px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+        
+        {/* Tab Header & Search */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+          
+          {/* Council Tabs */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Stethoscope size={18} color="var(--color-primary)" />
-            <h4 style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-primary)' }}>
-              Master KMPDC Doctor Oracle Registry ({practitioners.length} Registered Practitioners)
-            </h4>
+            <button
+              type="button"
+              onClick={() => setActiveOracleTab('kmpdc')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '7px',
+                background: activeOracleTab === 'kmpdc' ? 'rgba(16, 185, 129, 0.22)' : 'rgba(255,255,255,0.03)',
+                color: activeOracleTab === 'kmpdc' ? '#34d399' : 'var(--text-secondary)',
+                border: activeOracleTab === 'kmpdc' ? '1px solid rgba(16, 185, 129, 0.45)' : '1px solid rgba(255,255,255,0.08)'
+              }}
+            >
+              <Stethoscope size={15} color={activeOracleTab === 'kmpdc' ? '#34d399' : 'var(--text-muted)'} />
+              KMPDC Doctors ({practitioners.length})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveOracleTab('nck')}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '7px',
+                background: activeOracleTab === 'nck' ? 'rgba(59, 130, 246, 0.22)' : 'rgba(255,255,255,0.03)',
+                color: activeOracleTab === 'nck' ? '#60a5fa' : 'var(--text-secondary)',
+                border: activeOracleTab === 'nck' ? '1px solid rgba(59, 130, 246, 0.45)' : '1px solid rgba(255,255,255,0.08)'
+              }}
+            >
+              <Users size={15} color={activeOracleTab === 'nck' ? '#60a5fa' : 'var(--text-muted)'} />
+              NCK Nurses & Midwives ({nckPractitioners.length})
+            </button>
           </div>
           
-          {/* KMPDC Real-time Search Input & Button */}
+          {/* Real-time Search Input */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '280px', flex: 1, maxWidth: '420px', position: 'relative' }}>
             <div style={{ position: 'relative', width: '100%' }}>
               <input
                 type="text"
                 className="form-control"
-                placeholder="Search by license #, doctor name, cadre, facility..."
+                placeholder={activeOracleTab === 'nck' ? "Search by nurse license #, name, cadre, facility..." : "Search by doctor license #, name, cadre, facility..."}
                 value={practitionerSearch}
                 onChange={e => setPractitionerSearch(e.target.value)}
                 style={{ paddingLeft: '32px', paddingRight: practitionerSearch ? '28px' : '10px', height: '34px', fontSize: '0.8rem', borderRadius: '8px' }}
@@ -655,66 +750,100 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
                 </button>
               )}
             </div>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              style={{ height: '34px', padding: '0 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '5px', whiteSpace: 'nowrap' }}
-              onClick={() => {}}
-            >
-              <Search size={13} /> Search
-            </button>
           </div>
         </div>
 
-        <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
+        <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
           <table style={{ width: '100%', fontSize: '0.82rem', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-secondary)', textAlign: 'left' }}>
-                <th style={{ padding: '8px 6px' }}>License #</th>
+                <th style={{ padding: '8px 6px' }}>{activeOracleTab === 'nck' ? 'NCK License #' : 'KMPDC License #'}</th>
                 <th style={{ padding: '8px 6px' }}>Practitioner Name</th>
-                <th style={{ padding: '8px 6px' }}>Cadre & Specialty</th>
+                <th style={{ padding: '8px 6px' }}>{activeOracleTab === 'nck' ? 'Nursing Cadre' : 'Cadre & Specialty'}</th>
                 <th style={{ padding: '8px 6px' }}>Hospital Facility</th>
                 <th style={{ padding: '8px 6px' }}>Status</th>
               </tr>
             </thead>
             <tbody>
-              {practitioners
-                .filter(doc => {
-                  if (!practitionerSearch.trim()) return true;
-                  const q = practitionerSearch.toLowerCase();
-                  return (
-                    (doc.license_number && doc.license_number.toLowerCase().includes(q)) ||
-                    (doc.full_name && doc.full_name.toLowerCase().includes(q)) ||
-                    (doc.specialization && doc.specialization.toLowerCase().includes(q)) ||
-                    (doc.facility && doc.facility.toLowerCase().includes(q)) ||
-                    (doc.cadre && doc.cadre.toLowerCase().includes(q)) ||
-                    (doc.status && doc.status.toLowerCase().includes(q))
-                  );
-                })
-                .map((doc, idx) => (
-                <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                  <td style={{ padding: '8px 6px', fontFamily: 'monospace', color: 'var(--color-primary)', fontWeight: 600 }}>{doc.license_number}</td>
-                  <td style={{ padding: '8px 6px', fontWeight: 500 }}>{doc.full_name}</td>
-                  <td style={{ padding: '8px 6px', color: 'var(--text-secondary)' }}>{doc.specialization} ({doc.cadre})</td>
-                  <td style={{ padding: '8px 6px', color: 'var(--text-muted)' }}>
-                    {doc.organization_id || doc.organizationName ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#10b981', fontWeight: 500 }} title="Verified Multi-Tenant Facility">
-                        🏥 {doc.facility}
-                      </span>
-                    ) : (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="External Facility (Not yet on platform)">
-                        🏢 {doc.facility}
-                      </span>
-                    )}
-                  </td>
-                  <td style={{ padding: '8px 6px' }}>
-                    <span className="badge badge-success" style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
-                      {doc.status.toUpperCase()}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {practitioners.length > 0 && practitioners.filter(doc => {
+              {activeOracleTab === 'kmpdc' ? (
+                practitioners
+                  .filter(doc => {
+                    if (!practitionerSearch.trim()) return true;
+                    const q = practitionerSearch.toLowerCase();
+                    return (
+                      (doc.license_number && doc.license_number.toLowerCase().includes(q)) ||
+                      (doc.full_name && doc.full_name.toLowerCase().includes(q)) ||
+                      (doc.specialization && doc.specialization.toLowerCase().includes(q)) ||
+                      (doc.facility && doc.facility.toLowerCase().includes(q)) ||
+                      (doc.cadre && doc.cadre.toLowerCase().includes(q)) ||
+                      (doc.status && doc.status.toLowerCase().includes(q))
+                    );
+                  })
+                  .map((doc, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '8px 6px', fontFamily: 'monospace', color: 'var(--color-primary)', fontWeight: 600 }}>{doc.license_number}</td>
+                      <td style={{ padding: '8px 6px', fontWeight: 500 }}>{doc.full_name}</td>
+                      <td style={{ padding: '8px 6px', color: 'var(--text-secondary)' }}>{doc.specialization} ({doc.cadre})</td>
+                      <td style={{ padding: '8px 6px', color: 'var(--text-muted)' }}>
+                        {doc.organization_id || doc.organizationName ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#10b981', fontWeight: 500 }} title="Verified Multi-Tenant Facility">
+                            🏥 {doc.facility}
+                          </span>
+                        ) : (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="External Facility (Not yet on platform)">
+                            🏢 {doc.facility}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '8px 6px' }}>
+                        <span className={`badge ${doc.status === 'suspended' ? 'badge-error' : 'badge-success'}`} style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
+                          {doc.status.toUpperCase()}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+              ) : (
+                nckPractitioners
+                  .filter(nurse => {
+                    if (!practitionerSearch.trim()) return true;
+                    const q = practitionerSearch.toLowerCase();
+                    return (
+                      (nurse.license_number && nurse.license_number.toLowerCase().includes(q)) ||
+                      (nurse.full_name && nurse.full_name.toLowerCase().includes(q)) ||
+                      (nurse.facility && nurse.facility.toLowerCase().includes(q)) ||
+                      (nurse.cadre && nurse.cadre.toLowerCase().includes(q)) ||
+                      (nurse.status && nurse.status.toLowerCase().includes(q))
+                    );
+                  })
+                  .map((nurse, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <td style={{ padding: '8px 6px', fontFamily: 'monospace', color: '#60a5fa', fontWeight: 600 }}>{nurse.license_number}</td>
+                      <td style={{ padding: '8px 6px', fontWeight: 500 }}>{nurse.full_name}</td>
+                      <td style={{ padding: '8px 6px', color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
+                        {nurse.cadre === 'midwife' ? 'Registered Midwife' : 'Registered Nurse'}
+                      </td>
+                      <td style={{ padding: '8px 6px', color: 'var(--text-muted)' }}>
+                        {nurse.organization_id || nurse.organizationName ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#10b981', fontWeight: 500 }} title="Verified Multi-Tenant Facility">
+                            🏥 {nurse.facility || nurse.organizationName}
+                          </span>
+                        ) : (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }} title="External Facility">
+                            🏢 {nurse.facility || 'External / National Register'}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '8px 6px' }}>
+                        <span className={`badge ${nurse.status === 'suspended' ? 'badge-error' : 'badge-success'}`} style={{ fontSize: '0.7rem', padding: '2px 8px' }}>
+                          {nurse.status.toUpperCase()}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+              )}
+
+              {/* Empty States */}
+              {activeOracleTab === 'kmpdc' && practitioners.length > 0 && practitioners.filter(doc => {
                 if (!practitionerSearch.trim()) return true;
                 const q = practitionerSearch.toLowerCase();
                 return (
@@ -728,7 +857,33 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
               }).length === 0 && (
                 <tr>
                   <td colSpan="5" style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                    No practitioners match "{practitionerSearch}"
+                    No doctors match "{practitionerSearch}"
+                  </td>
+                </tr>
+              )}
+
+              {activeOracleTab === 'nck' && nckPractitioners.length > 0 && nckPractitioners.filter(nurse => {
+                if (!practitionerSearch.trim()) return true;
+                const q = practitionerSearch.toLowerCase();
+                return (
+                  (nurse.license_number && nurse.license_number.toLowerCase().includes(q)) ||
+                  (nurse.full_name && nurse.full_name.toLowerCase().includes(q)) ||
+                  (nurse.facility && nurse.facility.toLowerCase().includes(q)) ||
+                  (nurse.cadre && nurse.cadre.toLowerCase().includes(q)) ||
+                  (nurse.status && nurse.status.toLowerCase().includes(q))
+                );
+              }).length === 0 && (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                    No nurses match "{practitionerSearch}"
+                  </td>
+                </tr>
+              )}
+
+              {activeOracleTab === 'nck' && nckPractitioners.length === 0 && !loadingNckPractitioners && (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>
+                    No registered nurses found in NCK Oracle. Click "Add Nurse (NCK)" above to register one.
                   </td>
                 </tr>
               )}
@@ -1000,15 +1155,69 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
         </div>
       )}
 
-      {/* MODAL 4: Super Admin Add Doctor to KMPDC Oracle Modal */}
+      {/* MODAL 4: Super Admin Add Practitioner to KMPDC / NCK Oracle Modal */}
       {showAddDoctorModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, padding: '20px' }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: '520px', background: 'var(--bg-secondary)', border: '1px solid rgba(16, 185, 129, 0.4)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '14px', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
-                <Plus size={20} /> Add Doctor to Master KMPDC Oracle
+          <div className="glass-card" style={{ width: '100%', maxWidth: '540px', background: 'var(--bg-secondary)', border: '1px solid rgba(16, 185, 129, 0.4)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', paddingBottom: '14px', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)', fontSize: '1.15rem' }}>
+                <Plus size={20} /> Add to {selectedRegulator === 'nck' ? 'Master NCK Nurse Oracle' : 'Master KMPDC Doctor Oracle'}
               </h3>
               <button style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }} onClick={() => { setShowAddDoctorModal(false); resetAddDoctorForm(); }}>✕</button>
+            </div>
+
+            {/* Regulator Selector Tabs inside Modal */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '18px', background: 'rgba(0,0,0,0.25)', padding: '4px', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRegulator('kmpdc');
+                  resetAddDoctorForm('kmpdc');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '7px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: selectedRegulator === 'kmpdc' ? 'var(--color-primary)' : 'transparent',
+                  color: selectedRegulator === 'kmpdc' ? '#fff' : 'var(--text-secondary)',
+                  fontWeight: 600,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                🩺 KMPDC Doctor / Dentist
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedRegulator('nck');
+                  resetAddDoctorForm('nck');
+                }}
+                style={{
+                  flex: 1,
+                  padding: '7px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: selectedRegulator === 'nck' ? 'var(--color-primary)' : 'transparent',
+                  color: selectedRegulator === 'nck' ? '#fff' : 'var(--text-secondary)',
+                  fontWeight: 600,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s'
+                }}
+              >
+                👩‍⚕️ NCK Nurse / Midwife
+              </button>
             </div>
 
             {addDoctorSuccess && (
@@ -1027,24 +1236,24 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
               <div className="form-group" style={{ marginBottom: '14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                   <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
-                    KMPDC License Number (e.g. A12345 or B10234) <span style={{ color: 'var(--color-error, #ef4444)' }}>*</span>
+                    {selectedRegulator === 'nck' ? 'NCK License / Reg No. (e.g. 594079 or KRCHN-12345)' : 'KMPDC License Number (e.g. A12345 or B10234)'} <span style={{ color: 'var(--color-error, #ef4444)' }}>*</span>
                   </label>
                   {checkingLicense && (
                     <span style={{ fontSize: '0.72rem', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <RefreshCw size={12} className="spinning" /> Verifying against KMPDC portal...
+                      <RefreshCw size={12} className="spinning" /> Verifying against {selectedRegulator === 'nck' ? 'NCK' : 'KMPDC'} portal...
                     </span>
                   )}
                 </div>
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="e.g. A88990"
+                  placeholder={selectedRegulator === 'nck' ? "e.g. 594079 or KRCHN-12345" : "e.g. A88990"}
                   required
                   value={newLicense}
                   onChange={e => {
                     const val = e.target.value.toUpperCase();
                     setNewLicense(val);
-                    debouncedCheckLicense(val, newName);
+                    debouncedCheckLicense(val, newName, selectedRegulator);
                   }}
                   style={{
                     width: '100%',
@@ -1060,7 +1269,7 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
                       <AlertTriangle size={17} style={{ flexShrink: 0, marginTop: '2px', color: '#f59e0b' }} />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 600, color: '#fef3c7', marginBottom: '2px' }}>
-                          Duplicate License Detected in Registry
+                          Duplicate {selectedRegulator === 'nck' ? 'Nurse License' : 'Doctor License'} Detected in Registry
                         </div>
                         <div>
                           License <code>{newLicense}</code> is already registered on file to:
@@ -1089,14 +1298,14 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
                   <div style={{ padding: '7px 12px', borderRadius: '6px', background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399', fontSize: '0.78rem', marginTop: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <CheckCircle size={14} />
-                      <span>Live KMPDC Portal: <strong>{liveVerification.liveRecord?.fullName}</strong> ({liveVerification.liveRecord?.status?.toUpperCase() || 'ACTIVE'})</span>
+                      <span>Live {selectedRegulator === 'nck' ? 'NCK' : 'KMPDC'} Portal: <strong>{liveVerification.liveRecord?.fullName}</strong> ({liveVerification.liveRecord?.status?.toUpperCase() || 'ACTIVE'})</span>
                     </div>
                     {!newName && liveVerification.liveRecord?.fullName && (
                       <button
                         type="button"
                         onClick={() => {
                           setNewName(liveVerification.liveRecord.fullName);
-                          debouncedCheckLicense(newLicense, liveVerification.liveRecord.fullName);
+                          debouncedCheckLicense(newLicense, liveVerification.liveRecord.fullName, selectedRegulator);
                         }}
                         style={{ background: 'rgba(16, 185, 129, 0.2)', border: '1px solid rgba(16, 185, 129, 0.4)', color: '#34d399', borderRadius: '4px', padding: '2px 8px', fontSize: '0.72rem', cursor: 'pointer' }}
                       >
@@ -1109,25 +1318,27 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
                 {/* Format warning if invalid format */}
                 {liveVerification && !liveVerification.formatValid && (
                   <div style={{ fontSize: '0.75rem', color: '#f87171', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    ⚠️ Non-standard license format. Expected Kenyan council series (e.g. A12345 for Medical Officer, B10234 for Dentist).
+                    ⚠️ {selectedRegulator === 'nck'
+                      ? 'Non-standard NCK format. Expected numeric (e.g. 594079) or council prefix (e.g. KRCHN-12345, BSN-12345).'
+                      : 'Non-standard license format. Expected Kenyan council series (e.g. A12345 for Medical Officer, B10234 for Dentist).'}
                   </div>
                 )}
               </div>
 
               <div className="form-group" style={{ marginBottom: '14px' }}>
                 <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
-                  Doctor Full Name (as on Council Certificate) <span style={{ color: 'var(--color-error, #ef4444)' }}>*</span>
+                  {selectedRegulator === 'nck' ? 'Nurse Full Name (as on Council Certificate)' : 'Doctor Full Name (as on Council Certificate)'} <span style={{ color: 'var(--color-error, #ef4444)' }}>*</span>
                 </label>
                 <input
                   type="text"
                   className="form-control"
-                  placeholder="e.g. Dr. Mark Mwangi Mutuku"
+                  placeholder={selectedRegulator === 'nck' ? "e.g. Mary Njeri Kung'u" : "e.g. Dr. Mark Mwangi Mutuku"}
                   required
                   value={newName}
                   onChange={e => {
                     const val = e.target.value;
                     setNewName(val);
-                    debouncedCheckLicense(newLicense, val);
+                    debouncedCheckLicense(newLicense, val, selectedRegulator);
                   }}
                   style={{ width: '100%' }}
                 />
@@ -1160,17 +1371,29 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
                     onChange={e => setNewCadre(e.target.value)} 
                     style={{ width: '100%' }}
                   >
-                    <option value="Medical Practitioner">Medical Practitioner (A)</option>
-                    <option value="Dental Practitioner">Dental Practitioner (B)</option>
-                    <option value="Specialist Practitioner">Specialist Practitioner (C/T)</option>
+                    {selectedRegulator === 'nck' ? (
+                      <>
+                        <option value="nurse">Registered Nurse (KRCHN / BSN)</option>
+                        <option value="midwife">Registered Midwife (KRM)</option>
+                        <option value="specialist">Advanced Practice Nurse / Specialist</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="Medical Practitioner">Medical Practitioner (A)</option>
+                        <option value="Dental Practitioner">Dental Practitioner (B)</option>
+                        <option value="Specialist Practitioner">Specialist Practitioner (C/T)</option>
+                      </>
+                    )}
                   </SearchableSelect>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Specialization</label>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                    {selectedRegulator === 'nck' ? 'Department / Specialization' : 'Specialization'}
+                  </label>
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="e.g. Cardiology"
+                    placeholder={selectedRegulator === 'nck' ? "e.g. Critical Care Nursing" : "e.g. Cardiology"}
                     value={newSpec}
                     onChange={e => setNewSpec(e.target.value)}
                     style={{ width: '100%' }}
@@ -1250,8 +1473,8 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
                 >
                   {addDoctorLoading ? 'Registering...' : (
                     licenseDuplicate?.isDuplicate
-                      ? (confirmOverwrite ? 'Overwrite & Save Practitioner' : 'Confirm Overwrite to Proceed')
-                      : 'Register Practitioner'
+                      ? (confirmOverwrite ? `Overwrite & Save ${selectedRegulator === 'nck' ? 'Nurse' : 'Doctor'}` : 'Confirm Overwrite to Proceed')
+                      : (selectedRegulator === 'nck' ? 'Register Nurse' : 'Register Doctor')
                   )}
                 </button>
               </div>

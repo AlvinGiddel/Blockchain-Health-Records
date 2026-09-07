@@ -1,7 +1,7 @@
 import { getAuthToken } from '../storage/secureVault';
 
 // Default to live Vercel backend. Can be configured to local LAN IP if desired.
-export const BASE_API_URL = 'https://blockchainrecords.vercel.app/api';
+export const BASE_API_URL = 'https://blockhealthrecords.online/api';
 
 /**
  * Universal Mobile API Client

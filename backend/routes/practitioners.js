@@ -27,13 +27,21 @@ router.get('/kmpdc/practitioners', practitionersController.getKmpdcPractitioners
 router.get('/kmpdc/inspect', requireAuth, requireSuperAdmin, practitionersController.inspectKmpdc);
 router.post('/kmpdc/practitioners', requireAuth, requireSuperAdmin, practitionersController.addKmpdcPractitioner);
 
+// Master NCK Registry Listing (Public Directory) & Super Admin Add & Inspect
+router.get('/nck/practitioners', practitionersController.getNckPractitioners);
+router.get('/nck/inspect', requireAuth, requireSuperAdmin, practitionersController.inspectNck);
+router.post('/nck/practitioners', requireAuth, requireSuperAdmin, practitionersController.addNckPractitioner);
+
 // Normalized aliases under `/api/practitioners/*`
 router.get('/practitioners/verify', practitionersController.verifyPractitionerHandler);
 router.get('/practitioners/kmpdc/verify', practitionersController.verifyKmpdc);
 router.get('/practitioners/kmpdc/inspect', requireAuth, requireSuperAdmin, practitionersController.inspectKmpdc);
 router.get('/practitioners/nck/verify', practitionersController.verifyNck);
+router.get('/practitioners/nck/inspect', requireAuth, requireSuperAdmin, practitionersController.inspectNck);
 router.get('/practitioners/kmpdc', practitionersController.getKmpdcPractitioners);
 router.post('/practitioners/kmpdc', requireAuth, requireSuperAdmin, practitionersController.addKmpdcPractitioner);
+router.get('/practitioners/nck', practitionersController.getNckPractitioners);
+router.post('/practitioners/nck', requireAuth, requireSuperAdmin, practitionersController.addNckPractitioner);
 router.get('/practitioners', practitionersController.getKmpdcPractitioners);
 
 module.exports = router;
