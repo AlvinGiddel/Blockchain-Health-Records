@@ -21,7 +21,7 @@ const buttonVariants = cva(
         ghost:
           'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#112239] hover:text-slate-900 dark:hover:text-white',
         link:
-          'text-[#0F766E] underline-offset-4 hover:underline font-semibold',
+          'text-[#0F766E] dark:text-[#2DD4BF] underline-offset-4 hover:underline font-semibold',
         verified:
           'bg-[#1D9E75] text-white hover:bg-[#178562] shadow-sm',
       },

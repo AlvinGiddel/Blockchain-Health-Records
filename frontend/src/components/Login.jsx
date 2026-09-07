@@ -401,7 +401,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
       <div className="w-full flex items-center justify-center p-4">
         <div className="w-full max-w-md bg-white dark:bg-[#0F243E] border border-[#E2E8F0] dark:border-[#1E3A5F] shadow-sm dark:shadow-2xl rounded-2xl p-6 sm:p-8">
           <div className="text-center mb-6">
-            <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-[#112239] border border-slate-200 dark:border-[#1E3A5F] flex items-center justify-center mx-auto mb-3 text-[#0B2545]">
+            <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-[#112239] border border-slate-200 dark:border-[#1E3A5F] flex items-center justify-center mx-auto mb-3 text-[#0B2545] dark:text-white">
               <KeyRound className="w-6 h-6 text-[#0F766E] dark:text-[#14B8A6]" />
             </div>
             <h2 className="text-xl font-bold text-[#0B2545] dark:text-white">Reset Access Password</h2>
@@ -429,7 +429,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
 
           <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="reset-email" className="text-xs font-semibold text-[#0B2545]">Email Address</Label>
+              <Label htmlFor="reset-email" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Email Address</Label>
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-3 top-3 text-[#94A3B8]" />
                 <Input
@@ -459,10 +459,10 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
             </Button>
           </form>
 
-          <div className="mt-6 pt-4 border-t border-[#E2E8F0] text-center">
+          <div className="mt-6 pt-4 border-t border-[#E2E8F0] dark:border-[#1E3A5F] text-center">
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0F766E] hover:underline"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#0F766E] dark:text-[#2DD4BF] hover:underline"
               onClick={() => {
                 setIsForgotPassword(false);
                 setError('');
@@ -500,7 +500,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
             </p>
           </div>
 
-          <p className="text-xs text-[#475569] leading-relaxed mb-6 max-w-sm mx-auto">
+          <p className="text-xs text-[#475569] dark:text-slate-300 leading-relaxed mb-6 max-w-sm mx-auto">
             Platform Super Administrators verify clinical institutions for credentialing compliance before activating the network ledger node. You will receive an activation email once approved.
           </p>
 
@@ -636,7 +636,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
           {/* Hospital/Clinic Name Field */}
           {isRegister && role === 'clinic' && (
             <div className="space-y-1.5">
-              <Label htmlFor="clinicName" className="text-xs font-semibold text-[#0B2545]">Hospital or Clinic Facility Name</Label>
+              <Label htmlFor="clinicName" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Hospital or Clinic Facility Name</Label>
               <div className="relative">
                 <Building2 className="w-4 h-4 absolute left-3 top-3 text-[#94A3B8]" />
                 <Input
@@ -649,7 +649,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                   onChange={(e) => setClinicName(e.target.value)}
                 />
               </div>
-              <span className="text-[11px] text-[#0F766E] flex items-center gap-1">
+              <span className="text-[11px] text-[#0F766E] dark:text-[#2DD4BF] flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3 text-[#1D9E75]" /> Institutional credentialing evaluated prior to ledger node provisioning.
               </span>
             </div>
@@ -661,7 +661,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
             {/* Full Name */}
             {isRegister && (
               <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-xs font-semibold text-[#0B2545]">
+                <Label htmlFor="name" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">
                   {role === 'clinic' ? 'Admin Full Name' : 'Full Name'}
                 </Label>
                 <div className="relative">
@@ -681,7 +681,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
 
             {/* Email Address */}
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-xs font-semibold text-[#0B2545]">Email Address</Label>
+              <Label htmlFor="email" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Email Address</Label>
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-3 top-3 text-[#94A3B8]" />
                 <Input
@@ -699,7 +699,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
             {/* Password */}
             <div className={`space-y-1.5 ${isRegister ? 'sm:col-span-2' : ''}`}>
               <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-xs font-semibold text-[#0B2545]">Password</Label>
+                <Label htmlFor="password" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Password</Label>
                 {!isRegister && (
                   <button
                     type="button"
@@ -729,7 +729,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-[#94A3B8] hover:text-[#0F172A] transition-colors"
+                  className="absolute right-3 top-3 text-[#94A3B8] hover:text-[#0F172A] dark:hover:text-[#F8FAFC] transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -740,13 +740,13 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
 
           {/* Role-Specific Details Section (Register Mode) */}
           {isRegister && (
-            <div className="pt-3 border-t border-[#E2E8F0] space-y-4">
+            <div className="pt-3 border-t border-[#E2E8F0] dark:border-[#1E3A5F] space-y-4">
               
               {/* Patient Fields */}
               {role === 'patient' && (
                 <>
                   <div className="space-y-1.5">
-                    <Label htmlFor="patientHospital" className="text-xs font-semibold text-[#0B2545] flex items-center gap-1.5">
+                    <Label htmlFor="patientHospital" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200 flex items-center gap-1.5">
                       <Building2 className="w-3.5 h-3.5 text-[#0F766E]" />
                       Primary Healthcare Facility <span className="text-red-500">*</span>
                     </Label>
@@ -765,14 +765,14 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                         </option>
                       ))}
                     </SearchableSelect>
-                    <span className="text-[11px] text-[#475569] block">
+                    <span className="text-[11px] text-[#475569] dark:text-slate-300 block">
                       Establishes your primary cryptographic clinical record anchor.
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label htmlFor="age" className="text-xs font-semibold text-[#0B2545]">Age</Label>
+                      <Label htmlFor="age" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Age</Label>
                       <Input
                         type="number"
                         id="age"
@@ -784,7 +784,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                     </div>
 
                     <div className="space-y-1">
-                      <Label htmlFor="gender" className="text-xs font-semibold text-[#0B2545]">Gender</Label>
+                      <Label htmlFor="gender" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Gender</Label>
                       <SearchableSelect 
                         id="gender" 
                         className="form-control" 
@@ -801,7 +801,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                     </div>
 
                     <div className="space-y-1">
-                      <Label htmlFor="bloodType" className="text-xs font-semibold text-[#0B2545]">Blood Group</Label>
+                      <Label htmlFor="bloodType" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Blood Group</Label>
                       <SearchableSelect 
                         id="bloodType" 
                         className="form-control" 
@@ -823,7 +823,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                     </div>
 
                     <div className="space-y-1">
-                      <Label htmlFor="patientPhone" className="text-xs font-semibold text-[#0B2545]">Contact Phone</Label>
+                      <Label htmlFor="patientPhone" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Contact Phone</Label>
                       <Input
                         type="tel"
                         id="patientPhone"
@@ -845,7 +845,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                     </div>
 
                     <div className="sm:col-span-2 space-y-1">
-                      <Label htmlFor="allergies" className="text-xs font-semibold text-[#0B2545]">Allergies / Critical Contraindications</Label>
+                      <Label htmlFor="allergies" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Allergies / Critical Contraindications</Label>
                       <Input
                         type="text"
                         id="allergies"
@@ -862,7 +862,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
               {role === 'doctor' && (
                 <>
                   <div className="space-y-2">
-                    <Label className="text-xs font-semibold text-[#0B2545] flex items-center justify-between">
+                    <Label className="text-xs font-semibold text-[#0B2545] dark:text-slate-200 flex items-center justify-between">
                       <span>Statutory Council & Professional Cadre</span>
                       <span className="text-red-500">*</span>
                     </Label>
@@ -887,12 +887,12 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                           }}
                           className={`p-2 rounded-lg text-xs font-medium border text-center transition-colors ${
                             cadre === item.id
-                              ? 'bg-[#0B2545] text-white border-[#0B2545] shadow-sm'
-                              : 'bg-white text-slate-700 border-[#E2E8F0] hover:bg-slate-50'
+                              ? 'bg-[#0B2545] dark:bg-[#0F766E] text-white border-[#0B2545] dark:border-[#0F766E] shadow-sm'
+                              : 'bg-white dark:bg-[#112239] text-slate-700 dark:text-slate-200 border-[#E2E8F0] dark:border-[#1E3A5F] hover:bg-slate-50 dark:hover:bg-[#1B314F]'
                           }`}
                         >
                           <div className="font-semibold">{item.label}</div>
-                          <div className={`text-[10px] ${cadre === item.id ? 'text-teal-200' : 'text-[#475569]'}`}>
+                          <div className={`text-[10px] ${cadre === item.id ? 'text-teal-200' : 'text-[#475569] dark:text-slate-300'}`}>
                             {item.regulator} Regulated
                           </div>
                         </button>
@@ -903,7 +903,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                   {/* Statutory License Number with Verification Status */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="license" className="text-xs font-semibold text-[#0B2545]">
+                      <Label htmlFor="license" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">
                         {cadre === 'nurse' || cadre === 'midwife'
                           ? 'Nursing Council Index / License Number (NCK)'
                           : 'Medical Practitioners License Number (KMPDC)'}
@@ -933,14 +933,14 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                     />
 
                     {councilStatus.verifying && (
-                      <div className="text-xs text-[#475569] flex items-center gap-1.5 mt-1">
+                      <div className="text-xs text-[#475569] dark:text-slate-300 flex items-center gap-1.5 mt-1">
                         <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0F766E]" />
                         <span>Verifying credentials against {cadre === 'nurse' || cadre === 'midwife' ? 'NCK Registry' : 'KMPDC Register'}...</span>
                       </div>
                     )}
 
                     {councilStatus.verified && councilStatus.record && (
-                      <div className="bg-[#E8F7F2] border border-[#A3E3CD] text-[#1D9E75] rounded-lg p-2.5 text-xs mt-1 flex items-start gap-2">
+                      <div className="bg-[#E8F7F2] dark:bg-[#064E3B]/40 border border-[#A3E3CD] dark:border-[#065F46] text-[#1D9E75] dark:text-[#34D399] rounded-lg p-2.5 text-xs mt-1 flex items-start gap-2">
                         <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
                         <div>
                           <strong>{councilStatus.regulator} Verified Practitioner:</strong> {councilStatus.record.fullName}
@@ -959,7 +959,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                   {/* Specialization & Hospital */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label htmlFor="specialization" className="text-xs font-semibold text-[#0B2545]">Department / Specialty</Label>
+                      <Label htmlFor="specialization" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Department / Specialty</Label>
                       <Input
                         type="text"
                         id="specialization"
@@ -971,7 +971,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                     </div>
 
                     <div className="space-y-1">
-                      <Label htmlFor="yearsOfExperience" className="text-xs font-semibold text-[#0B2545]">Years of Practice</Label>
+                      <Label htmlFor="yearsOfExperience" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Years of Practice</Label>
                       <Input
                         type="number"
                         id="yearsOfExperience"
@@ -984,7 +984,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                     </div>
 
                     <div className="sm:col-span-2 space-y-1">
-                      <Label htmlFor="doctorHospital" className="text-xs font-semibold text-[#0B2545] flex items-center gap-1.5">
+                      <Label htmlFor="doctorHospital" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200 flex items-center gap-1.5">
                         <Building2 className="w-3.5 h-3.5 text-[#0F766E]" />
                         Affiliated Healthcare Facility <span className="text-red-500">*</span>
                       </Label>
@@ -1019,7 +1019,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
 
                     {doctorOrgId === 'other' && (
                       <div className="sm:col-span-2 space-y-1">
-                        <Label htmlFor="customHospital" className="text-xs font-semibold text-[#0B2545]">Facility Name <span className="text-red-500">*</span></Label>
+                        <Label htmlFor="customHospital" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Facility Name <span className="text-red-500">*</span></Label>
                         <Input
                           type="text"
                           id="customHospital"
@@ -1035,7 +1035,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                     )}
 
                     <div className="space-y-1">
-                      <Label htmlFor="docPhone" className="text-xs font-semibold text-[#0B2545]">Contact Phone</Label>
+                      <Label htmlFor="docPhone" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Contact Phone</Label>
                       <Input
                         type="tel"
                         id="docPhone"
@@ -1057,18 +1057,18 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                     </div>
 
                     <div className="space-y-1">
-                      <Label htmlFor="profilePhoto" className="text-xs font-semibold text-[#0B2545]">Profile Photo (Optional)</Label>
+                      <Label htmlFor="profilePhoto" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Profile Photo (Optional)</Label>
                       <Input
                         type="file"
                         id="profilePhoto"
                         accept="image/*"
-                        className="text-xs file:py-1 file:px-2.5 file:rounded-md file:border-0 file:bg-slate-100 file:text-slate-800"
+                        className="text-xs file:py-1 file:px-2.5 file:rounded-md file:border-0 file:bg-slate-100 dark:file:bg-[#1B314F] file:text-slate-800 dark:file:text-slate-100"
                         onChange={handlePhotoChange}
                       />
                       {profilePhoto && (
                         <div className="mt-1.5 flex items-center gap-2">
-                          <img src={profilePhoto} alt="Preview" className="w-8 h-8 rounded-full object-cover border border-[#E2E8F0]" />
-                          <span className="text-[11px] text-[#475569]">Photo attached</span>
+                          <img src={profilePhoto} alt="Preview" className="w-8 h-8 rounded-full object-cover border border-[#E2E8F0] dark:border-[#1E3A5F]" />
+                          <span className="text-[11px] text-[#475569] dark:text-slate-300">Photo attached</span>
                         </div>
                       )}
                     </div>
