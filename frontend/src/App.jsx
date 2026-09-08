@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, LayoutDashboard, FileText, Globe, LogOut, UserCheck, Sun, Moon, Menu, X, ArrowLeft, Clock, AlertTriangle, Pill } from 'lucide-react';
+import { Shield, LayoutDashboard, FileText, Globe, LogOut, UserCheck, Sun, Moon, Menu, X, ArrowLeft, Clock, AlertTriangle, Pill, KeyRound } from 'lucide-react';
 import logoSvg from './assets/logo.svg';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
@@ -12,6 +12,7 @@ import Settings from './components/Settings';
 import PublicCertificateView from './components/PublicCertificateView';
 import PrescriptionsManager from './components/PrescriptionsManager';
 import PrescriptionVerificationView from './components/PrescriptionVerificationView';
+import PatientConsentPortal from './components/PatientConsentPortal';
 import PaystackRenewalModal from './components/PaystackRenewalModal';
 import { safeFetch } from './utils/api';
 import { Toaster } from './components/ui/sonner';
@@ -144,6 +145,8 @@ export default function App() {
         return user.role === 'patient' ? 'My Health Folder' : 'Patient Dossiers';
       case 'prescriptions':
         return 'Clinical Prescriptions & Pharmacy';
+      case 'consent':
+        return 'Access & Consent Management';
       case 'blockchain':
         return 'Ledger Explorer';
       case 'profile':
@@ -403,6 +406,8 @@ export default function App() {
             onSelectPrescriptionForVerification={(token) => setPublicPrescriptionToken(token)} 
           />
         );
+      case 'consent':
+        return <PatientConsentPortal user={user} />;
       case 'blockchain':
         if (user.role === 'patient') {
           return <Dashboard user={user} onSelectPatient={handleSelectPatient} onUpdateUser={handleUpdateUser} onNavigate={setActiveTab} />;
@@ -584,6 +589,16 @@ export default function App() {
             <Pill size={20} />
             <span>Prescriptions</span>
           </button>
+          
+          {user.role === 'patient' && (
+            <button
+              className={`sidebar-link ${activeTab === 'consent' ? 'active' : ''}`}
+              onClick={() => handleNavClick('consent')}
+            >
+              <KeyRound size={20} />
+              <span>Access & Consent</span>
+            </button>
+          )}
           
           {user.role !== 'patient' && (
             <button

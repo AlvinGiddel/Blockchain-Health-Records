@@ -29,7 +29,7 @@ async function findDoctorAndPatient(doctorId, patientId, client = null) {
 }
 
 /**
- * Check if treating relationship exists or active emergency break-glass override (< 1 hour)
+ * Check if treating relationship exists, active patient consent grant exists, or active emergency break-glass override (< 1 hour)
  * @param {string} doctorId
  * @param {string} patientId
  * @param {object} [client]
@@ -37,7 +37,7 @@ async function findDoctorAndPatient(doctorId, patientId, client = null) {
  */
 async function checkTreatingRelationship(doctorId, patientId, client = null) {
     const runner = client || db;
-    const [apptRes, breakGlassRes] = await Promise.all([
+    const [apptRes, breakGlassRes, consentRes] = await Promise.all([
         runner.query(
             "SELECT 1 FROM appointments WHERE patient_id = $1 AND doctor_id = $2 AND status IN ('Confirmed', 'Completed') LIMIT 1",
             [patientId, doctorId]
@@ -45,9 +45,18 @@ async function checkTreatingRelationship(doctorId, patientId, client = null) {
         runner.query(
             "SELECT 1 FROM audit_logs WHERE event_type IN ('emergency_break_glass', 'break_glass') AND patient_id = $1 AND doctor_id = $2 AND timestamp >= NOW() - INTERVAL '1 hour' LIMIT 1",
             [patientId, doctorId]
+        ),
+        runner.query(
+            `SELECT 1 FROM patient_consents 
+             WHERE patient_id = $1 
+               AND (doctor_id = $2 OR organization_id IN (SELECT organization_id FROM users WHERE id = $2 AND organization_id IS NOT NULL))
+               AND status = 'active' 
+               AND (expires_at IS NULL OR expires_at > NOW()) 
+             LIMIT 1`,
+            [patientId, doctorId]
         )
     ]);
-    return apptRes.rows.length > 0 || breakGlassRes.rows.length > 0;
+    return apptRes.rows.length > 0 || breakGlassRes.rows.length > 0 || consentRes.rows.length > 0;
 }
 
 /**

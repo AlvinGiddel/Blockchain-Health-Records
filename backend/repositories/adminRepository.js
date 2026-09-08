@@ -497,7 +497,24 @@ async function getDoctorsByOrg({ orgId, isSuperAdmin, requestedOrgId, isPatient,
     let query;
     let params = [];
 
-    if (orgId && (!isPatient || !requestedOrgId)) {
+    if (isPatient && patientId) {
+        const { rows: mems } = await runner.query(
+            "SELECT organization_id FROM tenant_memberships WHERE user_id = $1 AND status = 'active'",
+            [patientId]
+        );
+        if (mems.length > 0) {
+            const orgIds = mems.map(m => m.organization_id);
+            if (requestedOrgId && orgIds.includes(requestedOrgId)) {
+                query = 'SELECT id, name, email, role, organization_id as "organizationId", public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE organization_id = $1 AND role = \'doctor\' AND is_approved = true ORDER BY created_at DESC;';
+                params = [requestedOrgId];
+            } else {
+                query = 'SELECT id, name, email, role, organization_id as "organizationId", public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE organization_id = ANY($1::uuid[]) AND role = \'doctor\' AND is_approved = true ORDER BY created_at DESC;';
+                params = [orgIds];
+            }
+        } else {
+            return [];
+        }
+    } else if (orgId) {
         query = 'SELECT id, name, email, role, organization_id as "organizationId", public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE organization_id = $1 AND role = \'doctor\' AND is_approved = true ORDER BY created_at DESC;';
         params = [orgId];
     } else if (requestedOrgId) {
@@ -505,17 +522,6 @@ async function getDoctorsByOrg({ orgId, isSuperAdmin, requestedOrgId, isPatient,
         params = [requestedOrgId];
     } else if (isSuperAdmin) {
         query = 'SELECT u.id, u.name, u.email, u.role, u.organization_id as "organizationId", o.name as "organizationName", o.status as "organizationStatus", u.public_key as "publicKey", u.profile_photo as "profilePhoto", u.doctor_profile as "doctorProfile", u.is_approved as "isApproved", u.created_at as "createdAt" FROM users u LEFT JOIN organizations o ON u.organization_id = o.id WHERE u.role = \'doctor\' AND u.is_approved = true ORDER BY u.created_at DESC;';
-    } else if (isPatient && patientId) {
-        const { rows: mems } = await runner.query(
-            "SELECT organization_id FROM tenant_memberships WHERE user_id = $1 AND status = 'active' ORDER BY joined_at ASC LIMIT 1",
-            [patientId]
-        );
-        if (mems.length > 0) {
-            query = 'SELECT id, name, email, role, organization_id as "organizationId", public_key as "publicKey", profile_photo as "profilePhoto", doctor_profile as "doctorProfile", is_approved as "isApproved", created_at as "createdAt" FROM users WHERE organization_id = $1 AND role = \'doctor\' AND is_approved = true ORDER BY created_at DESC;';
-            params = [mems[0].organization_id];
-        } else {
-            return [];
-        }
     } else {
         return [];
     }

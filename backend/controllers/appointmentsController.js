@@ -9,6 +9,7 @@ const {
     getRequesterOrgScope,
     verifyAuthToken
 } = require('../utils/helpers');
+const { sendSms } = require('../services/smsService');
 
 /**
  * Format a 24-hour time string into a 12-hour AM/PM string
@@ -231,6 +232,23 @@ const updateAppointmentStatus = catchAsync(async (req, res) => {
         doctorName: updatedAppointment.doctor_name,
         details: `Appointment status updated to ${status} for ${updatedAppointment.patient_name} with Dr. ${updatedAppointment.doctor_name}.`
     }).catch(err => console.error('Failed to log appointment status update audit:', err));
+
+    // Non-blocking clinical SMS notification when confirmed
+    if (status === 'Confirmed') {
+        appointmentsRepo.findUserById(updatedAppointment.patient_id)
+            .then(patient => {
+                const pProfile = typeof patient?.patient_profile === 'string' ? JSON.parse(patient.patient_profile) : patient?.patient_profile;
+                const ptPhone = pProfile?.phone || pProfile?.contactNumber;
+                if (ptPhone) {
+                    const formattedTime = formatTime12hBackend(updatedAppointment.time);
+                    sendSms({
+                        to: ptPhone,
+                        message: `BlockHealth: Your appointment with Dr. ${updatedAppointment.doctor_name} on ${updatedAppointment.date} at ${formattedTime} has been CONFIRMED.`
+                    }).catch(e => console.error('[SMS] Appointment confirmation SMS failed:', e));
+                }
+            })
+            .catch(e => console.error('[SMS] Failed to query patient for appointment SMS:', e));
+    }
 
     const responseAppointment = {
         id: updatedAppointment.id,

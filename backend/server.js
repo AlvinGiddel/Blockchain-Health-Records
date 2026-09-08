@@ -18,6 +18,7 @@ const createRecordsRouter = require('./routes/records');
 const organizationRoutes = require('./routes/organizations');
 const createAdminRouter = require('./routes/admin');
 const prescriptionRoutes = require('./routes/prescriptions');
+const consentRoutes = require('./routes/consentRoutes');
 
 // Background Jobs & Workers (Phase 7)
 const { autoMinerJob, licenseCheckJob } = require('./jobs');
@@ -178,6 +179,9 @@ app.use('/api', createAdminRouter({
 
 // Prescriptions & Pharmacy Dispensing Addon Domain Router
 app.use('/api', prescriptionRoutes);
+
+// Patient Consents & Granular Access Delegation Domain Router
+app.use('/api', consentRoutes);
 
 // ==================== BACKGROUND JOBS & SCHEMA BOOTSTRAP ====================
 

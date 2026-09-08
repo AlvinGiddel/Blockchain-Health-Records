@@ -10,6 +10,7 @@ const {
     sendPractitionerPendingEmail,
     sendAdminNewPractitionerAlert
 } = require('../mailer');
+const { sendSms } = require('../services/smsService');
 const { generateKeyPair, getKenyanTimestamp } = require('../blockchain');
 const { verifyPractitioner, recordPractitionerAttestation } = require('../services/practitionerAttestation');
 const {
@@ -956,6 +957,39 @@ const breakGlass = catchAsync(async (req, res) => {
     });
 
     console.log(`[ALERT] Break-Glass Emergency Override logged: Dr. ${dName} -> Patient ${pName}`);
+
+    // Dual Real-Time Emergency Notification (Patient Phone + Facility Admin / Oversight)
+    (async () => {
+        try {
+            // 1. Alert Patient immediately on their mobile device
+            const patPhone = patient.patient_profile?.phone || patient.patient_profile?.contactNumber || patient.phone;
+            if (patPhone) {
+                const patSmsMsg = `BHC EMERGENCY ALERT: Dr. ${dName} accessed your medical records under Emergency Break-Glass. Justification: "${reason.trim()}". If this was unauthorized, contact your clinic or support immediately.`;
+                sendSms({ to: patPhone, message: patSmsMsg, type: 'emergency_break_glass' }).catch(err => 
+                    console.warn('[SMS Dispatch] Failed patient break-glass SMS:', err.message)
+                );
+            }
+
+            // 2. Alert Facility Admin / Oversight in real time
+            if (doctorOrgId) {
+                const adminRes = await db.query(
+                    "SELECT email, doctor_profile, patient_profile FROM users WHERE organization_id = $1 AND role IN ('admin', 'super_admin') LIMIT 1",
+                    [doctorOrgId]
+                );
+                const adminUser = adminRes.rows[0];
+                const adminPhone = adminUser?.doctor_profile?.phone || adminUser?.patient_profile?.phone;
+                if (adminPhone) {
+                    const adminSmsMsg = `BHC FACILITY ALERT: Emergency Break-Glass invoked by Dr. ${dName} for Patient ${pName}. Justification: "${reason.trim()}". Review audit logs on your admin console.`;
+                    sendSms({ to: adminPhone, message: adminSmsMsg, type: 'facility_break_glass_oversight' }).catch(err => 
+                        console.warn('[SMS Dispatch] Failed admin break-glass SMS:', err.message)
+                    );
+                }
+            }
+        } catch (dispatchErr) {
+            console.warn('[SMS Dispatch] Error during break-glass dual alert dispatch:', dispatchErr.message);
+        }
+    })();
+
     res.json({
         success: true,
         message: `Emergency break-glass access activated for Dr. ${dName}. Audit event recorded on ledger.`,

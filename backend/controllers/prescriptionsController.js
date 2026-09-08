@@ -7,10 +7,12 @@
 
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
+const db = require('../db');
 const prescriptionsRepo = require('../repositories/prescriptionsRepository');
 const recordsRepo = require('../repositories/recordsRepository');
 const AppError = require('../utils/AppError');
 const catchAsync = require('../utils/catchAsync');
+const { sendSms } = require('../services/smsService');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
 
@@ -201,6 +203,22 @@ const createPrescription = catchAsync(async (req, res) => {
         items,
         overrideJustification: trimmedOverride || null
     });
+
+    // Non-blocking clinical SMS notification to patient
+    db.query('SELECT name, patient_profile FROM users WHERE id = $1', [patientId])
+        .then(({ rows }) => {
+            const pt = rows[0];
+            const pProfile = typeof pt?.patient_profile === 'string' ? JSON.parse(pt.patient_profile) : pt?.patient_profile;
+            const ptPhone = pProfile?.phone || pProfile?.contactNumber;
+            if (ptPhone) {
+                const medSummary = items.map(i => i.medicationName).slice(0, 2).join(', ') + (items.length > 2 ? '...' : '');
+                sendSms({
+                    to: ptPhone,
+                    message: `BlockHealth: New prescription #${prescription.id.slice(0, 8)} issued by Dr. ${req.user.name || 'Provider'} (${medSummary}). View: https://blockhealth.org/verify-rx?token=${qrToken}`
+                }).catch(e => console.error('[SMS] Prescription notification failed:', e));
+            }
+        })
+        .catch(e => console.error('[SMS] Failed to query patient for prescription SMS:', e));
 
     return res.status(201).json({
         status: 'success',
