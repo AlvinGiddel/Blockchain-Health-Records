@@ -1314,8 +1314,9 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
             width: '100%',
             maxWidth: '650px',
             padding: '24px',
-            border: '1px solid var(--glass-border)',
-            background: 'rgba(15, 15, 25, 0.98)',
+            border: '1px solid var(--border)',
+            background: 'var(--card)',
+            color: 'var(--text-primary)',
             maxHeight: '90vh',
             overflowY: 'auto'
           }}>
@@ -1477,8 +1478,9 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
             width: '100%',
             maxWidth: '550px',
             padding: '24px',
-            border: '1px solid var(--glass-border)',
-            background: 'rgba(15, 15, 25, 0.98)',
+            border: '1px solid var(--border)',
+            background: 'var(--card)',
+            color: 'var(--text-primary)',
             maxHeight: '90vh',
             overflowY: 'auto'
           }}>
@@ -1498,12 +1500,12 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
               </button>
             </div>
 
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '24px', background: 'var(--card)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
-              <div style={{ background: 'rgba(11, 37, 69, 0.08)', border: '1px solid rgba(11, 37, 69, 0.2)', borderRadius: '12px', width: '72px', height: '72px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <User size={36} color="#0B2545" />
+            <div style={{ display: 'flex', gap: '20px', alignItems: 'center', marginBottom: '24px', background: 'var(--bg-tertiary)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <div style={{ background: 'rgba(15, 118, 110, 0.1)', border: '1px solid rgba(15, 118, 110, 0.25)', borderRadius: '12px', width: '72px', height: '72px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <User size={36} color="var(--color-primary)" />
               </div>
               <div>
-                <h4 style={{ fontSize: '1.25rem', margin: '0 0 4px 0' }}>Dr. {user.name}</h4>
+                <h4 style={{ fontSize: '1.25rem', margin: '0 0 4px 0', color: 'var(--text-primary)' }}>Dr. {user.name}</h4>
                 <p style={{ color: 'var(--color-accent)', fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>{user.doctorProfile?.specialization || 'Clinical Practitioner'}</p>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '2px 0 0 0' }}>{user.doctorProfile?.hospital || 'Blockchain Health Network'}</p>
               </div>
@@ -1512,19 +1514,19 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '8px' }}>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Years of Experience</span>
-                <span style={{ fontWeight: 600 }}>{user.doctorProfile?.yearsOfExperience || '8'} Years</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{user.doctorProfile?.yearsOfExperience || '8'} Years</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '8px' }}>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>License Registration No.</span>
-                <span style={{ fontWeight: 600, fontFamily: 'monospace' }}>{user.doctorProfile?.licenseNumber || 'LIC-2024-8841'}</span>
+                <span style={{ fontWeight: 600, fontFamily: 'monospace', color: 'var(--text-primary)' }}>{user.doctorProfile?.licenseNumber || 'LIC-2024-8841'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '8px' }}>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Duty Hours Schedule</span>
-                <span style={{ fontWeight: 600 }}>{formatTime12h(user.doctorProfile?.availability?.workingHoursStart || '08:00')} - {formatTime12h(user.doctorProfile?.availability?.workingHoursEnd || '17:00')}</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{formatTime12h(user.doctorProfile?.availability?.workingHoursStart || '08:00')} - {formatTime12h(user.doctorProfile?.availability?.workingHoursEnd || '17:00')}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '8px' }}>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Clinic Active Days</span>
-                <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{user.doctorProfile?.availability?.workingDays?.join(', ') || 'Mon, Tue, Wed, Thu, Fri'}</span>
+                <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>{user.doctorProfile?.availability?.workingDays?.join(', ') || 'Mon, Tue, Wed, Thu, Fri'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--glass-border)', paddingBottom: '8px' }}>
                 <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Live Availability Status</span>
@@ -1553,8 +1555,8 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                 </button>
               </div>
               <div style={{
-                background: 'rgba(0,0,0,0.3)',
-                border: '1px solid var(--glass-border)',
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border)',
                 borderRadius: '8px',
                 padding: '12px',
                 wordBreak: 'break-all',
@@ -1562,7 +1564,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                 fontSize: '0.75rem',
                 maxHeight: '120px',
                 overflowY: 'auto',
-                color: 'var(--color-accent)'
+                color: 'var(--color-primary)'
               }}>
                 {user.publicKey}
               </div>
@@ -1603,8 +1605,9 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
             width: '100%',
             maxWidth: '850px',
             padding: '24px',
-            border: '1px solid var(--glass-border)',
-            background: 'rgba(15, 15, 25, 0.98)',
+            border: '1px solid var(--border)',
+            background: 'var(--card)',
+            color: 'var(--text-primary)',
             maxHeight: '90vh',
             overflowY: 'auto',
             display: 'flex',
@@ -1766,8 +1769,9 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
             width: '100%',
             maxWidth: '800px',
             padding: '24px',
-            border: '1px solid var(--glass-border)',
-            background: 'rgba(15, 15, 25, 0.98)',
+            border: '1px solid var(--border)',
+            background: 'var(--card)',
+            color: 'var(--text-primary)',
             maxHeight: '90vh',
             overflowY: 'auto',
             display: 'flex',
