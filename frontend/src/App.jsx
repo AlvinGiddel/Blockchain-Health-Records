@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, LayoutDashboard, FileText, Globe, LogOut, UserCheck, Sun, Moon, Menu, X, ArrowLeft, Clock, AlertTriangle } from 'lucide-react';
+import { Shield, LayoutDashboard, FileText, Globe, LogOut, UserCheck, Sun, Moon, Menu, X, ArrowLeft, Clock, AlertTriangle, Pill } from 'lucide-react';
 import logoSvg from './assets/logo.svg';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
@@ -10,6 +10,8 @@ import ResetPassword from './components/ResetPassword';
 import Profile from './components/Profile';
 import Settings from './components/Settings';
 import PublicCertificateView from './components/PublicCertificateView';
+import PrescriptionsManager from './components/PrescriptionsManager';
+import PrescriptionVerificationView from './components/PrescriptionVerificationView';
 import PaystackRenewalModal from './components/PaystackRenewalModal';
 import { safeFetch } from './utils/api';
 import { Toaster } from './components/ui/sonner';
@@ -140,6 +142,8 @@ export default function App() {
         return (user.role === 'admin' || user.role === 'super_admin') ? 'Admin Panel' : 'Dashboard';
       case 'records':
         return user.role === 'patient' ? 'My Health Folder' : 'Patient Dossiers';
+      case 'prescriptions':
+        return 'Clinical Prescriptions & Pharmacy';
       case 'blockchain':
         return 'Ledger Explorer';
       case 'profile':
@@ -162,6 +166,13 @@ export default function App() {
   };
 
   const [publicRecordId, setPublicRecordId] = useState(null);
+  const [publicPrescriptionToken, setPublicPrescriptionToken] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const fromParam = urlParams.get('verifyPrescription');
+    if (fromParam) return fromParam;
+    const match = window.location.pathname.match(/^\/verify-prescription\/(.+)/);
+    return match ? decodeURIComponent(match[1]) : null;
+  });
 
   // Global theme context
   const { theme, toggleTheme } = useTheme();
@@ -175,6 +186,10 @@ export default function App() {
     const verifyId = urlParams.get('verifyRecordId');
     if (verifyId) {
       setPublicRecordId(verifyId);
+    }
+    const verifyRx = urlParams.get('verifyPrescription');
+    if (verifyRx) {
+      setPublicPrescriptionToken(verifyRx);
     }
   }, []);
 
@@ -381,6 +396,13 @@ export default function App() {
             }}
           />
         );
+      case 'prescriptions':
+        return (
+          <PrescriptionsManager 
+            user={user} 
+            onSelectPrescriptionForVerification={(token) => setPublicPrescriptionToken(token)} 
+          />
+        );
       case 'blockchain':
         if (user.role === 'patient') {
           return <Dashboard user={user} onSelectPatient={handleSelectPatient} onUpdateUser={handleUpdateUser} onNavigate={setActiveTab} />;
@@ -430,6 +452,20 @@ export default function App() {
         recordId={publicRecordId}
         onDismiss={() => {
           setPublicRecordId(null);
+          const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }}
+      />
+    );
+  }
+
+  // Intercept render cycle if Prescription QR Token verification is active in URL
+  if (publicPrescriptionToken) {
+    return (
+      <PrescriptionVerificationView
+        qrToken={publicPrescriptionToken}
+        onDismiss={() => {
+          setPublicPrescriptionToken(null);
           const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
           window.history.replaceState({}, document.title, cleanUrl);
         }}
@@ -540,6 +576,14 @@ export default function App() {
               <span>{user.role === 'patient' ? 'My Health Folder' : 'Patient Dossiers'}</span>
             </button>
           )}
+
+          <button
+            className={`sidebar-link ${activeTab === 'prescriptions' ? 'active' : ''}`}
+            onClick={() => handleNavClick('prescriptions')}
+          >
+            <Pill size={20} />
+            <span>Prescriptions</span>
+          </button>
           
           {user.role !== 'patient' && (
             <button

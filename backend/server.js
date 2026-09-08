@@ -17,6 +17,7 @@ const createAppointmentsRouter = require('./routes/appointments');
 const createRecordsRouter = require('./routes/records');
 const organizationRoutes = require('./routes/organizations');
 const createAdminRouter = require('./routes/admin');
+const prescriptionRoutes = require('./routes/prescriptions');
 
 // Background Jobs & Workers (Phase 7)
 const { autoMinerJob, licenseCheckJob } = require('./jobs');
@@ -174,6 +175,9 @@ app.use('/api', createAdminRouter({
     healthBlockchain,
     syncBlockchainWithDatabase: () => autoMinerJob.syncBlockchainWithDatabase(healthBlockchain)
 }));
+
+// Prescriptions & Pharmacy Dispensing Addon Domain Router
+app.use('/api', prescriptionRoutes);
 
 // ==================== BACKGROUND JOBS & SCHEMA BOOTSTRAP ====================
 

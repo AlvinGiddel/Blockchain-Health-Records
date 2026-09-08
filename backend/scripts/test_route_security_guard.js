@@ -56,7 +56,10 @@ const PUBLIC_ALLOWLIST = new Set([
     'POST /api/records/verify-seal',
     'GET /api/records/:id/verify-blockchain',
     'GET /api/blockchain/blocks',
-    'GET /api/blockchain/validate'
+    'GET /api/blockchain/validate',
+
+    // Public prescription QR passport verification
+    'GET /api/prescriptions/verify/:qr_token'
 ]);
 
 /**

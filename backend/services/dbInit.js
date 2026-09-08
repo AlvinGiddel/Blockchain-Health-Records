@@ -101,17 +101,68 @@ async function initNckRegistry() {
 }
 
 /**
+ * Initialize Prescriptions & Dispensing Tables
+ */
+async function initPrescriptionsSchema() {
+    try {
+        await db.query(`
+            CREATE TABLE IF NOT EXISTS prescriptions (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                patient_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+                doctor_id UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+                organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE RESTRICT,
+                status VARCHAR(50) NOT NULL DEFAULT 'ISSUED' CHECK (status IN ('ISSUED', 'PARTIALLY_FILLED', 'FILLED', 'CANCELLED', 'EXPIRED')),
+                qr_token VARCHAR(100) UNIQUE NOT NULL,
+                instructions TEXT,
+                expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '30 days'),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+
+            CREATE TABLE IF NOT EXISTS prescription_items (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                prescription_id UUID NOT NULL REFERENCES prescriptions(id) ON DELETE CASCADE,
+                rxnorm_code VARCHAR(100),
+                medication_name VARCHAR(255) NOT NULL,
+                dosage VARCHAR(100) NOT NULL,
+                frequency VARCHAR(100) NOT NULL,
+                duration VARCHAR(100) NOT NULL,
+                quantity_prescribed INT NOT NULL CHECK (quantity_prescribed > 0),
+                quantity_dispensed INT NOT NULL DEFAULT 0 CHECK (quantity_dispensed >= 0),
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+
+            CREATE TABLE IF NOT EXISTS dispense_logs (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                prescription_id UUID NOT NULL REFERENCES prescriptions(id) ON DELETE RESTRICT,
+                pharmacy_org_id UUID REFERENCES organizations(id) ON DELETE SET NULL,
+                pharmacist_id UUID REFERENCES users(id) ON DELETE SET NULL,
+                quantity_dispensed INT NOT NULL CHECK (quantity_dispensed > 0),
+                notes TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
+        console.log('[Prescriptions Service] Prescriptions schema verified.');
+    } catch (err) {
+        console.warn('[Prescriptions Service] Schema init notice:', err.message);
+    }
+}
+
+/**
  * Bootstraps all database extensions and foundational reference tables
  */
 async function initDatabaseSchema() {
     await initUserSchemaExtensions();
     await initKmpdcRegistry();
     await initNckRegistry();
+    await initPrescriptionsSchema();
 }
 
 module.exports = {
     initDatabaseSchema,
     initKmpdcRegistry,
     initNckRegistry,
-    initUserSchemaExtensions
+    initUserSchemaExtensions,
+    initPrescriptionsSchema
 };
+
