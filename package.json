@@ -2,7 +2,9 @@
   "name": "blockchain-health-records",
   "version": "1.0.0",
   "private": true,
+  "main": "backend/server.js",
   "scripts": {
+    "start": "node backend/server.js",
     "build": "npm run build --prefix frontend"
   },
   "dependencies": {
