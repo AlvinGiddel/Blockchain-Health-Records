@@ -141,6 +141,8 @@ async function initPrescriptionsSchema() {
                 notes TEXT,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             );
+
+            ALTER TABLE prescriptions ADD COLUMN IF NOT EXISTS override_justification TEXT;
         `);
         console.log('[Prescriptions Service] Prescriptions schema verified.');
     } catch (err) {

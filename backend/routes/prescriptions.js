@@ -1,6 +1,6 @@
 const express = require('express');
 const prescriptionsController = require('../controllers/prescriptionsController');
-const { requireAuth, requireDoctor, requireAdmin } = require('../middleware/auth');
+const { requireAuth, requireDoctor, requireAdmin, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -19,10 +19,10 @@ router.get('/prescriptions', requireAuth, prescriptionsController.listPrescripti
 // 5. Get Prescription Details by ID
 router.get('/prescriptions/:id', requireAuth, prescriptionsController.getPrescriptionById);
 
-// 6. Pharmacy Dispensing / Fulfillment (Clinic staff / Pharmacist / Admin / Doctor)
-router.post('/prescriptions/:id/dispense', requireAuth, prescriptionsController.dispensePrescription);
+// 6. Pharmacy Dispensing / Fulfillment (Restricted to Doctor, Clinic Admin, Super Admin)
+router.post('/prescriptions/:id/dispense', requireAuth, requireRole('doctor', 'admin', 'super_admin'), prescriptionsController.dispensePrescription);
 
-// 7. Cancel Prescription (Prescribing Doctor / Clinic Admin)
-router.post('/prescriptions/:id/cancel', requireAuth, prescriptionsController.cancelPrescription);
+// 7. Cancel Prescription (Prescribing Doctor / Clinic Admin / Super Admin)
+router.post('/prescriptions/:id/cancel', requireAuth, requireRole('doctor', 'admin', 'super_admin'), prescriptionsController.cancelPrescription);
 
 module.exports = router;

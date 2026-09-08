@@ -31,6 +31,7 @@ export default function PrescriptionsManager({ user, onSelectPrescriptionForVeri
   const [issueLoading, setIssueLoading] = useState(false);
   const [issueError, setIssueError] = useState('');
   const [allergyWarnings, setAllergyWarnings] = useState([]);
+  const [overrideJustification, setOverrideJustification] = useState('');
 
   // Drug Autocomplete States
   const [drugSearchResults, setDrugSearchResults] = useState({});
@@ -179,6 +180,11 @@ export default function PrescriptionsManager({ user, onSelectPrescriptionForVeri
       }
     }
 
+    if (allergyWarnings.length > 0 && (!overrideJustification || overrideJustification.trim().length < 10)) {
+      setIssueError('Clinical Safety Block: Documented allergy contraindication detected. You must provide a clinical override justification (min. 10 characters) to proceed.');
+      return;
+    }
+
     setIssueLoading(true);
     setIssueError('');
 
@@ -193,6 +199,7 @@ export default function PrescriptionsManager({ user, onSelectPrescriptionForVeri
           patientId: selectedPatientId,
           instructions,
           expiresAt: expiresAt.toISOString(),
+          overrideJustification: overrideJustification.trim(),
           items: items.map(i => ({
             ...i,
             quantityPrescribed: parseInt(i.quantityPrescribed, 10)
@@ -206,6 +213,7 @@ export default function PrescriptionsManager({ user, onSelectPrescriptionForVeri
       setInstructions('');
       setItems([{ medicationName: '', rxnormCode: '', dosage: '', frequency: 'Twice daily', duration: '7 days', quantityPrescribed: 14 }]);
       setAllergyWarnings([]);
+      setOverrideJustification('');
       loadPrescriptions();
 
       // Show QR modal for the newly issued prescription
@@ -522,13 +530,45 @@ export default function PrescriptionsManager({ user, onSelectPrescriptionForVeri
             )}
 
             {allergyWarnings.length > 0 && (
-              <div className="bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 rounded-xl p-3 text-xs mb-4 flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 mt-0.5 text-amber-600 shrink-0" />
-                <div>
-                  <strong className="block font-semibold">Clinical Contraindication / Allergy Notice:</strong>
-                  {allergyWarnings.map((w, i) => (
-                    <div key={i}>{w}</div>
-                  ))}
+              <div className="bg-red-50 dark:bg-red-950/50 border-2 border-red-400 dark:border-red-700 text-red-900 dark:text-red-200 rounded-xl p-4 text-xs mb-4 space-y-3">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="w-5 h-5 mt-0.5 text-red-600 dark:text-red-400 shrink-0" />
+                  <div>
+                    <strong className="block font-bold text-red-800 dark:text-red-300 text-sm">
+                      CRITICAL CLINICAL ALLERGY HARD BLOCK
+                    </strong>
+                    <p className="mt-1 text-red-700 dark:text-red-300">
+                      The patient has documented contraindications to one or more selected medications:
+                    </p>
+                    <ul className="list-disc list-inside mt-1 space-y-0.5 font-medium">
+                      {allergyWarnings.map((w, i) => (
+                        <li key={i}>{w}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-red-200 dark:border-red-800">
+                  <Label htmlFor="rx-override-rationale" className="font-bold text-red-900 dark:text-red-200 block mb-1">
+                    Mandatory Clinical Override Justification <span className="text-red-600">*</span>
+                  </Label>
+                  <p className="text-[11px] text-red-700 dark:text-red-300 mb-1.5">
+                    This action will be permanently recorded on the immutable clinical audit trail. Document therapeutic rationale, desensitization protocol, or lack of alternatives.
+                  </p>
+                  <textarea
+                    id="rx-override-rationale"
+                    rows={2}
+                    className="form-control w-full text-xs border-red-300 focus:border-red-500 bg-white dark:bg-[#112239]"
+                    placeholder="e.g. Desensitization protocol initiated; antihistamine prophylaxis administered; no therapeutic alternative available..."
+                    value={overrideJustification}
+                    onChange={(e) => setOverrideJustification(e.target.value)}
+                    required
+                  />
+                  {overrideJustification.trim().length > 0 && overrideJustification.trim().length < 10 && (
+                    <span className="text-[10px] text-red-600 dark:text-red-400 mt-1 block">
+                      Minimum 10 characters required ({overrideJustification.trim().length}/10).
+                    </span>
+                  )}
                 </div>
               </div>
             )}
@@ -718,7 +758,7 @@ export default function PrescriptionsManager({ user, onSelectPrescriptionForVeri
                 </Button>
                 <Button
                   type="submit"
-                  disabled={issueLoading}
+                  disabled={issueLoading || (allergyWarnings.length > 0 && overrideJustification.trim().length < 10)}
                   className="bg-[#0F766E] hover:bg-[#0D655E] text-white font-semibold"
                 >
                   {issueLoading ? (

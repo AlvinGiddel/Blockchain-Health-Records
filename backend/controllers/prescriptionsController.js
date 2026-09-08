@@ -6,9 +6,13 @@
  */
 
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const prescriptionsRepo = require('../repositories/prescriptionsRepository');
+const recordsRepo = require('../repositories/recordsRepository');
 const AppError = require('../utils/AppError');
 const catchAsync = require('../utils/catchAsync');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
 
 // In-memory LRU Cache for drug searches (TTL: 10 minutes)
 const drugSearchCache = new Map();
@@ -132,7 +136,7 @@ const searchDrugs = catchAsync(async (req, res) => {
  * POST /api/prescriptions
  */
 const createPrescription = catchAsync(async (req, res) => {
-    const { patientId, instructions, expiresAt, items } = req.body;
+    const { patientId, instructions, expiresAt, items, overrideJustification } = req.body;
     const doctorId = req.user.id;
     const organizationId = req.user.organization_id || req.user.organizationId;
 
@@ -148,10 +152,16 @@ const createPrescription = catchAsync(async (req, res) => {
         throw new AppError('At least one prescription medication item is required.', 400);
     }
 
-    // Generate cryptographic QR verification token
+    // 1. Enforce Treating Relationship Check (confirmed/completed appointment or active emergency break-glass < 1 hr)
+    const isTreating = await recordsRepo.checkTreatingRelationship(doctorId, patientId);
+    if (!isTreating) {
+        throw new AppError('Access Denied: You do not have an active treatment relationship (confirmed/completed appointment) or emergency break-glass authorization for this patient.', 403);
+    }
+
+    // 2. Generate cryptographic QR verification token
     const qrToken = `rx_${crypto.randomBytes(18).toString('hex')}`;
 
-    // Clinical Contraindication / Allergy Safety Cross-Check
+    // 3. Clinical Contraindication / Allergy Safety Cross-Check
     const patientAllergies = await prescriptionsRepo.getPatientAllergies(patientId);
     const allergyWarnings = [];
 
@@ -163,11 +173,22 @@ const createPrescription = catchAsync(async (req, res) => {
                 if (allergy && (drugName.includes(allergy) || (allergy.includes('penicillin') && (drugName.includes('amoxicillin') || drugName.includes('ampicillin') || drugName.includes('augmentin'))))) {
                     allergyWarnings.push({
                         medication: item.medicationName,
-                        allergyAlert: `Patient has documented allergy: "${allergy}". Caution advised.`
+                        allergyAlert: `Patient has documented allergy: "${allergy}". High clinical risk.`
                     });
                 }
             }
         }
+    }
+
+    // 4. Clinical Allergy Hard Block: If contraindications detected, require explicit rationale (min 10 chars)
+    const trimmedOverride = (overrideJustification || '').trim();
+    if (allergyWarnings.length > 0 && trimmedOverride.length < 10) {
+        return res.status(400).json({
+            status: 'fail',
+            requiresOverride: true,
+            message: `Clinical safety block: Patient has documented allergy contraindications (${allergyWarnings.map(w => w.medication).join(', ')}). Explicit clinical override justification (minimum 10 characters) is required to issue this prescription.`,
+            allergyWarnings
+        });
     }
 
     const prescription = await prescriptionsRepo.createPrescription({
@@ -177,7 +198,8 @@ const createPrescription = catchAsync(async (req, res) => {
         instructions,
         expiresAt,
         qrToken,
-        items
+        items,
+        overrideJustification: trimmedOverride || null
     });
 
     return res.status(201).json({
@@ -282,6 +304,47 @@ const verifyPrescriptionByToken = catchAsync(async (req, res) => {
         ? 'EXPIRED'
         : rx.status;
 
+    // Zero-Knowledge Tiered Privacy Check:
+    // Determine whether caller is authenticated OR provided valid patient verification challenge
+    let isUnlockedByAuth = false;
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+            const decoded = jwt.verify(authHeader.substring(7).trim(), JWT_SECRET);
+            if (['doctor', 'admin', 'super_admin'].includes(decoded.role) || decoded.id === rx.patient_id) {
+                isUnlockedByAuth = true;
+            }
+        } catch {
+            // Unauthenticated or invalid token, fallback to verification code challenge
+        }
+    }
+
+    const patientProfile = typeof rx.patient_profile === 'string'
+        ? (JSON.parse(rx.patient_profile || '{}') || {})
+        : (rx.patient_profile || {});
+
+    const birthYearMatch = String(patientProfile.dob || patientProfile.dateOfBirth || patientProfile.date_of_birth || '').match(/\b(19\d\d|20\d\d)\b/);
+    const expectedBirthYear = birthYearMatch ? birthYearMatch[0] : null;
+    const patientPhone = String(patientProfile.phone || rx.patient_phone || '').replace(/\D/g, '');
+    const last4Phone = patientPhone.length >= 4 ? patientPhone.slice(-4) : null;
+
+    const userVerifyCode = String(req.query.dobYear || req.query.verifyCode || req.headers['x-patient-verify'] || '').trim();
+    let isUnlockedByChallenge = false;
+    if (userVerifyCode) {
+        if (expectedBirthYear && userVerifyCode === expectedBirthYear) {
+            isUnlockedByChallenge = true;
+        } else if (last4Phone && userVerifyCode === last4Phone) {
+            isUnlockedByChallenge = true;
+        } else if (!expectedBirthYear && !last4Phone) {
+            // Patient account has no recorded DOB or phone: accept 4-digit verification code
+            if (/^\d{4}$/.test(userVerifyCode)) {
+                isUnlockedByChallenge = true;
+            }
+        }
+    }
+
+    const isMedicationsUnlocked = isUnlockedByAuth || isUnlockedByChallenge;
+
     // Mask sensitive details while providing verifiable clinical trust anchors
     const sanitizedPayload = {
         verified: effectiveStatus !== 'CANCELLED' && effectiveStatus !== 'EXPIRED',
@@ -299,13 +362,18 @@ const verifyPrescriptionByToken = catchAsync(async (req, res) => {
         issuingFacility: {
             name: rx.organization_name
         },
-        instructions: rx.instructions,
-        items: (rx.items || []).map(item => ({
+        medicationsRestricted: !isMedicationsUnlocked,
+        requiresVerificationToViewMedications: !isMedicationsUnlocked,
+        verificationHint: !isMedicationsUnlocked ? 'Patient Year of Birth (YYYY) or Provider login required to view medication details.' : null,
+        instructions: isMedicationsUnlocked ? rx.instructions : 'Protected clinical posology. Verification required.',
+        overrideJustification: isMedicationsUnlocked ? (rx.override_justification || null) : undefined,
+        items: (rx.items || []).map((item, idx) => ({
             id: item.id,
-            medicationName: item.medication_name,
-            dosage: item.dosage,
-            frequency: item.frequency,
-            duration: item.duration,
+            itemNumber: idx + 1,
+            medicationName: isMedicationsUnlocked ? item.medication_name : 'Protected Clinical Medication [Verification Required]',
+            dosage: isMedicationsUnlocked ? item.dosage : '***',
+            frequency: isMedicationsUnlocked ? item.frequency : '***',
+            duration: isMedicationsUnlocked ? item.duration : '***',
             quantityPrescribed: item.quantity_prescribed,
             quantityDispensed: item.quantity_dispensed,
             isFullyDispensed: item.quantity_dispensed >= item.quantity_prescribed
@@ -329,6 +397,10 @@ const dispensePrescription = catchAsync(async (req, res) => {
     const { itemDispenses, notes } = req.body;
     const pharmacistId = req.user.id;
     const pharmacyOrgId = req.user.organization_id || req.user.organizationId;
+
+    if (req.user.role === 'patient') {
+        throw new AppError('Access Denied: Patients cannot dispense prescriptions.', 403);
+    }
 
     if (!pharmacyOrgId) {
         throw new AppError('Pharmacist or clinic must belong to an active organization to dispense.', 403);
@@ -360,6 +432,11 @@ const dispensePrescription = catchAsync(async (req, res) => {
 const cancelPrescription = catchAsync(async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body;
+
+    if (req.user.role === 'patient') {
+        throw new AppError('Access Denied: Patients cannot cancel prescriptions.', 403);
+    }
+
     const rx = await prescriptionsRepo.getPrescriptionById(id);
 
     if (!rx) {
@@ -373,7 +450,7 @@ const cancelPrescription = catchAsync(async (req, res) => {
         throw new AppError('Unauthorized to cancel this prescription.', 403);
     }
 
-    const cancelledRx = await prescriptionsRepo.cancelPrescription(id, reason);
+    const cancelledRx = await prescriptionsRepo.cancelPrescription(id, reason, req.user.id);
 
     return res.json({
         status: 'success',

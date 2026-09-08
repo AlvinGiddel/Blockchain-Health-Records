@@ -7,6 +7,7 @@
 
 const db = require('../db');
 const AppError = require('../utils/AppError');
+const { logAuditEvent } = require('../utils/helpers');
 
 /**
  * Helper to fetch items and dispense logs for a prescription
@@ -58,19 +59,19 @@ async function attachDetailsToPrescriptions(prescriptionsList) {
 /**
  * Create a new Prescription with medication items in an atomic transaction
  */
-async function createPrescription({ patientId, doctorId, organizationId, instructions, expiresAt, qrToken, items }) {
+async function createPrescription({ patientId, doctorId, organizationId, instructions, expiresAt, qrToken, items, overrideJustification }) {
     if (!items || !Array.isArray(items) || items.length === 0) {
         throw new AppError('At least one medication item is required.', 400);
     }
 
     const { rows: rxRows } = await db.query(`
         INSERT INTO prescriptions (
-            patient_id, doctor_id, organization_id, status, qr_token, instructions, expires_at
+            patient_id, doctor_id, organization_id, status, qr_token, instructions, expires_at, override_justification
         ) VALUES (
-            $1, $2, $3, 'ISSUED', $4, $5, COALESCE($6, NOW() + INTERVAL '30 days')
+            $1, $2, $3, 'ISSUED', $4, $5, COALESCE($6, NOW() + INTERVAL '30 days'), $7
         )
         RETURNING *;
-    `, [patientId, doctorId, organizationId, qrToken, instructions || '', expiresAt || null]);
+    `, [patientId, doctorId, organizationId, qrToken, instructions || '', expiresAt || null, overrideJustification || null]);
 
     const prescription = rxRows[0];
     const insertedItems = [];
@@ -103,6 +104,40 @@ async function createPrescription({ patientId, doctorId, organizationId, instruc
         ]);
 
         insertedItems.push(itemRows[0]);
+    }
+
+    // Centralized Audit Logging
+    try {
+        const { rows: pRows } = await db.query('SELECT name FROM users WHERE id = $1', [patientId]);
+        const { rows: dRows } = await db.query('SELECT name FROM users WHERE id = $1', [doctorId]);
+        const patientName = pRows[0]?.name || 'Unknown Patient';
+        const doctorName = dRows[0]?.name || 'Unknown Doctor';
+
+        if (overrideJustification) {
+            await logAuditEvent(
+                'prescription_allergy_override',
+                patientId,
+                patientName,
+                doctorId,
+                doctorName,
+                `Clinical allergy override recorded. Justification: "${overrideJustification}". Items: ${insertedItems.map(i => i.medication_name).join(', ')}. QR Token: ${qrToken}`,
+                null,
+                organizationId
+            );
+        }
+
+        await logAuditEvent(
+            'prescription_issued',
+            patientId,
+            patientName,
+            doctorId,
+            doctorName,
+            `Prescription issued with ${insertedItems.length} medication(s): ${insertedItems.map(i => i.medication_name).join(', ')}. QR Token: ${qrToken}`,
+            null,
+            organizationId
+        );
+    } catch (auditErr) {
+        console.warn('[Prescriptions Repo] Audit logging warning:', auditErr.message);
     }
 
     return {
@@ -316,13 +351,31 @@ async function dispenseItems({ prescriptionId, pharmacyOrgId, pharmacistId, item
         WHERE id = $2;
     `, [newStatus, prescriptionId]);
 
+    // Centralized Audit Logging for Dispensing
+    try {
+        const { rows: pharmRows } = await db.query('SELECT name FROM users WHERE id = $1', [pharmacistId]);
+        const pharmacistName = pharmRows[0]?.name || 'Dispensing Staff';
+        await logAuditEvent(
+            'prescription_dispensed',
+            prescription.patient_id,
+            prescription.patient_name,
+            pharmacistId,
+            pharmacistName,
+            `Prescription ${prescriptionId} dispensed (${totalDispensedInThisBatch} unit(s)). Status transitioned to ${newStatus}. Notes: ${notes || 'None'}`,
+            null,
+            pharmacyOrgId
+        );
+    } catch (auditErr) {
+        console.warn('[Prescriptions Repo] Audit logging warning:', auditErr.message);
+    }
+
     return getPrescriptionById(prescriptionId);
 }
 
 /**
  * Cancel an active prescription
  */
-async function cancelPrescription(id, reason = '') {
+async function cancelPrescription(id, reason = '', cancelledByUserId = null) {
     const rx = await getPrescriptionById(id);
     if (!rx) throw new AppError('Prescription not found.', 404);
     if (rx.status === 'FILLED') {
@@ -339,6 +392,27 @@ async function cancelPrescription(id, reason = '') {
         WHERE id = $2
         RETURNING *;
     `, [cancelNote, id]);
+
+    // Centralized Audit Logging for Cancellation
+    try {
+        let cancellerName = 'Authorized Prescriber / Admin';
+        if (cancelledByUserId) {
+            const { rows: uRows } = await db.query('SELECT name FROM users WHERE id = $1', [cancelledByUserId]);
+            if (uRows.length > 0) cancellerName = uRows[0].name;
+        }
+        await logAuditEvent(
+            'prescription_cancelled',
+            rx.patient_id,
+            rx.patient_name,
+            cancelledByUserId || rx.doctor_id,
+            cancellerName,
+            `Prescription ${id} cancelled. Reason: ${reason || 'Not specified'}`,
+            null,
+            rx.organization_id
+        );
+    } catch (auditErr) {
+        console.warn('[Prescriptions Repo] Audit logging warning:', auditErr.message);
+    }
 
     return rows[0];
 }
