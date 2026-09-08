@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, Plus, Link2, FileText, AlertCircle, Check, Award, Lock, HelpCircle, Search, ShieldAlert, QrCode } from 'lucide-react';
+import { ShieldCheck, Plus, Link2, FileText, AlertCircle, Check, Award, Lock, HelpCircle, Search, ShieldAlert, QrCode, Pill } from 'lucide-react';
 import RecordVerificationPortal from './RecordVerificationPortal';
 import RecordPdfExport from './RecordPdfExport';
 import { getApiUrl, safeFetch } from '../utils/api';
@@ -427,18 +427,6 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
               </div>
 
               <div className="form-group">
-                <label htmlFor="prescriptions">Prescriptions (comma-separated)</label>
-                <input
-                  type="text"
-                  id="prescriptions"
-                  className="form-control"
-                  placeholder="e.g. Prescription A 500mg, Prescription B"
-                  value={prescriptions}
-                  onChange={(e) => setPrescriptions(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group">
                 <label htmlFor="ipfsFile">IPFS Attachment (e.g. Lab Report File Name)</label>
                 <input
                   type="text"
@@ -448,6 +436,22 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
                   value={ipfsFile}
                   onChange={(e) => setIpfsFile(e.target.value)}
                 />
+              </div>
+
+              <div style={{
+                background: 'rgba(15, 118, 110, 0.08)',
+                border: '1px solid rgba(15, 118, 110, 0.25)',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <Pill size={18} color="var(--color-primary)" style={{ flexShrink: 0 }} />
+                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                  <strong style={{ color: 'var(--color-primary)' }}>Prescription Orders:</strong> Issue medications via the official <strong>Prescriptions</strong> section to enforce allergy checks, posology validation, and pharmacy QR dispensing.
+                </div>
               </div>
 
               <button

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { User, Activity, AlertTriangle, ShieldCheck, Phone, Clipboard, CheckCircle, Clock, Calendar, Check, X, BookOpen, FileText, Copy, Lock, Database, Globe, Search, QrCode, ShieldAlert, KeyRound, Building2 } from 'lucide-react';
+import { User, Activity, AlertTriangle, ShieldCheck, Phone, Clipboard, CheckCircle, Clock, Calendar, Check, X, BookOpen, FileText, Copy, Lock, Database, Globe, Search, QrCode, ShieldAlert, KeyRound, Building2, Pill } from 'lucide-react';
 import BreakGlassModal from './BreakGlassModal';
 import QRHealthPassport from './QRHealthPassport';
 import RecordVerificationPortal from './RecordVerificationPortal';
@@ -1396,18 +1396,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                   </div>
                 </div>
 
-                <div className="form-group" style={{ marginBottom: '12px' }}>
-                  <label>Prescriptions (comma-separated, optional)</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="e.g. Paracetamol 500mg, Amoxicillin 250mg"
-                    value={prescriptions}
-                    onChange={(e) => setPrescriptions(e.target.value)}
-                  />
-                </div>
-
-                <div className="form-group" style={{ marginBottom: '20px' }}>
+                <div className="form-group" style={{ marginBottom: '14px' }}>
                   <label>Laboratory Tests Request (optional)</label>
                   <input
                     type="text"
@@ -1416,6 +1405,22 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                     value={labRequest}
                     onChange={(e) => setLabRequest(e.target.value)}
                   />
+                </div>
+
+                <div style={{
+                  background: 'rgba(15, 118, 110, 0.08)',
+                  border: '1px solid rgba(15, 118, 110, 0.25)',
+                  borderRadius: '8px',
+                  padding: '10px 14px',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}>
+                  <Pill size={18} color="var(--color-primary)" style={{ flexShrink: 0 }} />
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                    <strong style={{ color: 'var(--color-primary)' }}>Official E-Prescriptions:</strong> Medications are issued through the dedicated <strong>Prescriptions</strong> module for clinical allergy checks, dosage tracking, and pharmacy QR dispensing.
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px' }}>
@@ -1438,11 +1443,11 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                 </div>
               </form>
             ) : (
-              <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   className="btn btn-secondary"
-                  style={{ width: '150px' }}
+                  style={{ minWidth: '130px' }}
                   onClick={() => {
                     setActiveConsultationAppt(null);
                     setCompletedTxHash('');
@@ -1450,6 +1455,21 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                 >
                   Close Window
                 </button>
+                {onNavigate && (
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    onClick={() => {
+                      const currentPatientId = activeConsultationAppt.patient_id || activeConsultationAppt.patientId;
+                      setActiveConsultationAppt(null);
+                      setCompletedTxHash('');
+                      onNavigate('prescriptions');
+                    }}
+                  >
+                    <Pill size={16} /> Issue E-Prescription &rarr;
+                  </button>
+                )}
               </div>
             )}
           </div>
