@@ -35,6 +35,7 @@ const jwt = require('jsonwebtoken');
 
 // Allowed Origin list for CORS
 const ALLOWED_ORIGINS = [
+    'https://bhcrecords.vercel.app',
     'https://blockhealthrecords.online',
     'https://www.blockhealthrecords.online',
     'https://blockchainrecords.vercel.app',
@@ -219,8 +220,8 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Start Server with optimized HTTP keep-alive settings (only when not running as a Vercel serverless function)
 if (!process.env.VERCEL) {
-    const server = app.listen(PORT, '0.0.0.0', () => {
-        console.log(`Server running on port ${PORT} (bound to 0.0.0.0)`);
+    const server = app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
     });
     server.keepAliveTimeout = 65000;
     server.headersTimeout = 66000;
