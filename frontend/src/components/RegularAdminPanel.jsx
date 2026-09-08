@@ -108,22 +108,50 @@ export default function RegularAdminPanel({ user }) {
 
   useEffect(() => {
     fetchAdminData(false);
-    // Poll backend state and node updates every 4 seconds for snappy real-time admin experience
-    const interval = setInterval(() => {
-      fetchAdminData(true);
-      
-      // Also simulate periodic network pings for log flavor
-      const pingMsgs = [
-        'P2P Peer Ping: Node [1] responded in 36ms',
-        'Ledger Synchronization check: Height matches consensus.',
-        'P2P Peer Ping: Node [2] responded in 48ms',
-        'Database connection pool checked: healthy.'
-      ];
-      const randomMsg = pingMsgs[Math.floor(Math.random() * pingMsgs.length)];
-      setLogs(prev => [...prev.slice(-8), `[${new Date().toLocaleTimeString()}] ${randomMsg}`]);
-    }, 4000);
 
-    return () => clearInterval(interval);
+    const POLLING_INTERVAL_MS = 20000; // 20s live sync (optimized from rapid 4s)
+    let intervalId = null;
+
+    const startPolling = () => {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(() => {
+        if (!document.hidden) {
+          fetchAdminData(true);
+          
+          // Also simulate periodic network pings for log flavor
+          const pingMsgs = [
+            'P2P Peer Ping: Node [1] responded in 36ms',
+            'Ledger Synchronization check: Height matches consensus.',
+            'P2P Peer Ping: Node [2] responded in 48ms',
+            'Database connection pool checked: healthy.'
+          ];
+          const randomMsg = pingMsgs[Math.floor(Math.random() * pingMsgs.length)];
+          setLogs(prev => [...prev.slice(-8), `[${new Date().toLocaleTimeString()}] ${randomMsg}`]);
+        }
+      }, POLLING_INTERVAL_MS);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab hidden: cancel interval to save server load
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+      } else {
+        // Tab restored: immediately fetch latest state and resume loop
+        fetchAdminData(true);
+        startPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -270,10 +298,9 @@ export default function RegularAdminPanel({ user }) {
 
   const handleManualRefresh = async () => {
     setRefreshing(true);
-    const minDelay = new Promise(resolve => setTimeout(resolve, 600));
     try {
       setRefreshTrigger(prev => prev + 1);
-      await Promise.all([fetchAdminData(false), minDelay]);
+      await fetchAdminData(false);
       setToast({
         message: 'Admin console data, approval queues, and metrics refreshed successfully.',
         type: 'success'

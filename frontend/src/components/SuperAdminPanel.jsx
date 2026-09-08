@@ -90,22 +90,50 @@ export default function SuperAdminPanel({ user }) {
 
   useEffect(() => {
     fetchAdminData(false);
-    // Poll backend state and node updates every 4 seconds for snappy live updates
-    const interval = setInterval(() => {
-      fetchAdminData(true);
 
-      // Periodic network pings for live infrastructure monitoring
-      const pingMsgs = [
-        'P2P Peer Ping: Tenant Gateway responded in 32ms',
-        'Consensus Verification: Ledger height matches network quorum.',
-        'P2P Peer Ping: Backup validator node responded in 44ms',
-        'Database connection pool: Healthy (0 deadlocks, latency 4ms).'
-      ];
-      const randomMsg = pingMsgs[Math.floor(Math.random() * pingMsgs.length)];
-      setLogs(prev => [...prev.slice(-10), `[${new Date().toLocaleTimeString()}] ${randomMsg}`]);
-    }, 4000);
+    const POLLING_INTERVAL_MS = 20000; // 20s live sync (optimized from rapid 4s)
+    let intervalId = null;
 
-    return () => clearInterval(interval);
+    const startPolling = () => {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(() => {
+        if (!document.hidden) {
+          fetchAdminData(true);
+
+          // Periodic network pings for live infrastructure monitoring
+          const pingMsgs = [
+            'P2P Peer Ping: Tenant Gateway responded in 32ms',
+            'Consensus Verification: Ledger height matches network quorum.',
+            'P2P Peer Ping: Backup validator node responded in 44ms',
+            'Database connection pool: Healthy (0 deadlocks, latency 4ms).'
+          ];
+          const randomMsg = pingMsgs[Math.floor(Math.random() * pingMsgs.length)];
+          setLogs(prev => [...prev.slice(-10), `[${new Date().toLocaleTimeString()}] ${randomMsg}`]);
+        }
+      }, POLLING_INTERVAL_MS);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab hidden: cancel interval to save server load
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+      } else {
+        // Tab restored: immediately fetch latest state and resume loop
+        fetchAdminData(true);
+        startPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -275,7 +303,6 @@ export default function SuperAdminPanel({ user }) {
 
   const handleManualRefresh = async () => {
     setRefreshing(true);
-    const minDelay = new Promise(resolve => setTimeout(resolve, 600));
     try {
       // Trigger child widgets (LicenseControlWidget) to refresh active organizations and licenses
       setRefreshTrigger(prev => prev + 1);
@@ -285,7 +312,7 @@ export default function SuperAdminPanel({ user }) {
       const prevPendingAdminsCount = pendingAdmins.length;
       const prevBlocksCount = blocks.length;
 
-      const [freshData] = await Promise.all([fetchAdminData(false), minDelay]);
+      const freshData = await fetchAdminData(false);
 
       if (freshData) {
         const clinicsCount = freshData.pendingClinics.length;

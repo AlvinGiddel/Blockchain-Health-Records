@@ -106,6 +106,49 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
     }
   }, [user, activePatient]);
 
+  // Periodic polling for Medical Records with Page Visibility API pause
+  useEffect(() => {
+    const targetPatientId = user.role === 'patient' 
+      ? user.id 
+      : (activePatient ? (activePatient.id || activePatient._id) : null);
+
+    if (!targetPatientId) return;
+
+    const POLLING_INTERVAL_MS = 45000; // 45 seconds (optimized from 10s)
+    let intervalId = null;
+
+    const startPolling = () => {
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(() => {
+        if (!document.hidden) {
+          fetchRecords(targetPatientId, true);
+        }
+      }, POLLING_INTERVAL_MS);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab hidden: pause timer to eliminate idle database queries
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+      } else {
+        // Tab became visible: immediately refresh so doctor sees up-to-date data, then resume interval
+        fetchRecords(targetPatientId, true);
+        startPolling();
+      }
+    };
+
+    startPolling();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user, activePatient]);
+
   const fetchPatients = async () => {
     try {
       const data = await safeFetch('/api/users/patients');
@@ -117,9 +160,9 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
     }
   };
 
-  const fetchRecords = async (patientId) => {
+  const fetchRecords = async (patientId, isBackground = false) => {
     try {
-      setLoading(true);
+      if (!isBackground) setLoading(true);
       setAccessDenied(false);
       const data = await safeFetch(`/api/records/patient/${patientId}`);
       if (Array.isArray(data)) {
@@ -134,7 +177,7 @@ export default function MedicalRecords({ user, selectedPatient, onBackToRegistry
       }
       setRecords([]);
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 

@@ -82,9 +82,8 @@ export default function BlockchainExplorer({ user }) {
 
   const handleManualRefresh = async () => {
     setRefreshing(true);
-    const minDelay = new Promise(resolve => setTimeout(resolve, 600));
     try {
-      await Promise.all([fetchBlockchainData(), minDelay]);
+      await fetchBlockchainData();
     } catch (err) {
       console.error('Error refreshing ledger:', err);
     } finally {
