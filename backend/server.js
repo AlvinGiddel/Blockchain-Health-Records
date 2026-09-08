@@ -219,8 +219,8 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Start Server with optimized HTTP keep-alive settings (only when not running as a Vercel serverless function)
 if (!process.env.VERCEL) {
-    const server = app.listen(PORT, () => {
-        console.log(`Server running on port ${PORT}`);
+    const server = app.listen(PORT, '0.0.0.0', () => {
+        console.log(`Server running on port ${PORT} (bound to 0.0.0.0)`);
     });
     server.keepAliveTimeout = 65000;
     server.headersTimeout = 66000;
