@@ -56,11 +56,27 @@ export default function App() {
   };
 
   // Session storage switched from sessionStorage to localStorage. Note: This is a JWT-in-localStorage tradeoff (XSS exposure) accepted for this project.
+  // On startup: immediately expire any session older than 8 hours so users are not
+  // perpetually logged in across days (the inactivity timer cannot survive a tab close).
   const [user, setUser] = useState(() => {
+    const SESSION_MAX_MS = 8 * 60 * 60 * 1000; // 8 hours
+    const ts = localStorage.getItem('loginTimestamp');
+    if (ts && Date.now() - parseInt(ts, 10) > SESSION_MAX_MS) {
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('loginTimestamp');
+      sessionStorage.setItem('sessionTimedOut', 'true');
+      return null;
+    }
     const saved = localStorage.getItem('user');
     return saved ? JSON.parse(saved) : null;
   });
-  const [token, setToken] = useState(() => localStorage.getItem('token') || '');
+  const [token, setToken] = useState(() => {
+    const ts = localStorage.getItem('loginTimestamp');
+    const SESSION_MAX_MS = 8 * 60 * 60 * 1000;
+    if (ts && Date.now() - parseInt(ts, 10) > SESSION_MAX_MS) return '';
+    return localStorage.getItem('token') || '';
+  });
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [resetToken, setResetToken] = useState(null);
@@ -278,6 +294,7 @@ export default function App() {
     // Session storage switched from sessionStorage to localStorage. Note: This is a JWT-in-localStorage tradeoff (XSS exposure) accepted for this project.
     localStorage.setItem('user', JSON.stringify(data.user));
     localStorage.setItem('token', data.token);
+    localStorage.setItem('loginTimestamp', String(Date.now())); // Used for 8-hour session expiry
     sessionStorage.removeItem('serverInstanceId'); // Let next heartbeat fetch it fresh
     sessionStorage.removeItem('sessionTimedOut'); // Clear timeout flag
     setActiveTab('dashboard');
@@ -291,6 +308,7 @@ export default function App() {
     // Session storage switched from sessionStorage to localStorage. Note: This is a JWT-in-localStorage tradeoff (XSS exposure) accepted for this project.
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('loginTimestamp');
     sessionStorage.removeItem('serverInstanceId');
     if (options && options.isSuspended === true) {
       sessionStorage.setItem('suspensionNotice', options.message || 'Your hospital facility has been suspended by platform administration.');

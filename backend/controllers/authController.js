@@ -393,7 +393,7 @@ const register = catchAsync(async (req, res) => {
         role: user.role,
         organization_id: user.organization_id || null,
         organizationName: targetOrg ? targetOrg.name : null
-    }, JWT_SECRET, { expiresIn: '1d' });
+    }, JWT_SECRET, { expiresIn: '8h' });
 
     res.status(201).json({
         token,
@@ -513,7 +513,7 @@ const login = catchAsync(async (req, res) => {
         organization_id: user.organization_id || null,
         organizationName: organizationName || null,
         organizationStatus: organizationStatus || null
-    }, JWT_SECRET, { expiresIn: '1d' });
+    }, JWT_SECRET, { expiresIn: '8h' });
 
     const doctorProfile = parseJsonIfNeeded(user.doctor_profile);
     const patientProfile = parseJsonIfNeeded(user.patient_profile);
