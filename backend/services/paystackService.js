@@ -179,28 +179,41 @@ function verifyWebhookSignature(rawBody, signatureHeader) {
 
 /**
  * Standard Available Subscription Plans
+ *
+ * Active tiered plans (Netflix-style, all billed monthly):
+ *   plan_starter       — KES 15,000/month  — up to 5 practitioners
+ *   plan_professional  — KES 30,000/month  — up to 30 practitioners
+ *   plan_enterprise    — KES 60,000/month  — unlimited practitioners
+ *   plan_pharmacy_monthly — KES 4,500/month — pharmacy dispensing portal
+ *
+ * Legacy plans (retained for existing subscribers, not shown on landing page):
+ *   plan_1m / plan_3m / plan_1y
  */
 const SUBSCRIPTION_PLANS = [
+    // ── Active tiered plans ────────────────────────────────────────────────
     {
-        id: 'plan_1m',
-        name: 'Standard Monthly Renewal',
+        id: 'plan_starter',
+        name: 'Starter',
         days: 30,
-        amountKES: 20000,
-        description: '30-day full clinic operational license with fail-closed security bypass and multi-practitioner ledger access.'
+        amountKES: 15000,
+        tier: 'starter',
+        description: 'Core tamper-evident records, QR health passports, and KMPDC/NCK verification for small clinics.'
     },
     {
-        id: 'plan_3m',
-        name: 'Quarterly Clinic Plan',
-        days: 90,
-        amountKES: 54000,
-        description: '90-day extended license with priority attestation and automated audit backups (Save KES 6,000).'
+        id: 'plan_professional',
+        name: 'Professional',
+        days: 30,
+        amountKES: 30000,
+        tier: 'professional',
+        description: 'Adds QR prescription tokens, compliance reports, and pharmacy dispensing integration for growing facilities.'
     },
     {
-        id: 'plan_1y',
-        name: 'Annual Medical License',
-        days: 365,
-        amountKES: 192000,
-        description: '365-day enterprise license, unlimited practitioners, full emergency break-glass, and dedicated node support (Save KES 48,000).'
+        id: 'plan_enterprise',
+        name: 'Enterprise',
+        days: 30,
+        amountKES: 60000,
+        tier: 'enterprise',
+        description: 'Unlimited practitioners, emergency break-glass, EHR/HMIS bridge, dedicated node, and 24/7 SLA support.'
     },
     {
         id: 'plan_pharmacy_monthly',
@@ -209,6 +222,32 @@ const SUBSCRIPTION_PLANS = [
         amountKES: 4500,
         organizationType: 'pharmacy',
         description: '30-day dispensing terminal license with cryptographic QR verification, rival-claim locking, and PPB statutory audit trails.'
+    },
+
+    // ── Legacy plans (existing subscribers only — do not surface on UI) ───
+    {
+        id: 'plan_1m',
+        name: 'Standard Monthly Renewal (Legacy)',
+        days: 30,
+        amountKES: 20000,
+        legacy: true,
+        description: 'Legacy 30-day clinic license.'
+    },
+    {
+        id: 'plan_3m',
+        name: 'Quarterly Clinic Plan (Legacy)',
+        days: 90,
+        amountKES: 54000,
+        legacy: true,
+        description: 'Legacy 90-day clinic license.'
+    },
+    {
+        id: 'plan_1y',
+        name: 'Annual Medical License (Legacy)',
+        days: 365,
+        amountKES: 192000,
+        legacy: true,
+        description: 'Legacy 365-day clinic license.'
     }
 ];
 

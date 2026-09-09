@@ -23,7 +23,10 @@ import {
   FileCheck, 
   Clock, 
   Database,
-  ArrowUpRight
+  ArrowUpRight,
+  Pill,
+  Users,
+  TrendingUp
 } from 'lucide-react';
 import logoSvg from '../assets/logo.svg';
 import { ThemeToggle } from './ui/theme-toggle';
@@ -33,77 +36,18 @@ import { safeFetch } from '../utils/api';
 
 export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLoggedIn }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [facilityCount, setFacilityCount] = useState(null);
   
-  // Standard subscription plans synced with paystackService.js
-  const [plans, setPlans] = useState([
-    {
-      id: 'plan_1m',
-      name: 'Standard Monthly Renewal',
-      days: 30,
-      amountKES: 20000,
-      description: 'Full clinic operational license with fail-closed security bypass and multi-practitioner ledger access.',
-      popular: false,
-      features: [
-        'Up to 10 verified practitioners',
-        'Unlimited tamper-evident records',
-        'Universal Health Passport QR generation',
-        'KMPDC & NCK license auto-verification',
-        'Standard ledger audit log export'
-      ]
-    },
-    {
-      id: 'plan_3m',
-      name: 'Quarterly Clinic Plan',
-      days: 90,
-      amountKES: 54000,
-      description: 'Extended operational license with priority attestation and automated audit backups (Save KES 6,000).',
-      popular: true,
-      badge: 'Most Popular',
-      features: [
-        'Up to 30 verified practitioners',
-        'All Monthly Plan capabilities',
-        'Priority ledger block inclusion',
-        'Automated regulatory compliance reports',
-        'Cross-facility referral attestation',
-        'Dedicated informatics email support'
-      ]
-    },
-    {
-      id: 'plan_1y',
-      name: 'Annual Medical License',
-      days: 365,
-      amountKES: 192000,
-      description: 'Full enterprise license, unlimited practitioners, full emergency break-glass, and dedicated node support (Save KES 48,000).',
-      popular: false,
-      badge: 'Full Hospital Facility',
-      features: [
-        'Unlimited practitioners & nursing staff',
-        'Full enterprise emergency break-glass ledger',
-        'Dedicated local verification node synchronization',
-        'Custom EHR / HMIS integration bridge',
-        'Custom tenant SLA & 24/7 incident hotline',
-        'Ministry of Health regulatory archive compliance'
-      ]
-    }
-  ]);
-
-  // Fetch live pricing from backend if available to keep strictly synced
+  // Fetch live active facility count for social proof
   useEffect(() => {
     let isMounted = true;
-    safeFetch('/api/payments/plans')
+    safeFetch('/api/organizations/active')
       .then(data => {
-        if (isMounted && data && Array.isArray(data.plans) && data.plans.length > 0) {
-          setPlans(prevPlans => 
-            prevPlans.map(p => {
-              const remote = data.plans.find(rp => rp.id === p.id);
-              return remote ? { ...p, amountKES: remote.amountKES, name: remote.name || p.name } : p;
-            })
-          );
+        if (isMounted && Array.isArray(data)) {
+          setFacilityCount(data.length);
         }
       })
-      .catch(err => {
-        console.warn('[LandingPage] Using static plan defaults:', err.message);
-      });
+      .catch(() => {});
     return () => { isMounted = false; };
   }, []);
 
@@ -114,6 +58,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
       maximumFractionDigits: 0
     }).format(amount);
   };
+
 
   const scrollToSection = (id) => {
     setMobileMenuOpen(false);
@@ -173,10 +118,10 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
               Trust & Security
             </button>
             <button 
-              onClick={() => scrollToSection('how-it-works')}
-              className="hover:text-[#0F766E] dark:hover:text-[#2DD4BF] transition-colors cursor-pointer"
+              onClick={() => scrollToSection('pharmacy-pricing')}
+              className="hover:text-[#0F766E] dark:hover:text-[#2DD4BF] transition-colors cursor-pointer flex items-center gap-1"
             >
-              How It Works
+              <Pill className="w-3.5 h-3.5" /> Pharmacy
             </button>
             <button 
               onClick={() => scrollToSection('pricing')}
@@ -217,7 +162,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                   onClick={() => onNavigateLogin('?register=clinic')}
                   className="bg-[#0F766E] hover:bg-[#115E59] text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-sm"
                 >
-                  Register Clinic
+                  Register Facility
                 </Button>
               </>
             )}
@@ -253,10 +198,10 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                 Trust & Security
               </button>
               <button 
-                onClick={() => scrollToSection('how-it-works')}
-                className="text-left py-2 px-3 rounded-md hover:bg-slate-50 dark:hover:bg-[#112239]"
+                onClick={() => scrollToSection('pharmacy-pricing')}
+                className="text-left py-2 px-3 rounded-md hover:bg-slate-50 dark:hover:bg-[#112239] flex items-center gap-2"
               >
-                How It Works
+                <Pill className="w-3.5 h-3.5 text-[#0F766E]" /> Pharmacy Portal
               </button>
               <button 
                 onClick={() => scrollToSection('pricing')}
@@ -294,6 +239,12 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                   >
                     Register your clinic
                   </Button>
+                  <button
+                    onClick={() => { setMobileMenuOpen(false); onNavigateLogin('?register=pharmacy'); }}
+                    className="text-center text-xs text-[#0F766E] dark:text-[#2DD4BF] font-semibold py-1.5 hover:underline"
+                  >
+                    Register your pharmacy →
+                  </button>
                 </>
               )}
             </div>
@@ -320,7 +271,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#0B2545] dark:text-white tracking-tight leading-[1.15]">
-                Blockchain-secured health records for Kenyan clinics and hospitals
+                Blockchain-secured health records for Kenyan clinics, hospitals, and pharmacies
               </h1>
 
               <p className="text-base sm:text-lg text-[#475569] dark:text-slate-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
@@ -348,7 +299,18 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                 </Button>
               </div>
 
-              {/* Fast Trust Indicators */}
+              {/* Pharmacy secondary CTA */}
+              <div className="flex items-center justify-center lg:justify-start">
+                <button
+                  onClick={() => onNavigateLogin('?register=pharmacy')}
+                  className="inline-flex items-center gap-1.5 text-sm text-[#0F766E] dark:text-[#2DD4BF] font-semibold hover:underline"
+                >
+                  <Pill className="w-4 h-4" />
+                  Are you a pharmacy? Register here →
+                </button>
+              </div>
+
+              {/* Trust Indicators */}
               <div className="pt-6 grid grid-cols-3 gap-4 border-t border-[#E2E8F0] dark:border-[#1E3A5F] max-w-lg mx-auto lg:mx-0 text-left">
                 <div>
                   <p className="text-xl sm:text-2xl font-bold text-[#0B2545] dark:text-white">100%</p>
@@ -359,8 +321,8 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                   <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">Council Verification</p>
                 </div>
                 <div>
-                  <p className="text-xl sm:text-2xl font-bold text-[#1D9E75] dark:text-[#34D399]">7 Days</p>
-                  <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">Complimentary Trial</p>
+                  <p className="text-xl sm:text-2xl font-bold text-[#1D9E75] dark:text-[#34D399]">PPB Verified</p>
+                  <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">Pharmacy Network</p>
                 </div>
               </div>
 
@@ -444,7 +406,83 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
       </section>
 
       {/* ========================================================================= */}
-      {/* 3. TRUST & SECURITY SECTION (Tailored for Hospital Admins)                */}
+      {/* 3. WHO THIS IS FOR (new)                                                  */}
+      {/* ========================================================================= */}
+      <section className="py-14 bg-[#0B2545] dark:bg-[#0F243E] border-b border-[#1E3A5F]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <p className="text-center text-xs font-bold uppercase tracking-widest text-[#2DD4BF] mb-10">
+            Built for Kenya's healthcare ecosystem
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            {/* Hospitals & Clinics */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-4 hover:bg-white/10 transition-colors duration-200 group">
+              <div className="w-12 h-12 rounded-xl bg-[#0F766E]/20 text-[#2DD4BF] flex items-center justify-center">
+                <Building2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white mb-1">Hospitals & Clinics</h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Register your facility, onboard licensed practitioners, issue tamper-proof QR health passports, and maintain a cryptographic audit trail ready for Ministry of Health inspections.
+                </p>
+              </div>
+              <button
+                onClick={() => onNavigateLogin('?register=clinic')}
+                className="mt-auto text-xs font-semibold text-[#2DD4BF] hover:underline flex items-center gap-1 group-hover:gap-2 transition-all"
+              >
+                Register your clinic <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Pharmacies */}
+            <div className="bg-white/5 border border-[#0F766E]/40 rounded-2xl p-6 flex flex-col gap-4 hover:bg-white/10 transition-colors duration-200 group relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <span className="bg-[#0F766E] text-white text-[10px] font-bold px-3 py-0.5 rounded-full shadow">
+                  New — Phase 2
+                </span>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-[#1D9E75]/20 text-[#34D399] flex items-center justify-center">
+                <Pill className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white mb-1">Licensed Pharmacies</h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Scan patient prescription QR codes, verify PPB premises licenses, dispense with batch and expiry tracking, and maintain a full dispensation audit trail — all in one compliance-ready portal.
+                </p>
+              </div>
+              <button
+                onClick={() => onNavigateLogin('?register=pharmacy')}
+                className="mt-auto text-xs font-semibold text-[#2DD4BF] hover:underline flex items-center gap-1 group-hover:gap-2 transition-all"
+              >
+                Register your pharmacy <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Patients */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col gap-4 hover:bg-white/10 transition-colors duration-200 group">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center">
+                <Heart className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white mb-1">Patients</h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Own your complete health history as a portable, cryptographically-sealed QR passport. Share it with any BHC-connected facility without repeating tests or carrying paper records.
+                </p>
+              </div>
+              <button
+                onClick={() => onNavigateLogin('?register=patient')}
+                className="mt-auto text-xs font-semibold text-[#2DD4BF] hover:underline flex items-center gap-1 group-hover:gap-2 transition-all"
+              >
+                Create patient account <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 4. TRUST & SECURITY SECTION                                               */}
       {/* ========================================================================= */}
       <section id="security" className="py-20 bg-white dark:bg-[#0B192C] border-b border-[#E2E8F0] dark:border-[#1E3A5F] transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -594,21 +632,24 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
               </div>
             </div>
 
-            {/* Feature 3 */}
+            {/* Feature 3: Pharmacy Dispensing Portal */}
             <div className="bg-white dark:bg-[#112239] p-8 rounded-2xl border border-[#E2E8F0] dark:border-[#1E3A5F] shadow-sm hover:shadow-md transition-shadow duration-200 flex flex-col justify-between">
               <div className="space-y-4">
-                <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                  <Database className="w-6 h-6" />
+                <div className="flex items-start justify-between">
+                  <div className="w-12 h-12 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                    <Pill className="w-6 h-6" />
+                  </div>
+                  <span className="text-[10px] font-bold bg-[#0F766E] text-white px-2 py-0.5 rounded-full">New</span>
                 </div>
                 <h3 className="text-xl font-bold text-[#0B2545] dark:text-white">
-                  Encrypted Patient Dossiers &amp; IPFS
+                  Pharmacy Dispensing Portal
                 </h3>
                 <p className="text-sm text-[#475569] dark:text-slate-300 leading-relaxed">
-                  Attach radiology scans, laboratory PDF findings, and clinical notes directly to the patient's record. Large documents are decentralized and pinned via IPFS with cryptographic hashes anchored on the blockchain.
+                  Pharmacists scan prescription QR tokens for full posology disclosure, dispense with batch number and expiry date tracking, and maintain a complete dispensation audit trail with rival-fill collision prevention.
                 </p>
               </div>
-              <div className="mt-6 pt-4 border-t border-[#E2E8F0] dark:border-[#1E3A5F] flex items-center text-xs font-semibold text-blue-600 dark:text-blue-400">
-                <span>Encrypted at rest &bull; High-res imaging and PDF reports</span>
+              <div className="mt-6 pt-4 border-t border-[#E2E8F0] dark:border-[#1E3A5F] flex items-center text-xs font-semibold text-teal-600 dark:text-teal-400">
+                <span>PPB premises verification &bull; 14-day pharmacy trial</span>
               </div>
             </div>
 
@@ -636,7 +677,74 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
       </section>
 
       {/* ========================================================================= */}
-      {/* 5. PRICING SECTION (Pulls exact numbers from paystackService.js)         */}
+      {/* 6. SOCIAL PROOF BANNER (new)                                              */}
+      {/* ========================================================================= */}
+      <section className="py-14 bg-white dark:bg-[#0B192C] border-b border-[#E2E8F0] dark:border-[#1E3A5F]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+          {/* Live facility count strip */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-8 mb-12 text-center">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#0F766E]/10 text-[#0F766E] dark:text-[#2DD4BF] flex items-center justify-center">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <p className="text-2xl font-extrabold text-[#0B2545] dark:text-white">
+                  {facilityCount !== null ? facilityCount : '—'}
+                </p>
+                <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">Active facilities on network</p>
+              </div>
+            </div>
+            <div className="hidden sm:block w-px h-10 bg-[#E2E8F0] dark:bg-[#1E3A5F]" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#1D9E75]/10 text-[#1D9E75] flex items-center justify-center">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <p className="text-2xl font-extrabold text-[#0B2545] dark:text-white">100%</p>
+                <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">Tamper-proof record integrity</p>
+              </div>
+            </div>
+            <div className="hidden sm:block w-px h-10 bg-[#E2E8F0] dark:bg-[#1E3A5F]" />
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <Users className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <p className="text-xl font-extrabold text-[#0B2545] dark:text-white">KMPDC + NCK + PPB</p>
+                <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">Statutory registries integrated</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Testimonial placeholder */}
+          <div className="max-w-2xl mx-auto bg-[#F8FAFC] dark:bg-[#112239] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-2xl p-8 relative">
+            <div className="absolute top-4 right-4">
+              <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800">
+                Beta Participant
+              </span>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-[#0B2545] dark:bg-[#1E3A5F] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                KH
+              </div>
+              <div>
+                <p className="text-sm text-[#475569] dark:text-slate-300 leading-relaxed italic">
+                  "The KMPDC verification at registration alone was enough to justify signing up. We had a case of forged credentials three years ago — now that can't happen. The QR passport has also cut our referral intake time significantly."
+                </p>
+                <div className="mt-3">
+                  <p className="text-xs font-bold text-[#0B2545] dark:text-white">Dr. K.H., Medical Director</p>
+                  <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">Nairobi-based private clinic &bull; Beta Participant</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ========================================================================= */}
+      {/* 7. PRICING SECTION — Netflix-style tiered                                 */}
       {/* ========================================================================= */}
       <section id="pricing" className="py-20 bg-white dark:bg-[#0B192C] border-b border-[#E2E8F0] dark:border-[#1E3A5F] transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -646,92 +754,248 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
               Transparent Pricing &bull; Paystack Secured
             </Badge>
             <h2 className="text-3xl font-extrabold text-[#0B2545] dark:text-white tracking-tight">
-              Predictable plans for clinics and hospital facilities
+              Choose the right plan for your facility
             </h2>
             <p className="text-base text-[#475569] dark:text-slate-300 leading-relaxed">
-              Every facility tier receives complete tamper-evident ledger access. Zero hidden fees. All new clinic registrations receive a 7-day trial upon administrative verification.
+              All plans billed monthly. Every new clinic registration receives a <strong>7-day free trial</strong>. No hidden fees.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
-            {plans.map((plan) => (
-              <div 
-                key={plan.id}
-                className={`relative flex flex-col justify-between rounded-2xl p-8 transition-all duration-200 ${
-                  plan.popular 
-                    ? 'bg-white dark:bg-[#112239] border-2 border-[#0F766E] dark:border-[#2DD4BF] shadow-lg scale-100 lg:-translate-y-2'
-                    : 'bg-[#F8FAFC] dark:bg-[#0F243E] border border-[#E2E8F0] dark:border-[#1E3A5F] shadow-xs'
-                }`}
-              >
-                {/* Popular / Tier Badge */}
-                {plan.badge && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                    <span className="bg-[#0F766E] text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm">
-                      {plan.badge}
-                    </span>
-                  </div>
-                )}
+          {/* ── 3-Tier Clinic Plan Cards ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
 
-                <div>
-                  <h3 className="text-xl font-bold text-[#0B2545] dark:text-white">
-                    {plan.name}
-                  </h3>
-                  <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1 min-h-[36px]">
-                    {plan.description}
-                  </p>
+            {/* ── STARTER ── */}
+            <div className="relative flex flex-col rounded-2xl p-8 bg-[#F8FAFC] dark:bg-[#0F243E] border border-[#E2E8F0] dark:border-[#1E3A5F] shadow-xs">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-[#64748B] dark:text-slate-400 mb-1">Starter</p>
+                <div className="flex items-baseline gap-1 mt-2">
+                  <span className="text-4xl font-extrabold text-[#0B2545] dark:text-white">KES 15,000</span>
+                  <span className="text-xs text-[#64748B] dark:text-[#94A3B8]">/month</span>
+                </div>
+                <p className="text-xs text-[#64748B] dark:text-slate-400 mt-1">Best for small private clinics & solo practitioners</p>
 
-                  <div className="mt-6 mb-6">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl sm:text-4xl font-extrabold text-[#0B2545] dark:text-white">
-                        {formatKES(plan.amountKES)}
-                      </span>
-                      <span className="text-xs text-[#64748B] dark:text-[#94A3B8]">
-                        / {plan.days} days
+                <div className="mt-6 pt-5 border-t border-[#E2E8F0] dark:border-[#1E3A5F] space-y-1">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#0B2545] dark:text-slate-300 mb-3">Up to 5 practitioners</p>
+                  {[
+                    { label: 'Tamper-evident patient records', included: true },
+                    { label: 'Universal Health Passport (QR)', included: true },
+                    { label: 'KMPDC & NCK auto-verification', included: true },
+                    { label: 'Digital prescription writing', included: true },
+                    { label: 'Basic ledger audit log', included: true },
+                    { label: 'QR prescription token (pharmacy)', included: false },
+                    { label: 'Cross-facility referral attestation', included: false, soon: false },
+                    { label: 'Automated compliance reports', included: false },
+                    { label: 'Emergency break-glass access', included: false },
+                    { label: 'Custom EHR / HMIS bridge', included: false },
+                    { label: 'Dedicated node sync', included: false },
+                    { label: '24/7 incident hotline', included: false },
+                  ].map((f, i) => (
+                    <div key={i} className="flex items-center gap-2.5 py-1.5 text-xs">
+                      {f.included
+                        ? <CheckCircle2 className="w-4 h-4 text-[#1D9E75] shrink-0" />
+                        : <X className="w-4 h-4 text-[#CBD5E1] dark:text-[#334155] shrink-0" />
+                      }
+                      <span className={f.included ? 'text-[#475569] dark:text-slate-300' : 'text-[#94A3B8] dark:text-slate-500'}>
+                        {f.label}
                       </span>
                     </div>
-                    <span className="text-[11px] text-[#0F766E] dark:text-[#2DD4BF] font-medium">
-                      Billed via M-Pesa or Card &bull; Paystack Encrypted
-                    </span>
-                  </div>
-
-                  <div className="space-y-3 pt-4 border-t border-[#E2E8F0] dark:border-[#1E3A5F]">
-                    <p className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">
-                      Included with this license:
-                    </p>
-                    <ul className="space-y-2.5">
-                      {plan.features.map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-2.5 text-xs text-[#475569] dark:text-slate-300">
-                          <CheckCircle2 className="w-4 h-4 text-[#1D9E75] shrink-0 mt-0.5" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                  ))}
                 </div>
-
-                <div className="mt-8 pt-4">
-                  <Button
-                    onClick={() => onNavigateLogin(`?register=clinic&plan=${plan.id}`)}
-                    className={`w-full py-3 rounded-xl font-semibold text-sm transition-all duration-150 ${
-                      plan.popular
-                        ? 'bg-[#0F766E] hover:bg-[#115E59] text-white shadow-sm'
-                        : 'bg-[#0B2545] hover:bg-[#112239] text-white'
-                    }`}
-                  >
-                    Register Clinic on this Plan
-                  </Button>
-                  <p className="text-[11px] text-center text-slate-400 mt-2">
-                    Includes 7-day initial trial
-                  </p>
-                </div>
-
               </div>
-            ))}
+              <div className="mt-8 pt-4">
+                <Button
+                  onClick={() => onNavigateLogin('?register=clinic&plan=plan_starter')}
+                  className="w-full py-3 rounded-xl font-semibold text-sm bg-[#0B2545] hover:bg-[#112239] text-white"
+                >
+                  Get Started
+                </Button>
+                <p className="text-[11px] text-center text-slate-400 mt-2">7-day free trial included</p>
+              </div>
+            </div>
+
+            {/* ── PROFESSIONAL (highlighted) ── */}
+            <div className="relative flex flex-col rounded-2xl p-8 bg-white dark:bg-[#112239] border-2 border-[#0F766E] dark:border-[#2DD4BF] shadow-lg lg:-translate-y-3">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <span className="bg-[#0F766E] text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md">
+                  Most Popular
+                </span>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-[#0F766E] dark:text-[#2DD4BF] mb-1">Professional</p>
+                <div className="flex items-baseline gap-1 mt-2">
+                  <span className="text-4xl font-extrabold text-[#0B2545] dark:text-white">KES 30,000</span>
+                  <span className="text-xs text-[#64748B] dark:text-[#94A3B8]">/month</span>
+                </div>
+                <p className="text-xs text-[#64748B] dark:text-slate-400 mt-1">Best for mid-size clinics & specialist centres</p>
+
+                <div className="mt-6 pt-5 border-t border-[#E2E8F0] dark:border-[#1E3A5F] space-y-1">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#0B2545] dark:text-slate-300 mb-3">Up to 30 practitioners</p>
+                  {[
+                    { label: 'Tamper-evident patient records', included: true },
+                    { label: 'Universal Health Passport (QR)', included: true },
+                    { label: 'KMPDC & NCK auto-verification', included: true },
+                    { label: 'Digital prescription writing', included: true },
+                    { label: 'Basic ledger audit log', included: true },
+                    { label: 'QR prescription token (pharmacy)', included: true },
+                    { label: 'Cross-facility referral attestation', included: false, soon: true },
+                    { label: 'Automated compliance reports', included: true },
+                    { label: 'Emergency break-glass access', included: false },
+                    { label: 'Custom EHR / HMIS bridge', included: false },
+                    { label: 'Dedicated node sync', included: false },
+                    { label: '24/7 incident hotline', included: false },
+                  ].map((f, i) => (
+                    <div key={i} className="flex items-center gap-2.5 py-1.5 text-xs">
+                      {f.included
+                        ? <CheckCircle2 className="w-4 h-4 text-[#1D9E75] shrink-0" />
+                        : <X className="w-4 h-4 text-[#CBD5E1] dark:text-[#334155] shrink-0" />
+                      }
+                      <span className={f.included ? 'text-[#475569] dark:text-slate-300' : 'text-[#94A3B8] dark:text-slate-500'}>
+                        {f.label}
+                      </span>
+                      {f.soon && (
+                        <span className="ml-1 text-[9px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800 whitespace-nowrap">
+                          Soon
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-8 pt-4">
+                <Button
+                  onClick={() => onNavigateLogin('?register=clinic&plan=plan_professional')}
+                  className="w-full py-3 rounded-xl font-semibold text-sm bg-[#0F766E] hover:bg-[#115E59] text-white shadow-sm"
+                >
+                  Get Started
+                </Button>
+                <p className="text-[11px] text-center text-slate-400 mt-2">7-day free trial included</p>
+              </div>
+            </div>
+
+            {/* ── ENTERPRISE ── */}
+            <div className="relative flex flex-col rounded-2xl p-8 bg-[#F8FAFC] dark:bg-[#0F243E] border border-[#E2E8F0] dark:border-[#1E3A5F] shadow-xs">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-[#64748B] dark:text-slate-400 mb-1">Enterprise</p>
+                <div className="flex items-baseline gap-1 mt-2">
+                  <span className="text-4xl font-extrabold text-[#0B2545] dark:text-white">KES 60,000</span>
+                  <span className="text-xs text-[#64748B] dark:text-[#94A3B8]">/month</span>
+                </div>
+                <p className="text-xs text-[#64748B] dark:text-slate-400 mt-1">Best for hospitals, county networks & multi-department facilities</p>
+
+                <div className="mt-6 pt-5 border-t border-[#E2E8F0] dark:border-[#1E3A5F] space-y-1">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#0B2545] dark:text-slate-300 mb-3">Unlimited practitioners</p>
+                  {[
+                    { label: 'Tamper-evident patient records', included: true },
+                    { label: 'Universal Health Passport (QR)', included: true },
+                    { label: 'KMPDC & NCK auto-verification', included: true },
+                    { label: 'Digital prescription writing', included: true },
+                    { label: 'Basic ledger audit log', included: true },
+                    { label: 'QR prescription token (pharmacy)', included: true },
+                    { label: 'Cross-facility referral attestation', included: false, soon: true },
+                    { label: 'Automated compliance reports', included: true },
+                    { label: 'Emergency break-glass access', included: true },
+                    { label: 'Custom EHR / HMIS bridge', included: true },
+                    { label: 'Dedicated node sync', included: true },
+                    { label: '24/7 incident hotline', included: true },
+                  ].map((f, i) => (
+                    <div key={i} className="flex items-center gap-2.5 py-1.5 text-xs">
+                      {f.included
+                        ? <CheckCircle2 className="w-4 h-4 text-[#1D9E75] shrink-0" />
+                        : <X className="w-4 h-4 text-[#CBD5E1] dark:text-[#334155] shrink-0" />
+                      }
+                      <span className={f.included ? 'text-[#475569] dark:text-slate-300' : 'text-[#94A3B8] dark:text-slate-500'}>
+                        {f.label}
+                      </span>
+                      {f.soon && (
+                        <span className="ml-1 text-[9px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800 whitespace-nowrap">
+                          Soon
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-8 pt-4">
+                <Button
+                  onClick={() => onNavigateLogin('?register=clinic&plan=plan_enterprise')}
+                  className="w-full py-3 rounded-xl font-semibold text-sm bg-[#0B2545] hover:bg-[#112239] text-white"
+                >
+                  Get Started
+                </Button>
+                <p className="text-[11px] text-center text-slate-400 mt-2">7-day free trial included</p>
+              </div>
+            </div>
+
           </div>
 
-          {/* Pricing FAQ Note */}
+          {/* Billing note */}
+          <p className="mt-6 text-center text-xs text-[#94A3B8] dark:text-slate-500">
+            All plans billed monthly via M-Pesa or card &bull; Paystack encrypted &bull; Cancel anytime
+          </p>
+
+          {/* ── Pharmacy Plan ── */}
+          <div id="pharmacy-pricing" className="mt-20">
+            <div className="text-center mb-8 space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#0F766E]/10 text-[#0F766E] dark:text-[#2DD4BF] border border-[#0F766E]/20">
+                <Pill className="w-3.5 h-3.5" /> Pharmacy Dispensary Portal
+              </div>
+              <h3 className="text-2xl font-extrabold text-[#0B2545] dark:text-white">Simple, flat pricing for licensed pharmacies</h3>
+              <p className="text-sm text-[#475569] dark:text-slate-300">One plan. Everything included. 14-day trial for new pharmacies.</p>
+            </div>
+
+            <div className="max-w-lg mx-auto bg-white dark:bg-[#112239] border-2 border-[#0F766E] dark:border-[#2DD4BF] rounded-2xl p-8 shadow-lg">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <h4 className="text-xl font-bold text-[#0B2545] dark:text-white">Pharmacy Monthly Subscription</h4>
+                  <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">Full dispensary compliance portal with PPB license verification</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-[#0F766E]/10 text-[#0F766E] dark:text-[#2DD4BF] flex items-center justify-center shrink-0">
+                  <Pill className="w-6 h-6" />
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-extrabold text-[#0B2545] dark:text-white">KES 4,500</span>
+                  <span className="text-xs text-[#64748B] dark:text-[#94A3B8]">/ month</span>
+                </div>
+                <span className="text-[11px] text-[#0F766E] dark:text-[#2DD4BF] font-medium">
+                  Billed via M-Pesa or Card &bull; Paystack Encrypted
+                </span>
+              </div>
+
+              <ul className="space-y-2.5 mb-8 pt-4 border-t border-[#E2E8F0] dark:border-[#1E3A5F]">
+                {[
+                  'PPB premises license verification & registration',
+                  'Prescription QR token scanning & full posology disclosure',
+                  'Batch number & expiry date dispensation tracking',
+                  'Rival-fill collision prevention (duplicate dispensing blocked)',
+                  'Multi-tenant isolation — your dispensations are private',
+                  'Full dispensation audit trail & compliance read-only mode',
+                  '14-day free trial upon Super Admin approval'
+                ].map((f, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-xs text-[#475569] dark:text-slate-300">
+                    <CheckCircle2 className="w-4 h-4 text-[#1D9E75] shrink-0 mt-0.5" />
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Button
+                onClick={() => onNavigateLogin('?register=pharmacy')}
+                className="w-full py-3 rounded-xl font-semibold text-sm bg-[#0F766E] hover:bg-[#115E59] text-white shadow-sm"
+              >
+                Register your Pharmacy — Start Free Trial
+              </Button>
+              <p className="text-[11px] text-center text-slate-400 mt-2">
+                14-day trial &bull; No card required until activation
+              </p>
+            </div>
+          </div>
+
+          {/* Enterprise contact note */}
           <div className="mt-12 text-center text-xs text-[#64748B] dark:text-[#94A3B8] max-w-xl mx-auto">
-            Need an enterprise deployment across multiple county hospitals or specialized HMIS integration? Contact our healthcare solutions desk for tailored institutional agreements.
+            Need a county-wide deployment or a custom HMIS integration contract? Contact our healthcare solutions desk for tailored institutional agreements.
           </div>
 
         </div>
@@ -748,10 +1012,10 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
               Onboarding Process
             </Badge>
             <h2 className="text-3xl font-extrabold text-[#0B2545] dark:text-white tracking-tight">
-              Get your healthcare facility up and running in 4 steps
+              Get your healthcare facility live in 4 steps
             </h2>
             <p className="text-base text-[#475569] dark:text-slate-300 leading-relaxed">
-              We uphold strict medical compliance without imposing bureaucratic complexity on your clinical team.
+              Whether you're a hospital, clinic, or licensed pharmacy — we uphold strict medical compliance without imposing bureaucratic complexity on your team.
             </p>
           </div>
 
@@ -763,10 +1027,10 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                 1
               </div>
               <h3 className="text-base font-bold text-[#0B2545] dark:text-white">
-                Register Your Clinic
+                Register Your Facility
               </h3>
               <p className="text-xs text-[#475569] dark:text-slate-300 leading-relaxed">
-                Submit your facility name, administrator contact, and medical facility credentials in under 2 minutes through our self-service portal.
+                Submit your facility name, administrator contact, and regulatory credentials — clinic registration number or PPB premises license for pharmacies — in under 2 minutes.
               </p>
             </div>
 
@@ -789,10 +1053,10 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                 3
               </div>
               <h3 className="text-base font-bold text-[#0B2545] dark:text-white">
-                Onboard Clinicians
+                Onboard Your Team
               </h3>
               <p className="text-xs text-[#475569] dark:text-slate-300 leading-relaxed">
-                Doctors and nurses register their credentials. The system automatically verifies their KMPDC or NCK council registration in real time.
+                Doctors and nurses register with automatic KMPDC / NCK council verification. Pharmacists join with PPB premises credentials linked to your facility.
               </p>
             </div>
 
@@ -802,10 +1066,10 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                 4
               </div>
               <h3 className="text-base font-bold text-[#0B2545] dark:text-white">
-                Deliver Tamper-Proof Care
+                Deliver Compliant Care
               </h3>
               <p className="text-xs text-[#475569] dark:text-slate-300 leading-relaxed">
-                Issue QR health passports, record encrypted visits, and verify complete patient histories with zero fear of falsification.
+                Issue QR health passports, record encrypted visits, dispense prescriptions with full audit trails, and verify complete patient histories with zero fear of falsification.
               </p>
             </div>
 
@@ -824,10 +1088,10 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
           <div className="bg-[#0B2545] dark:bg-[#0F243E] rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden shadow-xl">
             <div className="relative z-10 max-w-2xl space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#1D9E75]/20 text-[#34D399] border border-[#1D9E75]/40">
-                <Sparkles className="w-3.5 h-3.5" /> Start With a 7-Day Free Trial
+                <Sparkles className="w-3.5 h-3.5" /> Clinics: 7-day Trial &bull; Pharmacies: 14-day Trial
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-                Ready to secure your clinic's health records?
+                Ready to secure your facility's health records?
               </h2>
               <p className="text-sm text-slate-300 leading-relaxed">
                 Join forward-thinking Kenyan healthcare institutions. Protect your facility against record falsification and deliver seamless, connected patient care.
@@ -838,8 +1102,16 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                   onClick={() => onNavigateLogin('?register=clinic')}
                   className="bg-[#0F766E] hover:bg-[#115E59] text-white font-semibold text-sm px-6 py-3 rounded-xl shadow-md flex items-center justify-center gap-2"
                 >
-                  <span>Register your clinic</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <Building2 className="w-4 h-4" />
+                  <span>Register your Clinic</span>
+                </Button>
+                <Button
+                  size="lg"
+                  onClick={() => onNavigateLogin('?register=pharmacy')}
+                  className="bg-[#1D9E75] hover:bg-[#16a37a] text-white font-semibold text-sm px-6 py-3 rounded-xl shadow-md flex items-center justify-center gap-2"
+                >
+                  <Pill className="w-4 h-4" />
+                  <span>Register your Pharmacy</span>
                 </Button>
                 <Button
                   size="lg"
@@ -847,7 +1119,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                   onClick={() => onNavigateLogin()}
                   className="bg-transparent border-white/30 hover:bg-white/10 text-white font-medium text-sm px-6 py-3 rounded-xl"
                 >
-                  Practitioner or Patient Sign In
+                  Sign In
                 </Button>
               </div>
             </div>
@@ -867,7 +1139,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                 </span>
               </div>
               <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
-                Decentralized, tamper-evident health records infrastructure connecting healthcare facilities across the Republic of Kenya.
+                Decentralized, tamper-evident health records infrastructure connecting healthcare facilities and pharmacies across the Republic of Kenya.
               </p>
               <p className="text-[11px] text-[#1D9E75] font-semibold flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" /> Verified Kenyan Healthcare Node
@@ -888,6 +1160,11 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                 <li>
                   <button onClick={() => scrollToSection('security')} className="hover:text-[#0F766E]">
                     KMPDC / NCK Verification
+                  </button>
+                </li>
+                <li>
+                  <button onClick={() => scrollToSection('pharmacy-pricing')} className="hover:text-[#0F766E]">
+                    Pharmacy Dispensing Portal
                   </button>
                 </li>
                 <li>
@@ -932,7 +1209,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                 Regulatory Standards
               </p>
               <p className="text-xs text-[#64748B] dark:text-slate-400 leading-relaxed">
-                Operating under Kenya Data Protection Act 2019 provisions for sensitive health information, KMPDC practitioner attestation guidelines, and the National Health Informatics Framework.
+                Operating under Kenya Data Protection Act 2019 provisions for sensitive health information, KMPDC practitioner attestation guidelines, PPB premises licensing requirements, and the National Health Informatics Framework.
               </p>
             </div>
 
@@ -940,11 +1217,9 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
 
           <div className="mt-8 pt-6 border-t border-[#E2E8F0] dark:border-[#1E3A5F] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#64748B] dark:text-[#94A3B8]">
             <p>&copy; {new Date().getFullYear()} Block Health Chain. All rights reserved.</p>
-            <div className="flex items-center gap-4">
-              <span>Security &amp; Encryption Notice</span>
-              <span>Privacy Framework</span>
-              <span>Terms of Service</span>
-            </div>
+            <p className="text-[11px] text-[#94A3B8]">
+              Built for Kenya's healthcare ecosystem &bull; Clinics, Hospitals & Licensed Pharmacies
+            </p>
           </div>
 
         </div>
