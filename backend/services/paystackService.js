@@ -201,6 +201,14 @@ const SUBSCRIPTION_PLANS = [
         days: 365,
         amountKES: 192000,
         description: '365-day enterprise license, unlimited practitioners, full emergency break-glass, and dedicated node support (Save KES 48,000).'
+    },
+    {
+        id: 'plan_pharmacy_monthly',
+        name: 'Pharmacy Dispensing License',
+        days: 30,
+        amountKES: 4500,
+        organizationType: 'pharmacy',
+        description: '30-day dispensing terminal license with cryptographic QR verification, rival-claim locking, and PPB statutory audit trails.'
     }
 ];
 

@@ -688,6 +688,164 @@ const registerClinic = catchAsync(async (req, res) => {
 });
 
 /**
+ * Self-serve pharmacy registration and organization onboarding
+ */
+const registerPharmacy = catchAsync(async (req, res) => {
+    const client = await db.pool.connect();
+    try {
+        const { pharmacyName, adminName, email, password, phone, physicalAddress, ppbLicenseNumber } = req.body || {};
+
+        if (!pharmacyName || !adminName || !email || !password) {
+            throw new AppError('Please provide all required fields: pharmacyName, adminName, email, and password.', 400);
+        }
+
+        const cleanOrgName = pharmacyName.trim();
+        const cleanAdminName = adminName.trim();
+        const cleanEmail = email.toLowerCase().trim();
+        const cleanPhone = phone ? phone.trim() : null;
+        const cleanAddress = physicalAddress ? physicalAddress.trim() : null;
+        const cleanPpb = ppbLicenseNumber ? ppbLicenseNumber.trim() : null;
+
+        if (cleanOrgName.length < 3) {
+            throw new AppError('Pharmacy organization name must be at least 3 characters long.', 400);
+        }
+
+        if (password.length < 6) {
+            throw new AppError('Password must be at least 6 characters long.', 400);
+        }
+
+        // 1. Check if organization name already exists
+        const existingOrg = await authRepo.findOrganizationByName(cleanOrgName, client);
+        if (existingOrg) {
+            throw new AppError('A pharmacy or healthcare facility with this name is already registered.', 400);
+        }
+
+        // 2. Check if admin email already exists
+        const existingUser = await authRepo.findUserByEmail(cleanEmail, client);
+        if (existingUser) {
+            throw new AppError('An account with this email address already exists.', 400);
+        }
+
+        // Generate organization slug
+        const baseSlug = cleanOrgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        const slug = `${baseSlug}-${crypto.randomBytes(3).toString('hex')}`;
+
+        // Generate RSA keypair for the admin pharmacist
+        const { publicKey, privateKey } = generateKeyPair();
+
+        // Hash Password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        await client.query('BEGIN;');
+
+        // 3. Insert into organizations with org_type = 'pharmacy', status = 'pending_approval'
+        const newOrg = await authRepo.createOrganization({
+            name: cleanOrgName,
+            slug,
+            status: 'pending_approval',
+            licenseExpiresAt: null,
+            orgType: 'pharmacy',
+            ppbLicenseNumber: cleanPpb,
+            contactPhone: cleanPhone,
+            physicalAddress: cleanAddress
+        }, client);
+
+        // 4. Insert into users as role = 'pharmacist' scoped to new organization_id with is_approved = false
+        const createdAt = getKenyanTimestamp();
+        const newPharmacist = await authRepo.createUser({
+            name: cleanAdminName,
+            email: cleanEmail,
+            password: hashedPassword,
+            role: 'pharmacist',
+            publicKey,
+            privateKey,
+            isApproved: false,
+            isRejected: false,
+            organizationId: newOrg.id,
+            createdAt
+        }, client);
+
+        // 5. Insert into tenant_memberships with role = 'pharmacist', status = 'pending'
+        await authRepo.createTenantMembership({
+            userId: newPharmacist.id,
+            organizationId: newOrg.id,
+            role: 'pharmacist',
+            status: 'pending'
+        }, client);
+
+        // 6. Seed isolated Genesis block for this new pharmacy
+        const genesisTimestamp = getKenyanTimestamp();
+        const genesisRecords = [{
+            txType: 'pharmacy',
+            message: `Genesis Block: ${cleanOrgName} Pharmacy Dispensing Ledger Initialized`,
+            pharmacist: cleanAdminName,
+            ppbLicenseNumber: cleanPpb || 'PPB Pending'
+        }];
+        const genesisPrevHash = '0';
+        let nonce = 0;
+        let genesisHash = '';
+
+        while (true) {
+            const dataStr = JSON.stringify(genesisRecords);
+            genesisHash = crypto.createHash('sha256').update(0 + genesisTimestamp + dataStr + genesisPrevHash + nonce).digest('hex');
+            if (genesisHash.startsWith('00')) break;
+            nonce++;
+        }
+
+        await authRepo.createGenesisBlock({
+            organizationId: newOrg.id,
+            timestamp: genesisTimestamp,
+            records: genesisRecords,
+            previousHash: genesisPrevHash,
+            nonce,
+            hash: genesisHash
+        }, client);
+
+        // 7. Insert row in licenses with status = 'pending_approval'
+        await authRepo.createLicense({
+            organizationId: newOrg.id,
+            clientId: cleanOrgName,
+            status: 'pending_approval',
+            expiresAt: null
+        }, client);
+
+        // 8. Log audit trail
+        await authRepo.createAuditLog({
+            organizationId: newOrg.id,
+            eventType: 'pharmacy_registration_submitted',
+            doctorId: newPharmacist.id,
+            doctorName: cleanAdminName,
+            details: `New pharmacy registration for "${cleanOrgName}" submitted by ${cleanAdminName} (PPB: ${cleanPpb || 'None provided'}). Pending Super Admin review.`,
+            timestamp: createdAt
+        }, client);
+
+        await client.query('COMMIT;');
+
+        // Return confirmation without JWT (Do NOT log in immediately)
+        res.status(201).json({
+            success: true,
+            pendingApproval: true,
+            message: 'Your pharmacy registration has been submitted and is pending review by platform administration.',
+            organization: {
+                id: newOrg.id,
+                name: newOrg.name,
+                slug: newOrg.slug,
+                orgType: 'pharmacy',
+                status: 'pending_approval',
+                ppbLicenseNumber: cleanPpb
+            }
+        });
+
+    } catch (err) {
+        await client.query('ROLLBACK;').catch(() => { });
+        throw err;
+    } finally {
+        client.release();
+    }
+});
+
+/**
  * Change Account Password
  */
 const changePassword = catchAsync(async (req, res) => {
@@ -1037,6 +1195,7 @@ module.exports = {
     register,
     login,
     registerClinic,
+    registerPharmacy,
     changePassword,
     updateEmail,
     forgotPassword,

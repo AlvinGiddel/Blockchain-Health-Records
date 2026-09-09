@@ -115,16 +115,17 @@ const approveOrganization = catchAsync(async (req, res) => {
         const adminUsers = await orgRepo.approveClinicAdmin(id, client);
 
         // 4. Update tenant_memberships
-        await orgRepo.updateTenantMembershipStatus(id, 'admin', 'active', client);
+        const membershipRole = org.org_type === 'pharmacy' ? 'pharmacist' : 'admin';
+        await orgRepo.updateTenantMembershipStatus(id, membershipRole, 'active', client);
 
         // 5. Audit log
         const adminActorName = await resolveAdminName(decoded.id, decoded.name, client);
         await orgRepo.createAuditLog({
             organizationId: id,
-            eventType: 'clinic_approved',
+            eventType: org.org_type === 'pharmacy' ? 'pharmacy_approved' : 'clinic_approved',
             doctorId: decoded.id,
             doctorName: adminActorName,
-            details: `Clinic "${org.name}" approved by ${adminActorName}. 7-day trial activated.`,
+            details: `${org.org_type === 'pharmacy' ? 'Pharmacy' : 'Clinic'} "${org.name}" approved by ${adminActorName}. Trial activated.`,
             timestamp: getKenyanTimestamp()
         }, client);
 
@@ -137,12 +138,12 @@ const approveOrganization = catchAsync(async (req, res) => {
                 email: admin.email,
                 adminName: admin.name,
                 clinicName: org.name
-            }).catch(e => console.error('Failed to send clinic approval email:', e));
+            }).catch(e => console.error('Failed to send facility approval email:', e));
         }
 
         res.json({
             success: true,
-            message: `Clinic "${org.name}" approved successfully! 7-day trial activated.`,
+            message: `${org.org_type === 'pharmacy' ? 'Pharmacy' : 'Clinic'} "${org.name}" approved successfully! Trial activated.`,
             organization: org
         });
     } catch (err) {
@@ -154,7 +155,7 @@ const approveOrganization = catchAsync(async (req, res) => {
 });
 
 /**
- * 5. Reject a pending clinic registration (sets status to disabled, Super Admin only)
+ * 5. Reject a pending clinic or pharmacy registration (sets status to disabled, Super Admin only)
  * POST /api/admin/organizations/:id/reject
  */
 const rejectOrganization = catchAsync(async (req, res) => {
@@ -180,7 +181,8 @@ const rejectOrganization = catchAsync(async (req, res) => {
         const adminUsers = await orgRepo.rejectClinicAdmin(id, client);
 
         // 4. Update tenant_memberships
-        await orgRepo.updateTenantMembershipStatus(id, 'admin', 'inactive', client);
+        const rejectMembershipRole = org.org_type === 'pharmacy' ? 'pharmacist' : 'admin';
+        await orgRepo.updateTenantMembershipStatus(id, rejectMembershipRole, 'inactive', client);
 
         // 5. Audit log
         const adminActorName = await resolveAdminName(decoded.id, decoded.name, client);
@@ -441,6 +443,92 @@ const getOrganizationPatientsWithAudit = catchAsync(async (req, res) => {
     });
 });
 
+/**
+ * 10. Organization Prescription Counts (Statistical oversight, Zero PII)
+ * GET /api/admin/organizations/prescription-counts
+ */
+const getOrganizationPrescriptionCounts = catchAsync(async (req, res) => {
+    verifySuperAdminToken(req);
+    const orgs = await orgRepo.getPrescriptionCountsByOrg();
+    res.json({
+        success: true,
+        organizations: orgs
+    });
+});
+
+/**
+ * 11. Organization Prescription List Drill-Down with Mandatory Audit Justification
+ * POST /api/admin/organizations/:id/prescriptions
+ */
+const getOrganizationPrescriptionsWithAudit = catchAsync(async (req, res) => {
+    const adminUser = verifySuperAdminToken(req);
+    const { id: orgId } = req.params;
+    const { reason } = req.body || {};
+
+    // Privacy-by-design guardrail: mandatory non-blank justification reason (min 10 chars)
+    const trimmedReason = typeof reason === 'string' ? reason.trim() : '';
+    if (!trimmedReason || trimmedReason.length < 10) {
+        throw new AppError('A justified operational access reason is required (minimum 10 characters).', 400);
+    }
+
+    // Verify target organization exists
+    const org = await orgRepo.findOrganizationById(orgId);
+    if (!org) {
+        throw new AppError('Healthcare organization facility not found.', 404);
+    }
+
+    const kenyanTimestamp = getKenyanTimestamp();
+    const logDetails = `Super Admin viewed prescription directory for ${org.name}. Access Reason: "${trimmedReason}" (Admin: ${adminUser.email || adminUser.name || adminUser.id})`;
+
+    // 1. Immutable Break-Glass Audit Log
+    let effectiveAdminId = null;
+    let effectiveAdminName = adminUser.name;
+    if (adminUser.id) {
+        try {
+            const uCheck = await orgRepo.findUserById(adminUser.id);
+            if (uCheck) {
+                effectiveAdminId = uCheck.id;
+                if (!effectiveAdminName && uCheck.name) {
+                    effectiveAdminName = uCheck.name;
+                }
+            }
+        } catch (uErr) {
+            // fallback
+        }
+    }
+    if (!effectiveAdminName) effectiveAdminName = 'Super Administrator';
+
+    await logAuditEvent(
+        'admin_prescription_view',
+        null,
+        null,
+        effectiveAdminId,
+        effectiveAdminName,
+        logDetails,
+        kenyanTimestamp,
+        org.id
+    );
+
+    console.log(`[AUDIT] admin_prescription_view recorded by Super Admin (${adminUser.email}) for "${org.name}". Reason: "${trimmedReason}"`);
+
+    // 2. Query prescriptions for this organization
+    const prescriptions = await orgRepo.getOrganizationPrescriptions(org.id);
+
+    res.json({
+        success: true,
+        organization: {
+            id: org.id,
+            name: org.name,
+            status: org.status
+        },
+        auditLogged: true,
+        eventType: 'admin_prescription_view',
+        timestamp: kenyanTimestamp,
+        prescriptionCount: prescriptions.length,
+        prescriptions
+    });
+});
+
 module.exports = {
     getActiveOrganizations,
     getAdminOrganizations,
@@ -450,5 +538,7 @@ module.exports = {
     updateOrganizationStatus,
     provisionTenant,
     getOrganizationPatientCounts,
-    getOrganizationPatientsWithAudit
+    getOrganizationPatientsWithAudit,
+    getOrganizationPrescriptionCounts,
+    getOrganizationPrescriptionsWithAudit
 };

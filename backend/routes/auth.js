@@ -20,6 +20,9 @@ router.post('/login', authController.login);
 // Clinic / Hospital facility self-serve onboarding
 router.post('/register-clinic', authController.registerClinic);
 
+// Pharmacy facility self-serve onboarding
+router.post('/register-pharmacy', authController.registerPharmacy);
+
 // Password & Email management
 router.post('/change-password', requireAuth, authController.changePassword);
 router.post('/update-email', requireAuth, authController.updateEmail);

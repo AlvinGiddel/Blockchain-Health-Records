@@ -17,6 +17,7 @@ const EXEMPT_PATHS = [
     '/api/auth/login',
     '/api/auth/register',
     '/api/auth/register-clinic',
+    '/api/auth/register-pharmacy',
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
     '/api/organizations/active',

@@ -304,18 +304,50 @@ async function dispenseItems({ prescriptionId, pharmacyOrgId, pharmacistId, item
         }
 
         const remaining = item.quantity_prescribed - item.quantity_dispensed;
+        if (remaining <= 0) {
+            throw new AppError(
+                `Conflict: Item "${item.medication_name}" has already been completely dispensed and cannot be re-dispensed.`,
+                409
+            );
+        }
         if (qtyToDispense > remaining) {
             throw new AppError(
-                `Cannot dispense ${qtyToDispense} of ${item.medication_name}. Only ${remaining} remaining prescribed.`,
-                400
+                `Conflict: Cannot dispense ${qtyToDispense} of ${item.medication_name}. Only ${remaining} remaining prescribed.`,
+                409
             );
         }
 
+        const batchNumber = (disp.batchNumber || disp.batch_number || '').trim() || null;
+        const expiryDate = disp.expiryDate || disp.expiry_date || null;
+
         await db.query(`
             UPDATE prescription_items
-            SET quantity_dispensed = quantity_dispensed + $1
-            WHERE id = $2;
-        `, [qtyToDispense, item.id]);
+            SET quantity_dispensed = quantity_dispensed + $1,
+                batch_number = COALESCE($2, batch_number),
+                expiry_date = COALESCE($3, expiry_date),
+                dispensed_by_org_id = $4,
+                dispensed_by_user_id = $5,
+                dispensed_at = NOW()
+            WHERE id = $6;
+        `, [qtyToDispense, batchNumber, expiryDate, pharmacyOrgId, pharmacistId, item.id]);
+
+        // Insert into dispense_logs per item for granular batch/expiry audit tracking
+        await db.query(`
+            INSERT INTO dispense_logs (
+                prescription_id, pharmacy_org_id, pharmacist_id, item_id, batch_number, item_expiry_date, quantity_dispensed, notes
+            ) VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8
+            );
+        `, [
+            prescriptionId,
+            pharmacyOrgId || null,
+            pharmacistId || null,
+            item.id,
+            batchNumber,
+            expiryDate,
+            qtyToDispense,
+            notes || null
+        ]);
 
         totalDispensedInThisBatch += qtyToDispense;
     }
@@ -324,16 +356,7 @@ async function dispenseItems({ prescriptionId, pharmacyOrgId, pharmacistId, item
         throw new AppError('No valid items were dispensed (quantity must be greater than 0).', 400);
     }
 
-    // 3. Insert into dispense_logs
-    await db.query(`
-        INSERT INTO dispense_logs (
-            prescription_id, pharmacy_org_id, pharmacist_id, quantity_dispensed, notes
-        ) VALUES (
-            $1, $2, $3, $4, $5
-        );
-    `, [prescriptionId, pharmacyOrgId || null, pharmacistId || null, totalDispensedInThisBatch, notes || null]);
-
-    // 4. Re-evaluate overall status
+    // 3. Re-evaluate overall status
     const { rows: updatedItems } = await db.query(`
         SELECT quantity_prescribed, quantity_dispensed
         FROM prescription_items
@@ -354,7 +377,7 @@ async function dispenseItems({ prescriptionId, pharmacyOrgId, pharmacistId, item
     // Centralized Audit Logging for Dispensing
     try {
         const { rows: pharmRows } = await db.query('SELECT name FROM users WHERE id = $1', [pharmacistId]);
-        const pharmacistName = pharmRows[0]?.name || 'Dispensing Staff';
+        const pharmacistName = pharmRows[0]?.name || 'Dispensing Pharmacist';
         await logAuditEvent(
             'prescription_dispensed',
             prescription.patient_id,
@@ -435,6 +458,61 @@ async function getPatientAllergies(patientId) {
     return [];
 }
 
+/**
+ * Get dispensations history for a specific pharmacy organization
+ */
+async function getPharmacyDispensations(pharmacyOrgId) {
+    const query = `
+        SELECT dl.id, dl.prescription_id, dl.pharmacy_org_id, dl.pharmacist_id,
+               dl.item_id, dl.batch_number, dl.item_expiry_date, dl.quantity_dispensed,
+               dl.notes, dl.created_at,
+               pi.medication_name, pi.dosage, pi.frequency,
+               p.qr_token, p.status as prescription_status,
+               pat.name as patient_name,
+               u.name as pharmacist_name
+        FROM dispense_logs dl
+        LEFT JOIN prescription_items pi ON dl.item_id = pi.id
+        JOIN prescriptions p ON dl.prescription_id = p.id
+        JOIN users pat ON p.patient_id = pat.id
+        LEFT JOIN users u ON dl.pharmacist_id = u.id
+        WHERE dl.pharmacy_org_id = $1
+        ORDER BY dl.created_at DESC;
+    `;
+    const { rows } = await db.query(query, [pharmacyOrgId]);
+    return rows;
+}
+
+/**
+ * Get dispensary statistics & metrics for a specific pharmacy organization
+ */
+async function getPharmacyMetrics(pharmacyOrgId) {
+    const { rows: stats } = await db.query(`
+        SELECT 
+            COUNT(DISTINCT dl.prescription_id) as total_prescriptions_served,
+            COUNT(dl.id) as total_dispensations,
+            COALESCE(SUM(dl.quantity_dispensed), 0) as total_units_dispensed,
+            COUNT(DISTINCT dl.prescription_id) FILTER (WHERE dl.created_at >= CURRENT_DATE) as prescriptions_served_today
+        FROM dispense_logs dl
+        WHERE dl.pharmacy_org_id = $1;
+    `, [pharmacyOrgId]);
+
+    const { rows: orgRows } = await db.query(`
+        SELECT id, name, org_type, ppb_license_number, contact_phone, physical_address, status, license_expires_at
+        FROM organizations
+        WHERE id = $1;
+    `, [pharmacyOrgId]);
+
+    return {
+        metrics: {
+            total_prescriptions_served: parseInt(stats[0]?.total_prescriptions_served || '0', 10),
+            total_dispensations: parseInt(stats[0]?.total_dispensations || '0', 10),
+            total_units_dispensed: parseInt(stats[0]?.total_units_dispensed || '0', 10),
+            prescriptions_served_today: parseInt(stats[0]?.prescriptions_served_today || '0', 10)
+        },
+        organization: orgRows[0] || null
+    };
+}
+
 module.exports = {
     createPrescription,
     getPrescriptionsByOrganization,
@@ -444,5 +522,7 @@ module.exports = {
     getPrescriptionByQrToken,
     dispenseItems,
     cancelPrescription,
-    getPatientAllergies
+    getPatientAllergies,
+    getPharmacyDispensations,
+    getPharmacyMetrics
 };

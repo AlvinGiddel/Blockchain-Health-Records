@@ -184,14 +184,18 @@ async function createOrganization({
     name,
     slug,
     status = 'pending_approval',
-    licenseExpiresAt = null
+    licenseExpiresAt = null,
+    orgType = 'clinic',
+    ppbLicenseNumber = null,
+    contactPhone = null,
+    physicalAddress = null
 }, client = null) {
     const runner = client || db;
     const { rows } = await runner.query(
-        `INSERT INTO organizations (name, slug, status, license_expires_at)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO organizations (name, slug, status, license_expires_at, org_type, ppb_license_number, contact_phone, physical_address)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *;`,
-        [name, slug, status, licenseExpiresAt]
+        [name, slug, status, licenseExpiresAt, orgType, ppbLicenseNumber, contactPhone, physicalAddress]
     );
     return rows[0];
 }

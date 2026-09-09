@@ -19,10 +19,14 @@ router.get('/prescriptions', requireAuth, prescriptionsController.listPrescripti
 // 5. Get Prescription Details by ID
 router.get('/prescriptions/:id', requireAuth, prescriptionsController.getPrescriptionById);
 
-// 6. Pharmacy Dispensing / Fulfillment (Restricted to Doctor, Clinic Admin, Super Admin)
-router.post('/prescriptions/:id/dispense', requireAuth, requireRole('doctor', 'admin', 'super_admin'), prescriptionsController.dispensePrescription);
+// 6. Pharmacy Dispensing / Fulfillment (Restricted strictly to verified Pharmacists)
+router.post('/prescriptions/:id/dispense', requireAuth, requireRole('pharmacist'), prescriptionsController.dispensePrescription);
 
-// 7. Cancel Prescription (Prescribing Doctor / Clinic Admin / Super Admin)
+// 7. Pharmacy Portal Operations (Dispensations history & dispensary metrics scoped to pharmacy)
+router.get('/pharmacy/dispensations', requireAuth, requireRole('pharmacist'), prescriptionsController.getPharmacyDispensations);
+router.get('/pharmacy/metrics', requireAuth, requireRole('pharmacist'), prescriptionsController.getPharmacyMetrics);
+
+// 8. Cancel Prescription (Prescribing Doctor / Clinic Admin / Super Admin)
 router.post('/prescriptions/:id/cancel', requireAuth, requireRole('doctor', 'admin', 'super_admin'), prescriptionsController.cancelPrescription);
 
 module.exports = router;

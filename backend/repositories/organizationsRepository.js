@@ -20,6 +20,7 @@ async function getActiveOrganizations(client = null) {
         SELECT id, name, status 
         FROM organizations 
         WHERE status IN ('active', 'trial') 
+          AND (org_type = 'clinic' OR org_type IS NULL)
           AND LOWER(name) NOT LIKE '%unassigned%'
         ORDER BY name ASC;
     `);
@@ -39,6 +40,10 @@ async function getAdminOrganizations(client = null) {
             o.name,
             o.slug,
             o.status,
+            o.org_type as "orgType",
+            o.ppb_license_number as "ppbLicenseNumber",
+            o.contact_phone as "contactPhone",
+            o.physical_address as "physicalAddress",
             o.license_expires_at as "licenseExpiresAt",
             o.max_doctors as "maxDoctors",
             o.max_patients as "maxPatients",
@@ -60,7 +65,7 @@ async function getAdminOrganizations(client = null) {
 }
 
 /**
- * Get pending clinic approval requests for Super Admin review
+ * Pending organizations awaiting Super Admin review
  * @param {object} [client]
  * @returns {Promise<Array>}
  */
@@ -72,12 +77,17 @@ async function getPendingOrganizations(client = null) {
             o.name as "organizationName",
             o.slug,
             o.status,
+            o.org_type as "orgType",
+            o.ppb_license_number as "ppbLicenseNumber",
+            o.contact_phone as "contactPhone",
+            o.physical_address as "physicalAddress",
             o.created_at as "createdAt",
             u.id as "adminId",
             u.name as "adminName",
-            u.email as "adminEmail"
+            u.email as "adminEmail",
+            u.role as "adminRole"
         FROM organizations o
-        LEFT JOIN users u ON u.organization_id = o.id AND u.role = 'admin'
+        LEFT JOIN users u ON u.organization_id = o.id AND u.role IN ('admin', 'pharmacist')
         WHERE o.status IN ('pending_approval', 'pending')
         ORDER BY o.created_at ASC;
     `);
@@ -128,7 +138,11 @@ async function updateOrganizationApproval(id, { status = 'trial', licenseExpires
     const { rows } = await runner.query(`
         UPDATE organizations 
         SET status = $1,
-            license_expires_at = COALESCE($2, NOW() + INTERVAL '7 days'),
+            license_expires_at = COALESCE(
+                $2, 
+                CASE WHEN org_type = 'pharmacy' THEN NOW() + INTERVAL '14 days' 
+                     ELSE NOW() + INTERVAL '7 days' END
+            ),
             updated_at = NOW()
         WHERE id = $3
         RETURNING *;
@@ -159,7 +173,7 @@ async function updateLicenseStatus(organizationId, { status, expiresAt = null },
 }
 
 /**
- * Approve the clinic's admin user
+ * Approve the clinic or pharmacy admin/superintendent user
  * @param {string} organizationId
  * @param {object} [client]
  * @returns {Promise<Array>}
@@ -169,14 +183,14 @@ async function approveClinicAdmin(organizationId, client = null) {
     const { rows } = await runner.query(`
         UPDATE users 
         SET is_approved = true, is_rejected = false 
-        WHERE organization_id = $1 AND role = 'admin'
-        RETURNING id, name, email;
+        WHERE organization_id = $1 AND role IN ('admin', 'pharmacist')
+        RETURNING id, name, email, role;
     `, [organizationId]);
     return rows;
 }
 
 /**
- * Reject the clinic's admin user
+ * Reject the clinic or pharmacy admin/superintendent user
  * @param {string} organizationId
  * @param {object} [client]
  * @returns {Promise<Array>}
@@ -186,8 +200,8 @@ async function rejectClinicAdmin(organizationId, client = null) {
     const { rows } = await runner.query(`
         UPDATE users 
         SET is_approved = false, is_rejected = true 
-        WHERE organization_id = $1 AND role = 'admin'
-        RETURNING id, name, email;
+        WHERE organization_id = $1 AND role IN ('admin', 'pharmacist')
+        RETURNING id, name, email, role;
     `, [organizationId]);
     return rows;
 }
@@ -415,6 +429,83 @@ async function findUserByEmail(email, client = null) {
 }
 
 /**
+ * Query aggregate prescription metrics by organization (Zero PII, statistical oversight)
+ */
+async function getPrescriptionCountsByOrg(client = null) {
+    const runner = client || db;
+    const { rows } = await runner.query(`
+        SELECT 
+            o.id,
+            o.name,
+            o.slug,
+            o.status,
+            COUNT(p.id)::int as "totalPrescriptions",
+            COUNT(CASE WHEN p.status = 'ISSUED' THEN 1 END)::int as "issuedCount",
+            COUNT(CASE WHEN p.status = 'PARTIALLY_FILLED' THEN 1 END)::int as "partiallyFilledCount",
+            COUNT(CASE WHEN p.status = 'FILLED' THEN 1 END)::int as "filledCount",
+            COUNT(CASE WHEN p.status = 'CANCELLED' THEN 1 END)::int as "cancelledCount",
+            COUNT(CASE WHEN p.status = 'EXPIRED' OR (p.expires_at < NOW() AND p.status IN ('ISSUED', 'PARTIALLY_FILLED')) THEN 1 END)::int as "expiredCount"
+        FROM organizations o
+        LEFT JOIN prescriptions p ON o.id = p.organization_id
+        WHERE LOWER(o.name) NOT LIKE '%unassigned%'
+        GROUP BY o.id, o.name, o.slug, o.status
+        ORDER BY o.name ASC;
+    `);
+    return rows;
+}
+
+/**
+ * Query prescriptions for a specific organization upon justified drill-down
+ */
+async function getOrganizationPrescriptions(orgId, client = null) {
+    const runner = client || db;
+    const { rows } = await runner.query(`
+        SELECT 
+            p.id,
+            p.status,
+            p.qr_token as "qrToken",
+            p.instructions,
+            p.expires_at as "expiresAt",
+            p.created_at as "createdAt",
+            p.updated_at as "updatedAt",
+            pat.name as "patientName",
+            doc.name as "doctorName",
+            o.name as "organizationName"
+        FROM prescriptions p
+        JOIN users pat ON p.patient_id = pat.id
+        JOIN users doc ON p.doctor_id = doc.id
+        JOIN organizations o ON p.organization_id = o.id
+        WHERE p.organization_id = $1
+        ORDER BY p.created_at DESC;
+    `, [orgId]);
+
+    if (rows.length === 0) return [];
+
+    const prescriptionIds = rows.map(r => r.id);
+    const { rows: itemRows } = await runner.query(`
+        SELECT 
+            id, prescription_id, medication_name as "medicationName",
+            dosage, frequency, duration, quantity_prescribed as "quantityPrescribed",
+            quantity_dispensed as "quantityDispensed"
+        FROM prescription_items
+        WHERE prescription_id = ANY($1::uuid[]);
+    `, [prescriptionIds]);
+
+    const itemMap = new Map();
+    for (const item of itemRows) {
+        if (!itemMap.has(item.prescription_id)) {
+            itemMap.set(item.prescription_id, []);
+        }
+        itemMap.get(item.prescription_id).push(item);
+    }
+
+    return rows.map(rx => ({
+        ...rx,
+        items: itemMap.get(rx.id) || []
+    }));
+}
+
+/**
  * Create immutable audit log entry
  * @param {object} logData
  * @param {object} [client]
@@ -458,6 +549,8 @@ module.exports = {
     createTenantMembership,
     getPatientCountsByOrg,
     getOrganizationPatients,
+    getPrescriptionCountsByOrg,
+    getOrganizationPrescriptions,
     findUserById,
     findUserByEmail,
     createAuditLog

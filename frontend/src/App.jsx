@@ -14,6 +14,7 @@ import PrescriptionsManager from './components/PrescriptionsManager';
 import PrescriptionVerificationView from './components/PrescriptionVerificationView';
 import PatientConsentPortal from './components/PatientConsentPortal';
 import PaystackRenewalModal from './components/PaystackRenewalModal';
+import PharmacyDashboard from './components/PharmacyDashboard';
 import { safeFetch } from './utils/api';
 import { Toaster } from './components/ui/sonner';
 import clinicalBg from './assets/clinical_login_bg.jpg';
@@ -140,6 +141,7 @@ export default function App() {
     if (!user) return 'Blockchain Health Records';
     switch (activeTab) {
       case 'dashboard':
+        if (user.role === 'pharmacist') return 'Dispensary Portal';
         return (user.role === 'admin' || user.role === 'super_admin') ? 'Admin Panel' : 'Dashboard';
       case 'records':
         return user.role === 'patient' ? 'My Health Folder' : 'Patient Dossiers';
@@ -384,6 +386,9 @@ export default function App() {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'dashboard':
+        if (user.role === 'pharmacist') {
+          return <PharmacyDashboard user={user} onShowPaystack={() => setShowPaystackModal(true)} />;
+        }
         if (user.role === 'admin' || user.role === 'super_admin') {
           return <AdminPanel user={user} />;
         }
@@ -400,6 +405,9 @@ export default function App() {
           />
         );
       case 'prescriptions':
+        if (user.role === 'super_admin') {
+          return <AdminPanel user={user} />;
+        }
         return (
           <PrescriptionsManager 
             user={user} 
@@ -418,6 +426,9 @@ export default function App() {
       case 'settings':
         return <Settings user={user} onUpdateUser={handleUpdateUser} />;
       default:
+        if (user.role === 'pharmacist') {
+          return <PharmacyDashboard user={user} onShowPaystack={() => setShowPaystackModal(true)} />;
+        }
         if (user.role === 'admin' || user.role === 'super_admin') {
           return <AdminPanel user={user} />;
         }
@@ -569,10 +580,10 @@ export default function App() {
             onClick={() => handleNavClick('dashboard')}
           >
             <LayoutDashboard size={20} />
-            <span>{(user.role === 'admin' || user.role === 'super_admin') ? 'Admin Panel' : 'Dashboard'}</span>
+            <span>{user.role === 'pharmacist' ? 'Dispensary Portal' : ((user.role === 'admin' || user.role === 'super_admin') ? 'Admin Panel' : 'Dashboard')}</span>
           </button>
           
-          {user.role !== 'admin' && user.role !== 'super_admin' && (
+          {user.role !== 'admin' && user.role !== 'super_admin' && user.role !== 'pharmacist' && (
             <button
               className={`sidebar-link ${activeTab === 'records' ? 'active' : ''}`}
               onClick={() => handleNavClick('records')}
@@ -582,13 +593,15 @@ export default function App() {
             </button>
           )}
 
-          <button
-            className={`sidebar-link ${activeTab === 'prescriptions' ? 'active' : ''}`}
-            onClick={() => handleNavClick('prescriptions')}
-          >
-            <Pill size={20} />
-            <span>Prescriptions</span>
-          </button>
+          {user.role !== 'super_admin' && user.role !== 'pharmacist' && (
+            <button
+              className={`sidebar-link ${activeTab === 'prescriptions' ? 'active' : ''}`}
+              onClick={() => handleNavClick('prescriptions')}
+            >
+              <Pill size={20} />
+              <span>Prescriptions</span>
+            </button>
+          )}
           
           {user.role === 'patient' && (
             <button

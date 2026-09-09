@@ -248,13 +248,7 @@ const listPrescriptions = catchAsync(async (req, res) => {
     } else if (userRole === 'admin' || userRole === 'clinic') {
         prescriptions = await prescriptionsRepo.getPrescriptionsByOrganization(organizationId, { status, search });
     } else if (userRole === 'super_admin') {
-        // Super admin can filter by org or see given org
-        const targetOrgId = req.query.organizationId || organizationId;
-        if (targetOrgId) {
-            prescriptions = await prescriptionsRepo.getPrescriptionsByOrganization(targetOrgId, { status, search });
-        } else {
-            prescriptions = await prescriptionsRepo.getPrescriptionsByOrganization(organizationId, { status, search });
-        }
+        throw new AppError('Direct unrestricted prescription browsing is disabled for Super Admin. Use organization prescription oversight with justification.', 403);
     } else {
         throw new AppError('Unauthorized access to prescriptions.', 403);
     }
@@ -329,7 +323,7 @@ const verifyPrescriptionByToken = catchAsync(async (req, res) => {
     if (authHeader && authHeader.startsWith('Bearer ')) {
         try {
             const decoded = jwt.verify(authHeader.substring(7).trim(), JWT_SECRET);
-            if (['doctor', 'admin', 'super_admin'].includes(decoded.role) || decoded.id === rx.patient_id) {
+            if (['doctor', 'admin', 'super_admin', 'pharmacist'].includes(decoded.role) || decoded.id === rx.patient_id) {
                 isUnlockedByAuth = true;
             }
         } catch {
@@ -416,12 +410,12 @@ const dispensePrescription = catchAsync(async (req, res) => {
     const pharmacistId = req.user.id;
     const pharmacyOrgId = req.user.organization_id || req.user.organizationId;
 
-    if (req.user.role === 'patient') {
-        throw new AppError('Access Denied: Patients cannot dispense prescriptions.', 403);
+    if (req.user.role !== 'pharmacist') {
+        throw new AppError('Access Denied: Only verified pharmacists can dispense prescriptions.', 403);
     }
 
     if (!pharmacyOrgId) {
-        throw new AppError('Pharmacist or clinic must belong to an active organization to dispense.', 403);
+        throw new AppError('Pharmacist must belong to an active pharmacy organization to dispense.', 403);
     }
 
     if (!itemDispenses || !Array.isArray(itemDispenses) || itemDispenses.length === 0) {
@@ -456,7 +450,6 @@ const cancelPrescription = catchAsync(async (req, res) => {
     }
 
     const rx = await prescriptionsRepo.getPrescriptionById(id);
-
     if (!rx) {
         throw new AppError('Prescription not found.', 404);
     }
@@ -477,6 +470,32 @@ const cancelPrescription = catchAsync(async (req, res) => {
     });
 });
 
+/**
+ * Get Dispensations History for requesting Pharmacy organization
+ * GET /api/pharmacy/dispensations
+ */
+const getPharmacyDispensations = catchAsync(async (req, res) => {
+    const pharmacyOrgId = req.user.organization_id || req.user.organizationId;
+    if (!pharmacyOrgId) {
+        throw new AppError('Pharmacist must belong to an active pharmacy organization.', 403);
+    }
+    const dispensations = await prescriptionsRepo.getPharmacyDispensations(pharmacyOrgId);
+    return res.json({ dispensations });
+});
+
+/**
+ * Get Dispensary Metrics & Subscription Status for requesting Pharmacy organization
+ * GET /api/pharmacy/metrics
+ */
+const getPharmacyMetrics = catchAsync(async (req, res) => {
+    const pharmacyOrgId = req.user.organization_id || req.user.organizationId;
+    if (!pharmacyOrgId) {
+        throw new AppError('Pharmacist must belong to an active pharmacy organization.', 403);
+    }
+    const data = await prescriptionsRepo.getPharmacyMetrics(pharmacyOrgId);
+    return res.json(data);
+});
+
 module.exports = {
     searchDrugs,
     createPrescription,
@@ -484,5 +503,7 @@ module.exports = {
     getPrescriptionById,
     verifyPrescriptionByToken,
     dispensePrescription,
-    cancelPrescription
+    cancelPrescription,
+    getPharmacyDispensations,
+    getPharmacyMetrics
 };

@@ -15,7 +15,9 @@ import {
   Building2, 
   Clock, 
   CheckCircle2, 
-  Loader2 
+  Loader2,
+  Pill,
+  Info
 } from 'lucide-react';
 import logoSvg from '../assets/logo.svg';
 import { safeFetch } from '../utils/api';
@@ -30,6 +32,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
     const params = new URLSearchParams(window.location.search);
     const regParam = params.get('register');
     if (regParam === 'clinic' || regParam === 'hospital') return 'clinic';
+    if (regParam === 'pharmacy' || regParam === 'chemist') return 'pharmacy';
     if (regParam === 'doctor' || regParam === 'practitioner') return 'doctor';
     if (regParam === 'patient') return 'patient';
     return initialRole || 'patient';
@@ -46,6 +49,13 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
   const [pendingReview, setPendingReview] = useState(false);
   const [role, setRole] = useState(getInitialRole);
   const [clinicName, setClinicName] = useState('');
+  const [pharmacyName, setPharmacyName] = useState('');
+  const [ppbLicenseNumber, setPpbLicenseNumber] = useState('');
+  const [pharmacyPhone, setPharmacyPhone] = useState('');
+  const [pharmacyAddress, setPharmacyAddress] = useState('');
+  // Sub-type toggle for the Facility tab ('clinic' | 'pharmacy')
+  const [facilityType, setFacilityType] = useState('clinic');
+  const [showPpbTooltip, setShowPpbTooltip] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -81,6 +91,9 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
       const regParam = params.get('register');
       if (regParam === 'clinic' || regParam === 'hospital') {
         setRole('clinic');
+        setIsRegister(true);
+      } else if (regParam === 'pharmacy' || regParam === 'chemist') {
+        setRole('pharmacy');
         setIsRegister(true);
       } else if (regParam === 'doctor' || regParam === 'practitioner') {
         setRole('doctor');
@@ -312,6 +325,49 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
       }
     }
 
+    if (isRegister && role === 'pharmacy') {
+      if (!pharmacyName.trim()) {
+        setError('Please enter your pharmacy facility name.');
+        setLoading(false);
+        return;
+      }
+      if (!ppbLicenseNumber.trim()) {
+        setError('Please enter your PPB Premises License Number.');
+        setLoading(false);
+        return;
+      }
+      try {
+        const data = await safeFetch('/api/auth/register-pharmacy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pharmacyName: pharmacyName.trim(),
+            adminName: name.trim(),
+            email: email.toLowerCase().trim(),
+            password,
+            ppbLicenseNumber: ppbLicenseNumber.trim(),
+            phone: pharmacyPhone.trim() || undefined,
+            physicalAddress: pharmacyAddress.trim() || undefined
+          })
+        });
+
+        if (data.pendingApproval || !data.token) {
+          setPendingReview(true);
+          setLoading(false);
+          return;
+        }
+
+        if (data.token) {
+          onLoginSuccess(data);
+          return;
+        }
+      } catch (err) {
+        setError(err.message || 'Failed to register pharmacy.');
+        setLoading(false);
+        return;
+      }
+    }
+
     const url = isRegister ? '/api/auth/register' : '/api/auth/login';
     const body = { email, password };
 
@@ -501,7 +557,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
           </div>
 
           <p className="text-xs text-[#475569] dark:text-slate-300 leading-relaxed mb-6 max-w-sm mx-auto">
-            Platform Super Administrators verify clinical institutions for credentialing compliance before activating the network ledger node. You will receive an activation email once approved.
+            Platform Super Administrators verify clinical institutions and licensed pharmacies for credentialing compliance before activating the network ledger node. You will receive an activation email once approved.
           </p>
 
           <Button
@@ -516,6 +572,10 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
               setPassword('');
               setName('');
               setClinicName('');
+              setPharmacyName('');
+              setPpbLicenseNumber('');
+              setPharmacyPhone('');
+              setPharmacyAddress('');
               setError('');
               setSuccessMessage('');
             }}
@@ -591,7 +651,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
 
         <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* Registration Role Selector Tabs */}
+          {/* Registration Role Selector Tabs — 3 primary tabs */}
           {isRegister && (
             <div className="space-y-2 pb-2 border-b border-[#E2E8F0] dark:border-[#1E3A5F]">
               <Label className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Registration Category</Label>
@@ -618,18 +678,53 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                 >
                   <Stethoscope className="w-3.5 h-3.5" /> Practitioner
                 </button>
+                {/* "Facility" tab is active when either clinic or pharmacy sub-type is selected */}
                 <button
                   type="button"
                   className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold border transition-colors ${
-                    role === 'clinic'
+                    (role === 'clinic' || role === 'pharmacy')
                       ? 'bg-[#0F766E] text-white border-[#0F766E] shadow-sm'
                       : 'bg-white dark:bg-[#112239] text-slate-700 dark:text-slate-200 border-[#E2E8F0] dark:border-[#1E3A5F] hover:bg-slate-50 dark:hover:bg-[#1B314F]'
                   }`}
-                  onClick={() => setRole('clinic')}
+                  onClick={() => {
+                    // Restore whichever sub-type was last selected; default to 'clinic'
+                    setRole(facilityType);
+                  }}
                 >
-                  <Building2 className="w-3.5 h-3.5" /> Hospital
+                  <Building2 className="w-3.5 h-3.5" /> Facility
                 </button>
               </div>
+
+              {/* Facility sub-type selector — only shown when Facility tab is active */}
+              {(role === 'clinic' || role === 'pharmacy') && (
+                <div className="mt-2">
+                  <p className="text-[11px] text-[#475569] dark:text-slate-400 mb-1.5">I'm registering a:</p>
+                  <div className="inline-flex rounded-lg border border-[#E2E8F0] dark:border-[#1E3A5F] overflow-hidden">
+                    <button
+                      type="button"
+                      className={`flex items-center gap-1.5 py-1.5 px-4 text-xs font-semibold transition-colors ${
+                        role === 'clinic'
+                          ? 'bg-[#0B2545] dark:bg-[#0F766E] text-white'
+                          : 'bg-white dark:bg-[#112239] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#1B314F]'
+                      }`}
+                      onClick={() => { setRole('clinic'); setFacilityType('clinic'); }}
+                    >
+                      <Building2 className="w-3 h-3" /> Clinic / Hospital
+                    </button>
+                    <button
+                      type="button"
+                      className={`flex items-center gap-1.5 py-1.5 px-4 text-xs font-semibold border-l border-[#E2E8F0] dark:border-[#1E3A5F] transition-colors ${
+                        role === 'pharmacy'
+                          ? 'bg-[#0B2545] dark:bg-[#0F766E] text-white'
+                          : 'bg-white dark:bg-[#112239] text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#1B314F]'
+                      }`}
+                      onClick={() => { setRole('pharmacy'); setFacilityType('pharmacy'); }}
+                    >
+                      <Pill className="w-3 h-3" /> Pharmacy
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -655,6 +750,99 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
             </div>
           )}
 
+          {/* Pharmacy Name & Regulatory Fields */}
+          {isRegister && role === 'pharmacy' && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="pharmacyName" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">Pharmacy Premises Name</Label>
+                <div className="relative">
+                  <Pill className="w-4 h-4 absolute left-3 top-3 text-[#94A3B8]" />
+                  <Input
+                    type="text"
+                    id="pharmacyName"
+                    className="pl-9"
+                    placeholder="e.g. Nairobi Apex Chemists Ltd"
+                    required
+                    value={pharmacyName}
+                    onChange={(e) => setPharmacyName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Label htmlFor="ppbLicenseNumber" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">
+                      PPB Premises License Number
+                    </Label>
+                    {/* Inline info tooltip — replaces the full paragraph disclosure banner */}
+                    <div className="relative inline-flex">
+                      <button
+                        type="button"
+                        className="text-[#94A3B8] hover:text-[#0F766E] dark:hover:text-[#2DD4BF] transition-colors"
+                        aria-label="PPB license information"
+                        onMouseEnter={() => setShowPpbTooltip(true)}
+                        onMouseLeave={() => setShowPpbTooltip(false)}
+                        onFocus={() => setShowPpbTooltip(true)}
+                        onBlur={() => setShowPpbTooltip(false)}
+                        onClick={() => setShowPpbTooltip(v => !v)}
+                      >
+                        <Info className="w-3.5 h-3.5" />
+                      </button>
+                      {showPpbTooltip && (
+                        <div className="absolute left-5 top-0 z-20 w-64 rounded-lg border border-[#E2E8F0] dark:border-[#1E3A5F] bg-white dark:bg-[#0F243E] shadow-lg p-2.5 text-[11px] text-[#475569] dark:text-slate-300 leading-relaxed">
+                          Statutory Pharmacy and Poisons Board (PPB) Premises Registration Number. Self-reported credentials are cross-referenced during administrative verification.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] font-mono border-amber-300 text-amber-800 dark:text-amber-300 dark:border-amber-800">
+                    Kenya PPB
+                  </Badge>
+                </div>
+                <div className="relative">
+                  <Shield className="w-4 h-4 absolute left-3 top-3 text-[#94A3B8]" />
+                  <Input
+                    type="text"
+                    id="ppbLicenseNumber"
+                    className="pl-9 font-mono"
+                    placeholder="e.g. PPB/PREM/2026/0842"
+                    required
+                    value={ppbLicenseNumber}
+                    onChange={(e) => setPpbLicenseNumber(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="pharmacyPhone" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">
+                    Contact Phone Number
+                  </Label>
+                  <Input
+                    type="tel"
+                    id="pharmacyPhone"
+                    placeholder="+254 700 000000"
+                    value={pharmacyPhone}
+                    onChange={(e) => setPharmacyPhone(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pharmacyAddress" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">
+                    Physical Location / Address
+                  </Label>
+                  <Input
+                    type="text"
+                    id="pharmacyAddress"
+                    placeholder="e.g. Kimathi St, Nairobi CBD"
+                    value={pharmacyAddress}
+                    onChange={(e) => setPharmacyAddress(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Primary Fields Grid */}
           <div className={`grid gap-4 ${isRegister ? 'sm:grid-cols-2' : 'grid-cols-1'}`}>
             
@@ -662,7 +850,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
             {isRegister && (
               <div className="space-y-1.5">
                 <Label htmlFor="name" className="text-xs font-semibold text-[#0B2545] dark:text-slate-200">
-                  {role === 'clinic' ? 'Admin Full Name' : 'Full Name'}
+                  {role === 'clinic' ? 'Admin Full Name' : (role === 'pharmacy' ? 'Superintendent Pharmacist Name' : 'Full Name')}
                 </Label>
                 <div className="relative">
                   <User className="w-4 h-4 absolute left-3 top-3 text-[#94A3B8]" />
@@ -670,7 +858,7 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                     type="text"
                     id="name"
                     className="pl-9"
-                    placeholder={role === 'clinic' ? 'e.g. Dr. Jane Doe (Lead Admin)' : 'e.g. John Doe'}
+                    placeholder={role === 'clinic' ? 'e.g. Dr. Jane Doe (Lead Admin)' : (role === 'pharmacy' ? 'e.g. Pharm. Mary Wanjiku' : 'e.g. John Doe')}
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}

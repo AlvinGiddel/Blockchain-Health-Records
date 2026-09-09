@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import LicenseControlWidget from './LicenseControlWidget';
 import PatientsByOrgWidget from './PatientsByOrgWidget';
+import PrescriptionsByOrgWidget from './PrescriptionsByOrgWidget';
 import { getApiUrl, safeFetch } from '../utils/api';
 
 export default function SuperAdminPanel({ user }) {
@@ -754,6 +755,9 @@ export default function SuperAdminPanel({ user }) {
 
       {/* Patients by Organization with Privacy-by-Design Access Controls & Audited Directory */}
       <PatientsByOrgWidget user={user} refreshTrigger={refreshTrigger} />
+
+      {/* Prescriptions by Organization with Privacy-by-Design Access Controls & Audited Oversight */}
+      <PrescriptionsByOrgWidget user={user} refreshTrigger={refreshTrigger} />
 
       {/* Cryptographic Ledger Health Header */}
       <div

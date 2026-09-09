@@ -15,10 +15,12 @@ router.get('/organizations/active', organizationController.getActiveOrganization
 router.get('/admin/organizations', requireAuth, requireSuperAdmin, organizationController.getAdminOrganizations);
 router.get('/admin/organizations/pending', requireAuth, requireSuperAdmin, organizationController.getPendingOrganizations);
 router.get('/admin/organizations/patient-counts', requireAuth, requireSuperAdmin, organizationController.getOrganizationPatientCounts);
+router.get('/admin/organizations/prescription-counts', requireAuth, requireSuperAdmin, organizationController.getOrganizationPrescriptionCounts);
 router.post('/admin/organizations/:id/approve', requireAuth, requireSuperAdmin, organizationController.approveOrganization);
 router.post('/admin/organizations/:id/reject', requireAuth, requireSuperAdmin, organizationController.rejectOrganization);
 router.post('/admin/organizations/:id/status', requireAuth, requireSuperAdmin, organizationController.updateOrganizationStatus);
 router.post('/admin/organizations/:id/patients', requireAuth, requireSuperAdmin, organizationController.getOrganizationPatientsWithAudit);
+router.post('/admin/organizations/:id/prescriptions', requireAuth, requireSuperAdmin, organizationController.getOrganizationPrescriptionsWithAudit);
 
 // Super Admin Hospital Tenant Provisioning
 router.post('/admin/provision-tenant', requireAuth, requireSuperAdmin, organizationController.provisionTenant);
