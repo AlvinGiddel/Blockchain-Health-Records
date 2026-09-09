@@ -23,6 +23,7 @@ const EXEMPT_PATHS = [
     '/api/organizations/active',
     '/api/license/status',
     '/api/payments',
+    '/api/ppb',
     '/api/health',
     '/health',
     '/'

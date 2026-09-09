@@ -60,7 +60,10 @@ const PUBLIC_ALLOWLIST = new Set([
     'GET /api/blockchain/validate',
 
     // Public prescription QR passport verification
-    'GET /api/prescriptions/verify/:qr_token'
+    'GET /api/prescriptions/verify/:qr_token',
+
+    // Public PPB premises license verification
+    'GET /api/ppb/verify'
 ]);
 
 /**

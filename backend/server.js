@@ -19,6 +19,7 @@ const organizationRoutes = require('./routes/organizations');
 const createAdminRouter = require('./routes/admin');
 const prescriptionRoutes = require('./routes/prescriptions');
 const consentRoutes = require('./routes/consentRoutes');
+const ppbRoutes = require('./routes/ppb');
 
 // Background Jobs & Workers (Phase 7)
 const { autoMinerJob, licenseCheckJob } = require('./jobs');
@@ -180,6 +181,9 @@ app.use('/api', createAdminRouter({
 
 // Prescriptions & Pharmacy Dispensing Addon Domain Router
 app.use('/api', prescriptionRoutes);
+
+// PPB Premises License Verification Router (public)
+app.use('/api', ppbRoutes);
 
 // Patient Consents & Granular Access Delegation Domain Router
 app.use('/api', consentRoutes);
