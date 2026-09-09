@@ -56,25 +56,40 @@ export default function App() {
   };
 
   // Session storage switched from sessionStorage to localStorage. Note: This is a JWT-in-localStorage tradeoff (XSS exposure) accepted for this project.
-  // On startup: immediately expire any session older than 8 hours so users are not
-  // perpetually logged in across days (the inactivity timer cannot survive a tab close).
-  const [user, setUser] = useState(() => {
-    const SESSION_MAX_MS = 8 * 60 * 60 * 1000; // 8 hours
+  // On startup: check both the hard session cap (8h) AND the inactivity timeout (15 min default).
+  // This makes logout work across app closes — lastActivity is persisted to localStorage.
+  const _sessionCheck = (() => {
+    const INACTIVITY_TIMEOUT = (() => {
+      const s = localStorage.getItem('inactivityTimeout');
+      return s ? parseInt(s, 10) : 15 * 60 * 1000; // 15 minutes default
+    })();
+    const SESSION_MAX_MS = 8 * 60 * 60 * 1000; // 8-hour hard cap
+    const now = Date.now();
     const ts = localStorage.getItem('loginTimestamp');
-    if (ts && Date.now() - parseInt(ts, 10) > SESSION_MAX_MS) {
+    const lastActivity = localStorage.getItem('lastActivity');
+    const sessionExpired = ts && now - parseInt(ts, 10) > SESSION_MAX_MS;
+    // If we have a lastActivity record, use that for the inactivity check.
+    // If not (first login or legacy session), fall back to the login timestamp.
+    const inactivityBase = lastActivity || ts;
+    const inactivityExpired = inactivityBase && now - parseInt(inactivityBase, 10) > INACTIVITY_TIMEOUT;
+    if (sessionExpired || inactivityExpired) {
       localStorage.removeItem('user');
       localStorage.removeItem('token');
       localStorage.removeItem('loginTimestamp');
+      localStorage.removeItem('lastActivity');
       sessionStorage.setItem('sessionTimedOut', 'true');
-      return null;
+      return { expired: true };
     }
+    return { expired: false };
+  })();
+
+  const [user, setUser] = useState(() => {
+    if (_sessionCheck.expired) return null;
     const saved = localStorage.getItem('user');
     return saved ? JSON.parse(saved) : null;
   });
   const [token, setToken] = useState(() => {
-    const ts = localStorage.getItem('loginTimestamp');
-    const SESSION_MAX_MS = 8 * 60 * 60 * 1000;
-    if (ts && Date.now() - parseInt(ts, 10) > SESSION_MAX_MS) return '';
+    if (_sessionCheck.expired) return '';
     return localStorage.getItem('token') || '';
   });
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -309,6 +324,7 @@ export default function App() {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     localStorage.removeItem('loginTimestamp');
+    localStorage.removeItem('lastActivity');
     sessionStorage.removeItem('serverInstanceId');
     if (options && options.isSuspended === true) {
       sessionStorage.setItem('suspensionNotice', options.message || 'Your hospital facility has been suspended by platform administration.');
@@ -347,46 +363,34 @@ export default function App() {
     return () => window.removeEventListener('tenant-trial-expired', handleExpired);
   }, []);
 
-  // Inactivity timeout logic to auto log out after inactivity
+  // Inactivity timeout — works both while tab is OPEN (setTimeout) and across app CLOSES
+  // (lastActivity written to localStorage on every interaction, checked on startup above).
   useEffect(() => {
     if (!user) return;
 
-    // Check for custom timeout (e.g. for testing/demo) or default to 15 minutes
     const savedTimeout = localStorage.getItem('inactivityTimeout');
     const INACTIVITY_TIMEOUT = savedTimeout ? parseInt(savedTimeout, 10) : 15 * 60 * 1000;
     let timeoutId;
 
     const resetTimer = () => {
+      // Persist last-activity time so startup check can use it after app closes
+      localStorage.setItem('lastActivity', String(Date.now()));
       if (timeoutId) clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
-        console.log('Session timed out due to inactivity.');
         handleLogout({ isTimeout: true });
       }, INACTIVITY_TIMEOUT);
     };
 
-    // Events to track user activity
-    const activityEvents = [
-      'mousedown',
-      'mousemove',
-      'keypress',
-      'scroll',
-      'touchstart',
-      'click'
-    ];
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
 
-    // Initialize timer
+    // Seed the timer immediately — also writes lastActivity right now
     resetTimer();
 
-    // Bind event listeners
-    activityEvents.forEach(event => {
-      window.addEventListener(event, resetTimer);
-    });
+    activityEvents.forEach(event => window.addEventListener(event, resetTimer, { passive: true }));
 
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
-      activityEvents.forEach(event => {
-        window.removeEventListener(event, resetTimer);
-      });
+      activityEvents.forEach(event => window.removeEventListener(event, resetTimer));
     };
   }, [user]);
 
