@@ -20,15 +20,15 @@
     },
     {
       "src": "/assets/(.*)",
-      "dest": "frontend/assets/$1"
+      "dest": "frontend/dist/assets/$1"
     },
     {
       "src": "/((?!api/).*\\.[a-zA-Z0-9]+)$",
-      "dest": "frontend/$1"
+      "dest": "frontend/dist/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/index.html"
+      "dest": "frontend/dist/index.html"
     }
   ]
 }
