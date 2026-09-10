@@ -584,15 +584,19 @@ export default function Profile({ user, onUpdateUser }) {
                     </div>
 
                     <div className="form-group" style={{ marginBottom: '20px' }}>
-                      <label htmlFor="edit-allergies">Known Allergies (comma-separated)</label>
+                      <label htmlFor="edit-allergies">Known Allergies <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: '0.85em' }}>(comma-separated specific names)</span></label>
                       <input
                         type="text"
                         id="edit-allergies"
                         className="form-control"
-                        placeholder="e.g. Penicillin, Peanuts (or leave empty)"
+                        placeholder="e.g. Penicillin, Sulfonamides, Peanuts, Latex"
                         value={editAllergies}
                         onChange={(e) => setEditAllergies(e.target.value)}
                       />
+                      <p style={{ margin: '6px 0 0 0', fontSize: '0.78rem', color: 'var(--color-warning)', lineHeight: 1.5, display: 'flex', gap: '5px', alignItems: 'flex-start' }}>
+                        <span style={{ marginTop: '1px' }}>⚠</span>
+                        <span>Enter <strong>specific allergen names</strong> (e.g. <em>Penicillin</em>, not <em>Antibiotics</em>). The prescription contraindication engine matches these names against medication ingredients — broad categories like <em>"Proteins"</em> or <em>"Chemicals"</em> will not trigger safety alerts.</span>
+                      </p>
                     </div>
                   </>
                 ) : (

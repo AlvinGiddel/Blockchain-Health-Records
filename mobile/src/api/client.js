@@ -1,7 +1,7 @@
 import { getAuthToken } from '../storage/secureVault';
 
-// Default to live Vercel backend. Can be configured to local LAN IP if desired.
-export const BASE_API_URL = 'https://blockhealthrecords.online/api';
+// Default to live production backend.
+export const BASE_API_URL = 'https://bhcrecords.co.ke/api';
 
 /**
  * Universal Mobile API Client

@@ -1037,10 +1037,14 @@ export default function Login({ onLoginSuccess, onNavigateHome, initialRegister 
                       <Input
                         type="text"
                         id="allergies"
-                        placeholder="e.g. Penicillin, Peanuts (or leave empty)"
+                        placeholder="e.g. Penicillin, Sulfonamides, Peanuts, Latex"
                         value={allergies}
                         onChange={(e) => setAllergies(e.target.value)}
                       />
+                      <p className="text-[10px] text-amber-600 dark:text-amber-400 flex items-start gap-1 mt-1 leading-snug">
+                        <span className="mt-px">⚠</span>
+                        <span>Use specific names (e.g. <em>Penicillin</em>, not <em>Antibiotics</em>). The prescription safety engine matches allergens against medication ingredients — vague categories like <em>"Proteins"</em> or <em>"Chemicals"</em> won't trigger contraindication alerts.</span>
+                      </p>
                     </div>
                   </div>
                 </>

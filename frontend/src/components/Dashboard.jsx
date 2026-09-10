@@ -522,7 +522,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                             if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
                           }}
                         >
-                          Book an Appointment Below
+                          Book an Appointment
                         </button>
                       </div>
                     );
@@ -581,12 +581,9 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
                   <button
                     className="btn btn-secondary"
                     style={{ fontSize: '0.85rem', padding: '12px 14px', display: 'flex', gap: '8px', justifyContent: 'center' }}
-                    onClick={() => {
-                      const formEl = document.getElementById('appointment-booking-section');
-                      if (formEl) formEl.scrollIntoView({ behavior: 'smooth' });
-                    }}
+                    onClick={() => setShowQRPassportModal(true)}
                   >
-                    <Calendar size={16} color="var(--color-primary)" /> Book an Appointment
+                    <QrCode size={16} color="var(--color-primary)" /> Share Health QR Passport
                   </button>
                 </div>
               </div>
@@ -594,7 +591,7 @@ export default function Dashboard({ user, onSelectPatient, onUpdateUser, onNavig
               {/* Appointment Booking Form */}
               <div id="appointment-booking-section" className="glass-card">
                 <h3 style={{ fontSize: '1.25rem', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-primary)' }}>
-                  <Calendar size={20} /> Request an Appointment
+                  <Calendar size={20} /> Book an Appointment
                 </h3>
                 {apptError && (
                   <div className="badge-error" style={{ padding: '8px', borderRadius: '6px', marginBottom: '12px', fontSize: '0.85rem' }}>

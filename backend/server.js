@@ -36,10 +36,9 @@ const jwt = require('jsonwebtoken');
 
 // Allowed Origin list for CORS
 const ALLOWED_ORIGINS = [
+    'https://bhcrecords.co.ke',
+    'https://www.bhcrecords.co.ke',
     'https://bhcrecords.vercel.app',
-    'https://blockhealthrecords.online',
-    'https://www.blockhealthrecords.online',
-    'https://blockchainrecords.vercel.app',
     'http://localhost:5173',
     'http://localhost:3000',
     'http://localhost:5000'
