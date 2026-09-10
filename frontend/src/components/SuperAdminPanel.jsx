@@ -577,7 +577,7 @@ export default function SuperAdminPanel({ user }) {
   };
 
   return (
-    <div style={{ color: '#F8FAFC' }}>
+    <div style={{ color: 'var(--text-primary)' }}>
 
       {/* ── Toast Notification ── */}
       {toast && (
@@ -608,12 +608,12 @@ export default function SuperAdminPanel({ user }) {
               <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#00D4FF', background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.25)', padding: '3px 10px', borderRadius: '20px' }}>
                 Platform Super Admin
               </span>
-              <span style={{ fontSize: '0.75rem', color: 'rgba(248,250,252,0.4)' }}>› Command Center</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>› Command Center</span>
             </div>
-            <h1 style={{ fontSize: '1.85rem', fontWeight: 800, margin: 0, color: '#F8FAFC', letterSpacing: '-0.5px' }}>
+            <h1 style={{ fontSize: '1.85rem', fontWeight: 800, margin: 0, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
               Super Admin Command Center
             </h1>
-            <p style={{ color: 'rgba(248,250,252,0.45)', marginTop: '5px', fontSize: '0.85rem' }}>
+            <p style={{ color: 'var(--text-muted)', marginTop: '5px', fontSize: '0.85rem' }}>
               Multi-tenant licensing authority, cryptographic consensus governance &amp; global node registry
             </p>
           </div>
@@ -623,7 +623,7 @@ export default function SuperAdminPanel({ user }) {
               {stats.isValid ? 'SYSTEM ONLINE' : 'CHAIN COMPROMISED'}
             </div>
             <button className="btn btn-secondary" onClick={handleManualRefresh} disabled={loading || refreshing}
-              style={{ display: 'flex', gap: '7px', alignItems: 'center', fontSize: '0.83rem', padding: '8px 14px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: '#F8FAFC' }}>
+              style={{ display: 'flex', gap: '7px', alignItems: 'center', fontSize: '0.83rem', padding: '8px 14px', background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
               <RefreshCw size={14} className={refreshing || loading ? 'rotate-spin' : ''} />
               {refreshing ? 'Refreshing…' : 'Refresh Console'}
             </button>
@@ -644,9 +644,9 @@ export default function SuperAdminPanel({ user }) {
               <div className="admin-kpi-label">Tenant Admins</div>
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
             <span className="admin-kpi-chip" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>Manage</span>
-            <ChevronRight size={13} color="rgba(248,250,252,0.3)" />
+            <ChevronRight size={13} color="var(--text-muted)" />
           </div>
         </div>
 
@@ -661,9 +661,9 @@ export default function SuperAdminPanel({ user }) {
               <div className="admin-kpi-label">Practitioners</div>
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
             <span className="admin-kpi-chip" style={{ background: 'rgba(0,212,255,0.1)', color: '#00D4FF' }}>KMPDC Verified</span>
-            <ChevronRight size={13} color="rgba(248,250,252,0.3)" />
+            <ChevronRight size={13} color="var(--text-muted)" />
           </div>
         </div>
 
@@ -678,9 +678,9 @@ export default function SuperAdminPanel({ user }) {
               <div className="admin-kpi-label">Patient IDs</div>
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
             <span className="admin-kpi-chip" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>Browse Accounts</span>
-            <ChevronRight size={13} color="rgba(248,250,252,0.3)" />
+            <ChevronRight size={13} color="var(--text-muted)" />
           </div>
         </div>
 
@@ -695,14 +695,14 @@ export default function SuperAdminPanel({ user }) {
               <div className="admin-kpi-label">Mined Blocks</div>
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
             <span className="admin-kpi-chip" style={{ background: 'rgba(59,130,246,0.1)', color: '#3B82F6' }}>View Chain</span>
-            <ChevronRight size={13} color="rgba(248,250,252,0.3)" />
+            <ChevronRight size={13} color="var(--text-muted)" />
           </div>
         </div>
 
         {/* Consensus */}
-        <div className="admin-kpi-card" style={{ borderColor: stats.isValid ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)' }}
+        <div className="admin-kpi-card" style={{ borderColor: stats.isValid ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)' }}
           onClick={() => { setActiveMetricModal('consensus'); setModalSearchQuery(''); }} title="View POW Consensus State">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div className="admin-kpi-icon" style={{ background: stats.isValid ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)', border: stats.isValid ? '1px solid rgba(16,185,129,0.25)' : '1px solid rgba(239,68,68,0.25)' }}>
@@ -715,9 +715,9 @@ export default function SuperAdminPanel({ user }) {
               <div className="admin-kpi-label">Consensus State</div>
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
             <span className="admin-kpi-chip" style={{ background: stats.isValid ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: stats.isValid ? '#10b981' : '#ef4444' }}>Diagnostics</span>
-            <ChevronRight size={13} color="rgba(248,250,252,0.3)" />
+            <ChevronRight size={13} color="var(--text-muted)" />
           </div>
         </div>
       </div>
@@ -793,10 +793,10 @@ export default function SuperAdminPanel({ user }) {
         </div>
       )}
 
-      {/* ── 3-Column Mid Row: Approvals Queue / License Authority / Quick Actions ── */}
-      <div className="admin-3col-grid">
+      {/* ── Mid Row: Approvals & Node Operations ── */}
+      <div className="admin-mid-grid">
 
-        {/* Left: Pending Approvals (when empty) + Node Activity Log */}
+        {/* Left Column: Approvals Queues & Mempool Queue */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {pendingClinics.length === 0 && (
             <div className="admin-section-card alert-orange">
@@ -806,18 +806,18 @@ export default function SuperAdminPanel({ user }) {
                     <Building2 size={18} color="#10b981" />
                   </div>
                   <div>
-                    <h3 style={{ fontSize: '0.9rem', margin: 0, color: '#F8FAFC', fontWeight: 700 }}>Pending Clinic Approvals</h3>
+                    <h3 style={{ fontSize: '0.9rem', margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>Pending Clinic Approvals</h3>
                     <span style={{ fontSize: '0.72rem', color: '#10b981', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', padding: '1px 7px', borderRadius: '20px', fontWeight: 700 }}>Queue Clear</span>
                   </div>
                 </div>
                 <button type="button" onClick={() => fetchAdminData(true)}
-                  style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: 'rgba(248,250,252,0.5)', cursor: 'pointer', padding: '4px 10px', fontSize: '0.72rem' }}>
+                  style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px 10px', fontSize: '0.72rem' }}>
                   Refresh
                 </button>
               </div>
               <div style={{ padding: '18px', textAlign: 'center', background: 'rgba(16,185,129,0.04)', borderRadius: '8px', border: '1px dashed rgba(16,185,129,0.2)' }}>
                 <CheckCircle2 size={28} color="#10b981" style={{ margin: '0 auto 8px', display: 'block', opacity: 0.7 }} />
-                <span style={{ color: 'rgba(248,250,252,0.45)', fontSize: '0.82rem' }}>Queue is Clear — All registrations reviewed</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Queue is Clear — All registrations reviewed</span>
               </div>
             </div>
           )}
@@ -832,8 +832,8 @@ export default function SuperAdminPanel({ user }) {
                 <div style={{ position: 'relative', maxWidth: '220px', width: '100%' }}>
                   <input type="text" className="form-control" placeholder="Filter by name or email…"
                     value={pendingAdminSearch} onChange={(e) => setPendingAdminSearch(e.target.value)}
-                    style={{ paddingLeft: '28px', fontSize: '0.75rem', height: '32px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#F8FAFC', borderRadius: '8px' }} />
-                  <Search size={12} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(248,250,252,0.35)' }} />
+                    style={{ paddingLeft: '28px', fontSize: '0.75rem', height: '32px', background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '8px' }} />
+                  <Search size={12} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                 </div>
               </div>
               <div className="table-container">
@@ -853,17 +853,17 @@ export default function SuperAdminPanel({ user }) {
                       .map(adm => (
                         <tr key={adm.id || adm._id}>
                           <td style={{ fontWeight: 600 }}>{adm.name}</td>
-                          <td style={{ fontSize: '0.75rem' }}>{adm.email}</td>
+                          <td>{adm.email}</td>
                           <td>{new Date(adm.createdAt || Date.now()).toLocaleDateString()}</td>
                           <td style={{ textAlign: 'right' }}>
                             <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                              <button className="btn btn-primary" style={{ padding: '4px 8px', fontSize: '0.72rem', background: '#10b981', border: 'none', display: 'flex', alignItems: 'center', gap: '3px' }}
+                              <button className="btn btn-primary" style={{ padding: '3px 8px', fontSize: '0.72rem', background: '#10b981', border: 'none', display: 'flex', alignItems: 'center', gap: '3px' }}
                                 onClick={() => handleApproveAdmin(adm.id || adm._id, adm.name)}>
-                                <Check size={12} /> Approve
+                                <Check size={11} /> Approve
                               </button>
-                              <button className="btn btn-danger" style={{ padding: '4px 8px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}
+                              <button className="btn btn-danger" style={{ padding: '3px 8px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '3px' }}
                                 onClick={() => handleRejectAdmin(adm.id || adm._id, adm.name)}>
-                                <X size={12} /> Reject
+                                <X size={11} /> Reject
                               </button>
                             </div>
                           </td>
@@ -886,11 +886,11 @@ export default function SuperAdminPanel({ user }) {
                   <div style={{ position: 'relative', maxWidth: '200px' }}>
                     <input type="text" className="form-control" placeholder="Filter…" value={pendingDoctorSearch}
                       onChange={(e) => setPendingDoctorSearch(e.target.value)}
-                      style={{ paddingLeft: '28px', fontSize: '0.75rem', height: '30px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#F8FAFC', borderRadius: '8px' }} />
-                    <Search size={12} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(248,250,252,0.35)' }} />
+                      style={{ paddingLeft: '28px', fontSize: '0.75rem', height: '30px', background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '8px' }} />
+                    <Search size={12} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                   </div>
                   <button type="button" onClick={refreshPendingDoctors} disabled={isRefreshingPendingDocs} className="btn btn-secondary"
-                    style={{ height: '30px', padding: '0 10px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(248,250,252,0.7)' }}>
+                    style={{ height: '30px', padding: '0 10px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: '4px', background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                     <RefreshCw size={12} className={isRefreshingPendingDocs ? 'spin' : ''} />
                   </button>
                 </div>
@@ -916,7 +916,7 @@ export default function SuperAdminPanel({ user }) {
                         <tr key={doc.id || doc._id}>
                           <td style={{ fontWeight: 600 }}>Dr. {doc.name}</td>
                           <td>{doc.doctorProfile?.specialization || 'General Practice'}</td>
-                          <td style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'rgba(248,250,252,0.5)' }}>{doc.doctorProfile?.licenseNumber || 'N/A'}</td>
+                          <td style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--text-muted)' }}>{doc.doctorProfile?.licenseNumber || 'N/A'}</td>
                           <td>{doc.doctorProfile?.hospital || 'N/A'}</td>
                           <td>{new Date(doc.createdAt || Date.now()).toLocaleDateString()}</td>
                           <td style={{ textAlign: 'right' }}>
@@ -939,8 +939,46 @@ export default function SuperAdminPanel({ user }) {
             </div>
           )}
 
+          {/* Mempool Queue */}
+          <div className="admin-section-card" style={{ border: mempoolRecords.length > 0 ? '1px solid rgba(139,92,246,0.3)' : '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <h3 style={{ margin: 0, fontSize: '0.88rem', color: mempoolRecords.length > 0 ? '#a78bfa' : 'var(--text-muted)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '7px' }}>
+                <Zap size={15} color={mempoolRecords.length > 0 ? '#a78bfa' : 'var(--text-muted)'} />
+                Mempool Queue ({mempoolRecords.length})
+              </h3>
+              {mempoolRecords.length > 0 && (
+                <button onClick={handleMineBlock} disabled={mining}
+                  style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', color: '#a78bfa', borderRadius: '8px', padding: '4px 10px', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Layers size={12} className={mining ? 'rotate-slow' : ''} /> {mining ? 'Sealing…' : 'Force Mine'}
+                </button>
+              )}
+            </div>
+            {mempoolRecords.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '14px', color: 'var(--text-muted)', fontSize: '0.78rem', border: '1px dashed var(--border)', borderRadius: '8px' }}>
+                Mempool synchronized — no pending transactions
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '160px', overflowY: 'auto' }}>
+                {mempoolRecords.map((rec, i) => (
+                  <div key={rec.recordId || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.15)', borderRadius: '8px', fontSize: '0.75rem' }}>
+                    <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace' }}>{new Date(rec.timestamp).toLocaleTimeString()}</span>
+                    <span style={{ background: rec.txType === 'consent' ? 'rgba(16,185,129,0.1)' : 'rgba(0,212,255,0.1)', color: rec.txType === 'consent' ? '#10b981' : '#00D4FF', padding: '2px 7px', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700 }}>
+                      {rec.txType === 'consent' ? 'Consent' : 'Clinical'}
+                    </span>
+                    <span style={{ background: 'rgba(16,185,129,0.08)', color: '#10b981', padding: '2px 7px', borderRadius: '20px', fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      <ShieldCheck size={10} /> Signed
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Node Activity Log & Quick Actions */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* Node Activity Log */}
-          <div className="admin-section-card" style={{ background: '#050508', border: '1px solid #0d1117', flex: 1 }}>
+          <div className="admin-section-card" style={{ flex: 1, border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <h3 style={{ margin: 0, fontSize: '0.9rem', color: '#00D4FF', display: 'flex', alignItems: 'center', gap: '7px', fontWeight: 700 }}>
                 <Terminal size={16} /> Node Activity Log
@@ -956,90 +994,52 @@ export default function SuperAdminPanel({ user }) {
               {recovering && <div style={{ color: '#f59e0b', fontWeight: 600 }}>&gt;&gt; [SYS] Rebuilding from cryptographic ledger snapshots…</div>}
             </div>
           </div>
-        </div>
 
-        {/* Middle: License Authority */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div className="admin-section-card alert-teal" style={{ flex: 1 }}>
-            <p className="admin-section-title">Platform License Authority</p>
-            <LicenseControlWidget user={user} refreshTrigger={refreshTrigger} />
-          </div>
-
-          {/* Mempool summary */}
-          <div className="admin-section-card" style={{ border: mempoolRecords.length > 0 ? '1px solid rgba(139,92,246,0.3)' : '1px solid rgba(255,255,255,0.08)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <h3 style={{ margin: 0, fontSize: '0.88rem', color: mempoolRecords.length > 0 ? '#a78bfa' : 'rgba(248,250,252,0.6)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '7px' }}>
-                <Zap size={15} color={mempoolRecords.length > 0 ? '#a78bfa' : 'rgba(248,250,252,0.4)'} />
-                Mempool Queue ({mempoolRecords.length})
-              </h3>
-              {mempoolRecords.length > 0 && (
-                <button onClick={handleMineBlock} disabled={mining}
-                  style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.3)', color: '#a78bfa', borderRadius: '8px', padding: '4px 10px', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <Layers size={12} className={mining ? 'rotate-slow' : ''} /> {mining ? 'Sealing…' : 'Force Mine'}
-                </button>
-              )}
+          {/* Quick Actions */}
+          <div className="admin-section-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <p className="admin-section-title">Quick Actions</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <button className="admin-quick-btn teal" onClick={() => { setActiveMetricModal('admins'); setShowProvisionForm(true); }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={14} /> Add Doctor (KMPDC)</span>
+                <ArrowUpRight size={13} />
+              </button>
+              <button className="admin-quick-btn violet" onClick={() => { setActiveMetricModal('admins'); setShowProvisionForm(true); }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={14} /> Onboard Hospital Admin</span>
+                <ArrowUpRight size={13} />
+              </button>
+              <button className="admin-quick-btn ghost" onClick={() => { setActiveMetricModal('blocks'); setModalSearchQuery(''); }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Hash size={14} /> Billing Records</span>
+                <ArrowUpRight size={13} />
+              </button>
+              <button className="admin-quick-btn ghost" onClick={() => { setActiveMetricModal('admins'); setModalSearchQuery(''); }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><UserCog size={14} /> View All Admins</span>
+                <ArrowUpRight size={13} />
+              </button>
+              <button className="admin-quick-btn ghost" onClick={() => { setActiveMetricModal('consensus'); setModalSearchQuery(''); }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Shield size={14} /> Consensus Diagnostics</span>
+                <ArrowUpRight size={13} />
+              </button>
             </div>
-            {mempoolRecords.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '14px', color: 'rgba(248,250,252,0.3)', fontSize: '0.78rem', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: '8px' }}>
-                Mempool synchronized — no pending transactions
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '160px', overflowY: 'auto' }}>
-                {mempoolRecords.map((rec, i) => (
-                  <div key={rec.recordId || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.15)', borderRadius: '8px', fontSize: '0.75rem' }}>
-                    <span style={{ color: 'rgba(248,250,252,0.5)', fontFamily: 'monospace' }}>{new Date(rec.timestamp).toLocaleTimeString()}</span>
-                    <span style={{ background: rec.txType === 'consent' ? 'rgba(16,185,129,0.1)' : 'rgba(0,212,255,0.1)', color: rec.txType === 'consent' ? '#10b981' : '#00D4FF', padding: '2px 7px', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700 }}>
-                      {rec.txType === 'consent' ? 'Consent' : 'Clinical'}
-                    </span>
-                    <span style={{ background: 'rgba(16,185,129,0.08)', color: '#10b981', padding: '2px 7px', borderRadius: '20px', fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                      <ShieldCheck size={10} /> Signed
-                    </span>
-                  </div>
-                ))}
+
+            {/* Self-healing recover */}
+            {!stats.isValid && (
+              <div style={{ marginTop: 'auto', padding: '12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px' }}>
+                <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: '#f87171', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <ShieldAlert size={14} /> Tamper Detected!
+                </p>
+                <button onClick={handleRestoreDatabase} disabled={recovering}
+                  style={{ width: '100%', padding: '8px', background: '#ef4444', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
+                  {recovering ? 'Repairing Database…' : 'Recover from Ledger'}
+                </button>
               </div>
             )}
           </div>
         </div>
+      </div>
 
-        {/* Right: Quick Actions */}
-        <div className="admin-section-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <p className="admin-section-title">Quick Actions</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <button className="admin-quick-btn teal" onClick={() => { setActiveMetricModal('admins'); setShowProvisionForm(true); }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={14} /> Add Doctor (KMPDC)</span>
-              <ArrowUpRight size={13} />
-            </button>
-            <button className="admin-quick-btn violet" onClick={() => { setActiveMetricModal('admins'); setShowProvisionForm(true); }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={14} /> Onboard Hospital Admin</span>
-              <ArrowUpRight size={13} />
-            </button>
-            <button className="admin-quick-btn ghost" onClick={() => { setActiveMetricModal('blocks'); setModalSearchQuery(''); }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Hash size={14} /> Billing Records</span>
-              <ArrowUpRight size={13} />
-            </button>
-            <button className="admin-quick-btn ghost" onClick={() => { setActiveMetricModal('admins'); setModalSearchQuery(''); }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><UserCog size={14} /> View All Admins</span>
-              <ArrowUpRight size={13} />
-            </button>
-            <button className="admin-quick-btn ghost" onClick={() => { setActiveMetricModal('consensus'); setModalSearchQuery(''); }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Shield size={14} /> Consensus Diagnostics</span>
-              <ArrowUpRight size={13} />
-            </button>
-          </div>
-
-          {/* Self-healing recover */}
-          {!stats.isValid && (
-            <div style={{ marginTop: 'auto', padding: '12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px' }}>
-              <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: '#f87171', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <ShieldAlert size={14} /> Tamper Detected!
-              </p>
-              <button onClick={handleRestoreDatabase} disabled={recovering}
-                style={{ width: '100%', padding: '8px', background: '#ef4444', border: 'none', borderRadius: '8px', color: '#fff', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
-                {recovering ? 'Repairing Database…' : 'Recover from Ledger'}
-              </button>
-            </div>
-          )}
-        </div>
+      {/* ── SaaS Multi-Tenant Organization Licensing Authority & Statutory Oracles ── */}
+      <div style={{ marginBottom: '24px' }}>
+        <LicenseControlWidget user={user} refreshTrigger={refreshTrigger} />
       </div>
 
       {/* ── Widget Sections ── */}
@@ -1050,10 +1050,10 @@ export default function SuperAdminPanel({ user }) {
       <div className="admin-section-card" style={{ marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
           <div>
-            <h3 style={{ fontSize: '1rem', margin: 0, fontWeight: 700, color: '#F8FAFC', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h3 style={{ fontSize: '1rem', margin: 0, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Users size={18} color="#00D4FF" /> Network Node Directory &amp; Identity Governance
             </h3>
-            <p style={{ fontSize: '0.78rem', color: 'rgba(248,250,252,0.45)', margin: '3px 0 0' }}>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '3px 0 0' }}>
               Manage licensed clinical node operators and patient accounts across the health network
             </p>
           </div>
@@ -1061,11 +1061,11 @@ export default function SuperAdminPanel({ user }) {
             <div style={{ position: 'relative', flex: 1 }}>
               <input type="text" className="form-control" placeholder="Search by name, email, license…"
                 value={nodeSearchQuery} onChange={(e) => setNodeSearchQuery(e.target.value)}
-                style={{ paddingLeft: '32px', paddingRight: nodeSearchQuery ? '28px' : '10px', fontSize: '0.8rem', height: '36px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#F8FAFC', borderRadius: '8px' }} />
-              <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(248,250,252,0.3)' }} />
+                style={{ paddingLeft: '32px', paddingRight: nodeSearchQuery ? '28px' : '10px', fontSize: '0.8rem', height: '36px', background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '8px' }} />
+              <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
               {nodeSearchQuery && (
                 <button type="button" onClick={() => setNodeSearchQuery('')}
-                  style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(248,250,252,0.35)', cursor: 'pointer', padding: '2px', display: 'flex' }}>
+                  style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex' }}>
                   <X size={13} />
                 </button>
               )}
@@ -1074,7 +1074,7 @@ export default function SuperAdminPanel({ user }) {
         </div>
 
         {/* Directory Tab Chips */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '12px' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border)', paddingBottom: '12px' }}>
           <button className={`admin-tab-chip ${activeDirectoryTab === 'doctors' ? 'active-teal' : ''}`} onClick={() => setActiveDirectoryTab('doctors')}>
             <UserCheck size={13} style={{ marginRight: 5 }} />
             Clinical Node Operators ({filteredDoctors.length})
@@ -1088,7 +1088,7 @@ export default function SuperAdminPanel({ user }) {
         {/* Doctors Table */}
         {activeDirectoryTab === 'doctors' && (
           filteredDoctors.length === 0 ? (
-            <div style={{ padding: '24px', color: 'rgba(248,250,252,0.3)', fontSize: '0.85rem', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: '8px' }}>
+            <div style={{ padding: '24px', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', border: '1px dashed var(--border)', borderRadius: '8px' }}>
               {nodeSearchQuery ? 'No clinical practitioners match your search.' : 'No registered doctors in the network.'}
             </div>
           ) : (
@@ -1104,10 +1104,10 @@ export default function SuperAdminPanel({ user }) {
                     const isDocOrgSuspended = doc.organizationStatus === 'suspended' || doc.organizationStatus === 'disabled';
                     return (
                       <tr key={doc.id || doc._id}>
-                        <td style={{ fontWeight: 600, color: '#F8FAFC' }}>Dr. {doc.name}</td>
-                        <td style={{ color: 'rgba(248,250,252,0.6)' }}>{doc.email}</td>
+                        <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Dr. {doc.name}</td>
+                        <td style={{ color: 'var(--text-muted)' }}>{doc.email}</td>
                         <td>{doc.doctorProfile?.specialization || 'General Practice'}</td>
-                        <td style={{ fontFamily: 'monospace', color: 'rgba(248,250,252,0.45)' }}>{doc.doctorProfile?.licenseNumber || 'N/A'}</td>
+                        <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{doc.doctorProfile?.licenseNumber || 'N/A'}</td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span>{doc.organizationName || doc.doctorProfile?.hospital || 'N/A'}</span>
@@ -1132,7 +1132,7 @@ export default function SuperAdminPanel({ user }) {
         {/* Patients Table */}
         {activeDirectoryTab === 'patients' && (
           filteredPatients.length === 0 ? (
-            <div style={{ padding: '24px', color: 'rgba(248,250,252,0.3)', fontSize: '0.85rem', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: '8px' }}>
+            <div style={{ padding: '24px', color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', border: '1px dashed var(--border)', borderRadius: '8px' }}>
               {nodeSearchQuery ? 'No patient identities match your search.' : 'No registered patients in the network.'}
             </div>
           ) : (
@@ -1146,9 +1146,9 @@ export default function SuperAdminPanel({ user }) {
                 <tbody>
                   {filteredPatients.map(pat => (
                     <tr key={pat.id || pat._id}>
-                      <td style={{ fontWeight: 600, color: '#F8FAFC' }}>{pat.name}</td>
-                      <td style={{ color: 'rgba(248,250,252,0.6)' }}>{pat.email}</td>
-                      <td style={{ color: 'rgba(248,250,252,0.5)' }}>{new Date(pat.createdAt || Date.now()).toLocaleDateString()}</td>
+                      <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{pat.name}</td>
+                      <td style={{ color: 'var(--text-muted)' }}>{pat.email}</td>
+                      <td style={{ color: 'var(--text-muted)' }}>{new Date(pat.createdAt || Date.now()).toLocaleDateString()}</td>
                       <td><span className="badge badge-success" style={{ fontSize: '0.65rem' }}>RSA-2048 Seeded</span></td>
                       <td style={{ textAlign: 'right' }}>
                         <button className="btn btn-danger" style={{ padding: '3px 8px', fontSize: '0.73rem' }}
@@ -1167,37 +1167,37 @@ export default function SuperAdminPanel({ user }) {
 
       {/* ── Mined Block Heights Explorer ── */}
       <div className="admin-section-card" style={{ marginBottom: '20px' }}>
-        <h3 style={{ fontSize: '1rem', marginBottom: '8px', fontWeight: 700, color: '#F8FAFC', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <h3 style={{ fontSize: '1rem', marginBottom: '8px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Layers size={18} color="#3B82F6" /> Mined Block Heights Explorer
           <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', background: 'rgba(59,130,246,0.1)', color: '#3B82F6', border: '1px solid rgba(59,130,246,0.25)', padding: '2px 8px', borderRadius: '20px' }}>
             Height: {blocks.length}
           </span>
         </h3>
-        <p style={{ fontSize: '0.8rem', color: 'rgba(248,250,252,0.4)', marginBottom: '16px' }}>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
           Immutable proof-of-work blockchain ledger linked via recursive SHA-256 cryptographic hashing.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {blocks.map((block, bIdx) => (
-            <div key={block.id || block.hash || `${block.organizationId || 'org'}_${block.index}_${bIdx}`} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px', padding: '14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '8px', marginBottom: '8px' }}>
+            <div key={block.id || block.hash || `${block.organizationId || 'org'}_${block.index}_${bIdx}`} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '8px', marginBottom: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <span className="badge badge-primary" style={{ fontSize: '0.8rem', padding: '3px 9px', background: 'rgba(59,130,246,0.12)', color: '#3B82F6', border: '1px solid rgba(59,130,246,0.25)' }}>Block #{block.index}</span>
-                  <span style={{ fontSize: '0.72rem', color: 'rgba(248,250,252,0.4)' }}>Mined: {new Date(block.timestamp).toLocaleString()}</span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Mined: {new Date(block.timestamp).toLocaleString()}</span>
                 </div>
-                <span style={{ fontSize: '0.72rem', color: 'rgba(248,250,252,0.4)' }}>Nonce: <strong style={{ color: '#F8FAFC' }}>{block.nonce}</strong></span>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Nonce: <strong style={{ color: 'var(--text-primary)' }}>{block.nonce}</strong></span>
               </div>
               <div className="grid-2" style={{ gap: '10px', fontSize: '0.73rem' }}>
                 <div>
-                  <span style={{ color: 'rgba(248,250,252,0.35)', display: 'block', marginBottom: '2px' }}>Current Block Hash</span>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Current Block Hash</span>
                   <span style={{ fontFamily: 'monospace', color: '#10b981', wordBreak: 'break-all', fontSize: '0.7rem' }}>{block.hash}</span>
                 </div>
                 <div>
-                  <span style={{ color: 'rgba(248,250,252,0.35)', display: 'block', marginBottom: '2px' }}>Previous Block Hash</span>
-                  <span style={{ fontFamily: 'monospace', color: 'rgba(248,250,252,0.4)', wordBreak: 'break-all', fontSize: '0.7rem' }}>{block.previousHash}</span>
+                  <span style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Previous Block Hash</span>
+                  <span style={{ fontFamily: 'monospace', color: 'var(--text-muted)', wordBreak: 'break-all', fontSize: '0.7rem' }}>{block.previousHash}</span>
                 </div>
               </div>
-              <div style={{ marginTop: '8px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', padding: '7px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.72rem', color: 'rgba(248,250,252,0.45)' }}>Encapsulated Transactions: <strong style={{ color: '#F8FAFC' }}>{block.records?.length || 0}</strong></span>
+              <div style={{ marginTop: '8px', background: 'var(--bg-tertiary)', border: '1px solid var(--border)', borderRadius: '6px', padding: '7px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Encapsulated Transactions: <strong style={{ color: 'var(--text-primary)' }}>{block.records?.length || 0}</strong></span>
                 <span className="badge badge-success" style={{ fontSize: '0.62rem', padding: '2px 6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                   <CheckCircle2 size={10} /> SHA-256 Verified
                 </span>
