@@ -10,6 +10,7 @@ export default function PatientsByOrgWidget({ user, refreshTrigger }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [limit, setLimit] = useState(5);
 
   // Justification Modal State
   const [selectedOrg, setSelectedOrg] = useState(null); // Org selected for drill-down
@@ -211,7 +212,7 @@ export default function PatientsByOrgWidget({ user, refreshTrigger }) {
                 </td>
               </tr>
             ) : (
-              filteredOrgs.map(org => {
+              filteredOrgs.slice(0, searchQuery.trim() ? undefined : limit).map(org => {
                 const statusColor = org.status === 'active' ? '#10b981' : org.status === 'trial' ? '#3b82f6' : '#ef4444';
                 return (
                   <tr key={org.id}>
@@ -305,6 +306,34 @@ export default function PatientsByOrgWidget({ user, refreshTrigger }) {
           </tbody>
         </table>
       </div>
+
+      {/* Collapsible expander for patient stats */}
+      {!searchQuery.trim() && filteredOrgs.length > 5 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border)', flexWrap: 'wrap', gap: '8px' }}>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            Showing {Math.min(limit, filteredOrgs.length)} of {filteredOrgs.length} facilities
+          </span>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setLimit(prev => prev === 5 ? filteredOrgs.length : 5)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.78rem',
+              padding: '4px 12px',
+              borderRadius: '20px',
+              background: 'var(--card)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-primary)',
+              cursor: 'pointer'
+            }}
+          >
+            {limit > 5 ? '▲ Collapse list (top 5)' : `▼ Show all ${filteredOrgs.length} facilities (${filteredOrgs.length - 5} hidden)`}
+          </button>
+        </div>
+      )}
 
       {/* MODAL 1: Break-Glass Justification Required Modal */}
       {selectedOrg && (

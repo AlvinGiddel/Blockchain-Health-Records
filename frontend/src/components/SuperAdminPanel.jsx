@@ -60,6 +60,15 @@ export default function SuperAdminPanel({ user }) {
   const [activeDirectoryTab, setActiveDirectoryTab] = useState('doctors'); // 'doctors' | 'patients'
   const [pendingAdminSearch, setPendingAdminSearch] = useState('');
   const [pendingDoctorSearch, setPendingDoctorSearch] = useState('');
+  const [directoryLimit, setDirectoryLimit] = useState(5); // Default to top 5 with collapsible expander
+  const [blocksLimit, setBlocksLimit] = useState(5); // Default to top 5 with collapsible expander
+
+  const scrollToSection = (secId) => {
+    const el = document.getElementById(secId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   // Filtered Doctors & Patients based on search query
   const filteredDoctors = dbDoctors.filter(doc => {
@@ -631,10 +640,43 @@ export default function SuperAdminPanel({ user }) {
         </div>
       </div>
 
+      {/* ── Super Admin Quick Navigation Jump Bar (No endless scrolling) ── */}
+      <div className="admin-quick-nav-bar" style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        overflowX: 'auto',
+        padding: '6px 0 16px',
+        marginBottom: '20px',
+        borderBottom: '1px solid var(--border)'
+      }}>
+        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginRight: '4px', whiteSpace: 'nowrap' }}>
+          Jump To:
+        </span>
+        <button type="button" className="admin-tab-chip active-teal" onClick={() => scrollToSection('admin-sec-overview')}>
+          ⚡ Approvals &amp; Queues
+        </button>
+        <button type="button" className="admin-tab-chip" onClick={() => scrollToSection('admin-sec-licensing')}>
+          🏥 Hospital Licensing Matrix
+        </button>
+        <button type="button" className="admin-tab-chip" onClick={() => scrollToSection('admin-sec-oracles')}>
+          🩺 Statutory Oracles (KMPDC / NCK)
+        </button>
+        <button type="button" className="admin-tab-chip" onClick={() => scrollToSection('admin-sec-audits')}>
+          📊 Facility Patient &amp; Rx Audits
+        </button>
+        <button type="button" className="admin-tab-chip" onClick={() => scrollToSection('admin-sec-directory')}>
+          👥 Node Directory
+        </button>
+        <button type="button" className="admin-tab-chip" onClick={() => scrollToSection('admin-sec-ledger')}>
+          ⛓️ Blockchain Ledger ({blocks.length} Blocks)
+        </button>
+      </div>
+
       {/* ── KPI Cards ── */}
       <div className="admin-kpi-grid">
         {/* Tenant Admins */}
-        <div className="admin-kpi-card orange" onClick={() => { setActiveMetricModal('admins'); setModalSearchQuery(''); }} title="View Tenant Administrators">
+        <div className="admin-kpi-card orange" onClick={() => scrollToSection('admin-sec-licensing')} title="Jump to Hospital Licensing Matrix">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div className="admin-kpi-icon" style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)' }}>
               <UserCog size={22} color="#f59e0b" />
@@ -645,13 +687,16 @@ export default function SuperAdminPanel({ user }) {
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
-            <span className="admin-kpi-chip" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}>Manage</span>
+            <span className="admin-kpi-chip" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b' }}
+              onClick={(e) => { e.stopPropagation(); setActiveMetricModal('admins'); setModalSearchQuery(''); }}>
+              Manage &rarr;
+            </span>
             <ChevronRight size={13} color="var(--text-muted)" />
           </div>
         </div>
 
         {/* Doctors */}
-        <div className="admin-kpi-card teal" onClick={() => { setActiveMetricModal('doctors'); setModalSearchQuery(''); }} title="View Licensed Practitioners">
+        <div className="admin-kpi-card teal" onClick={() => scrollToSection('admin-sec-oracles')} title="Jump to Statutory Practitioners">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div className="admin-kpi-icon" style={{ background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.2)' }}>
               <Stethoscope size={22} color="#00D4FF" />
@@ -662,13 +707,16 @@ export default function SuperAdminPanel({ user }) {
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
-            <span className="admin-kpi-chip" style={{ background: 'rgba(0,212,255,0.1)', color: '#00D4FF' }}>KMPDC Verified</span>
+            <span className="admin-kpi-chip" style={{ background: 'rgba(0,212,255,0.1)', color: '#00D4FF' }}
+              onClick={(e) => { e.stopPropagation(); setActiveMetricModal('doctors'); setModalSearchQuery(''); }}>
+              KMPDC Verified &rarr;
+            </span>
             <ChevronRight size={13} color="var(--text-muted)" />
           </div>
         </div>
 
         {/* Patients */}
-        <div className="admin-kpi-card green" onClick={() => { setActiveMetricModal('patients'); setModalSearchQuery(''); }} title="View Patient Identities">
+        <div className="admin-kpi-card green" onClick={() => scrollToSection('admin-sec-directory')} title="Jump to Patient Directory">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div className="admin-kpi-icon" style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)' }}>
               <Users size={22} color="#10b981" />
@@ -679,13 +727,16 @@ export default function SuperAdminPanel({ user }) {
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
-            <span className="admin-kpi-chip" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>Browse Accounts</span>
+            <span className="admin-kpi-chip" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}
+              onClick={(e) => { e.stopPropagation(); setActiveMetricModal('patients'); setModalSearchQuery(''); }}>
+              Browse Accounts &rarr;
+            </span>
             <ChevronRight size={13} color="var(--text-muted)" />
           </div>
         </div>
 
         {/* Blocks */}
-        <div className="admin-kpi-card blue" onClick={() => { setActiveMetricModal('blocks'); setModalSearchQuery(''); }} title="View Blockchain State">
+        <div className="admin-kpi-card blue" onClick={() => scrollToSection('admin-sec-ledger')} title="Jump to Mined Blocks Ledger">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div className="admin-kpi-icon" style={{ background: 'rgba(59,130,246,0.12)', border: '1px solid rgba(59,130,246,0.25)' }}>
               <Layers size={22} color="#3B82F6" />
@@ -696,7 +747,10 @@ export default function SuperAdminPanel({ user }) {
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
-            <span className="admin-kpi-chip" style={{ background: 'rgba(59,130,246,0.1)', color: '#3B82F6' }}>View Chain</span>
+            <span className="admin-kpi-chip" style={{ background: 'rgba(59,130,246,0.1)', color: '#3B82F6' }}
+              onClick={(e) => { e.stopPropagation(); setActiveMetricModal('blocks'); setModalSearchQuery(''); }}>
+              View Chain &rarr;
+            </span>
             <ChevronRight size={13} color="var(--text-muted)" />
           </div>
         </div>
@@ -716,7 +770,7 @@ export default function SuperAdminPanel({ user }) {
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
-            <span className="admin-kpi-chip" style={{ background: stats.isValid ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: stats.isValid ? '#10b981' : '#ef4444' }}>Diagnostics</span>
+            <span className="admin-kpi-chip" style={{ background: stats.isValid ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: stats.isValid ? '#10b981' : '#ef4444' }}>Diagnostics &rarr;</span>
             <ChevronRight size={13} color="var(--text-muted)" />
           </div>
         </div>
@@ -794,7 +848,7 @@ export default function SuperAdminPanel({ user }) {
       )}
 
       {/* ── Mid Row: Approvals & Node Operations ── */}
-      <div className="admin-mid-grid">
+      <div id="admin-sec-overview" className="admin-mid-grid">
 
         {/* Left Column: Approvals Queues & Mempool Queue */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -999,7 +1053,7 @@ export default function SuperAdminPanel({ user }) {
           <div className="admin-section-card" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <p className="admin-section-title">Quick Actions</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <button className="admin-quick-btn teal" onClick={() => { setActiveMetricModal('admins'); setShowProvisionForm(true); }}>
+              <button className="admin-quick-btn teal" onClick={() => scrollToSection('admin-sec-oracles')}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={14} /> Add Doctor (KMPDC)</span>
                 <ArrowUpRight size={13} />
               </button>
@@ -1007,8 +1061,8 @@ export default function SuperAdminPanel({ user }) {
                 <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Plus size={14} /> Onboard Hospital Admin</span>
                 <ArrowUpRight size={13} />
               </button>
-              <button className="admin-quick-btn ghost" onClick={() => { setActiveMetricModal('blocks'); setModalSearchQuery(''); }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Hash size={14} /> Billing Records</span>
+              <button className="admin-quick-btn ghost" onClick={() => scrollToSection('admin-sec-licensing')}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Building2 size={14} /> Manage Clinic Licenses</span>
                 <ArrowUpRight size={13} />
               </button>
               <button className="admin-quick-btn ghost" onClick={() => { setActiveMetricModal('admins'); setModalSearchQuery(''); }}>
@@ -1042,12 +1096,14 @@ export default function SuperAdminPanel({ user }) {
         <LicenseControlWidget user={user} refreshTrigger={refreshTrigger} />
       </div>
 
-      {/* ── Widget Sections ── */}
-      <PatientsByOrgWidget user={user} refreshTrigger={refreshTrigger} />
-      <PrescriptionsByOrgWidget user={user} refreshTrigger={refreshTrigger} />
+      {/* ── Widget Sections: Facility Audits ── */}
+      <div id="admin-sec-audits" style={{ marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <PatientsByOrgWidget user={user} refreshTrigger={refreshTrigger} />
+        <PrescriptionsByOrgWidget user={user} refreshTrigger={refreshTrigger} />
+      </div>
 
       {/* ── Network Node Directory & Identity Governance ── */}
-      <div className="admin-section-card" style={{ marginBottom: '20px' }}>
+      <div id="admin-sec-directory" className="admin-section-card" style={{ marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
           <div>
             <h3 style={{ fontSize: '1rem', margin: 0, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1092,40 +1148,70 @@ export default function SuperAdminPanel({ user }) {
               {nodeSearchQuery ? 'No clinical practitioners match your search.' : 'No registered doctors in the network.'}
             </div>
           ) : (
-            <div className="table-container" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-              <table className="custom-table" style={{ fontSize: '0.8rem' }}>
-                <thead>
-                  <tr>
-                    <th>Practitioner</th><th>Email</th><th>Specialization</th><th>License Number</th><th>Hospital Facility</th><th style={{ textAlign: 'right' }}>Governance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredDoctors.map(doc => {
-                    const isDocOrgSuspended = doc.organizationStatus === 'suspended' || doc.organizationStatus === 'disabled';
-                    return (
-                      <tr key={doc.id || doc._id}>
-                        <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Dr. {doc.name}</td>
-                        <td style={{ color: 'var(--text-muted)' }}>{doc.email}</td>
-                        <td>{doc.doctorProfile?.specialization || 'General Practice'}</td>
-                        <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{doc.doctorProfile?.licenseNumber || 'N/A'}</td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span>{doc.organizationName || doc.doctorProfile?.hospital || 'N/A'}</span>
-                            {isDocOrgSuspended && <span className="badge badge-error" style={{ fontSize: '0.62rem', padding: '1px 5px' }}>SUSPENDED</span>}
-                          </div>
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <button className="btn btn-danger" style={{ padding: '3px 8px', fontSize: '0.73rem' }}
-                            onClick={() => setDeleteTarget({ id: doc.id || doc._id, name: `Dr. ${doc.name}`, role: 'Doctor' })}>
-                            Revoke Node
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <div className="table-container" style={{ maxHeight: '420px', overflowY: 'auto' }}>
+                <table className="custom-table" style={{ fontSize: '0.8rem' }}>
+                  <thead>
+                    <tr>
+                      <th>Practitioner</th><th>Email</th><th>Specialization</th><th>License Number</th><th>Hospital Facility</th><th style={{ textAlign: 'right' }}>Governance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(nodeSearchQuery.trim() ? filteredDoctors : filteredDoctors.slice(0, directoryLimit)).map(doc => {
+                      const isDocOrgSuspended = doc.organizationStatus === 'suspended' || doc.organizationStatus === 'disabled';
+                      return (
+                        <tr key={doc.id || doc._id}>
+                          <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Dr. {doc.name}</td>
+                          <td style={{ color: 'var(--text-muted)' }}>{doc.email}</td>
+                          <td>{doc.doctorProfile?.specialization || 'General Practice'}</td>
+                          <td style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{doc.doctorProfile?.licenseNumber || 'N/A'}</td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>{doc.organizationName || doc.doctorProfile?.hospital || 'N/A'}</span>
+                              {isDocOrgSuspended && <span className="badge badge-error" style={{ fontSize: '0.62rem', padding: '1px 5px' }}>SUSPENDED</span>}
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button className="btn btn-danger" style={{ padding: '3px 8px', fontSize: '0.73rem' }}
+                              onClick={() => setDeleteTarget({ id: doc.id || doc._id, name: `Dr. ${doc.name}`, role: 'Doctor' })}>
+                              Revoke Node
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {!nodeSearchQuery.trim() && filteredDoctors.length > 5 && (
+                <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => setDirectoryLimit(prev => prev === 5 ? filteredDoctors.length : 5)}
+                    style={{
+                      background: 'var(--bg-primary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                      padding: '8px 18px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      color: '#00D4FF',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+                    }}
+                  >
+                    {directoryLimit === 5 ? (
+                      <>▼ Show all {filteredDoctors.length} clinical nodes ({filteredDoctors.length - 5} hidden)</>
+                    ) : (
+                      <>▲ Collapse list (show top 5)</>
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
           )
         )}
 
@@ -1136,37 +1222,67 @@ export default function SuperAdminPanel({ user }) {
               {nodeSearchQuery ? 'No patient identities match your search.' : 'No registered patients in the network.'}
             </div>
           ) : (
-            <div className="table-container" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-              <table className="custom-table" style={{ fontSize: '0.8rem' }}>
-                <thead>
-                  <tr>
-                    <th>Patient Name</th><th>Email</th><th>Registration Date</th><th>Key Status</th><th style={{ textAlign: 'right' }}>Governance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPatients.map(pat => (
-                    <tr key={pat.id || pat._id}>
-                      <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{pat.name}</td>
-                      <td style={{ color: 'var(--text-muted)' }}>{pat.email}</td>
-                      <td style={{ color: 'var(--text-muted)' }}>{new Date(pat.createdAt || Date.now()).toLocaleDateString()}</td>
-                      <td><span className="badge badge-success" style={{ fontSize: '0.65rem' }}>RSA-2048 Seeded</span></td>
-                      <td style={{ textAlign: 'right' }}>
-                        <button className="btn btn-danger" style={{ padding: '3px 8px', fontSize: '0.73rem' }}
-                          onClick={() => setDeleteTarget({ id: pat.id || pat._id, name: pat.name, role: 'Patient' })}>
-                          Purge Account
-                        </button>
-                      </td>
+            <>
+              <div className="table-container" style={{ maxHeight: '420px', overflowY: 'auto' }}>
+                <table className="custom-table" style={{ fontSize: '0.8rem' }}>
+                  <thead>
+                    <tr>
+                      <th>Patient Name</th><th>Email</th><th>Registration Date</th><th>Key Status</th><th style={{ textAlign: 'right' }}>Governance</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {(nodeSearchQuery.trim() ? filteredPatients : filteredPatients.slice(0, directoryLimit)).map(pat => (
+                      <tr key={pat.id || pat._id}>
+                        <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{pat.name}</td>
+                        <td style={{ color: 'var(--text-muted)' }}>{pat.email}</td>
+                        <td style={{ color: 'var(--text-muted)' }}>{new Date(pat.createdAt || Date.now()).toLocaleDateString()}</td>
+                        <td><span className="badge badge-success" style={{ fontSize: '0.65rem' }}>RSA-2048 Seeded</span></td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button className="btn btn-danger" style={{ padding: '3px 8px', fontSize: '0.73rem' }}
+                            onClick={() => setDeleteTarget({ id: pat.id || pat._id, name: pat.name, role: 'Patient' })}>
+                            Purge Account
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {!nodeSearchQuery.trim() && filteredPatients.length > 5 && (
+                <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => setDirectoryLimit(prev => prev === 5 ? filteredPatients.length : 5)}
+                    style={{
+                      background: 'var(--bg-primary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '8px',
+                      padding: '8px 18px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      color: '#10b981',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+                    }}
+                  >
+                    {directoryLimit === 5 ? (
+                      <>▼ Show all {filteredPatients.length} patient identities ({filteredPatients.length - 5} hidden)</>
+                    ) : (
+                      <>▲ Collapse list (show top 5)</>
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
           )
         )}
       </div>
 
       {/* ── Mined Block Heights Explorer ── */}
-      <div className="admin-section-card" style={{ marginBottom: '20px' }}>
+      <div id="admin-sec-ledger" className="admin-section-card" style={{ marginBottom: '20px' }}>
         <h3 style={{ fontSize: '1rem', marginBottom: '8px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Layers size={18} color="#3B82F6" /> Mined Block Heights Explorer
           <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', background: 'rgba(59,130,246,0.1)', color: '#3B82F6', border: '1px solid rgba(59,130,246,0.25)', padding: '2px 8px', borderRadius: '20px' }}>
@@ -1177,7 +1293,7 @@ export default function SuperAdminPanel({ user }) {
           Immutable proof-of-work blockchain ledger linked via recursive SHA-256 cryptographic hashing.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {blocks.map((block, bIdx) => (
+          {blocks.slice(0, blocksLimit).map((block, bIdx) => (
             <div key={block.id || block.hash || `${block.organizationId || 'org'}_${block.index}_${bIdx}`} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '8px', marginBottom: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1205,6 +1321,34 @@ export default function SuperAdminPanel({ user }) {
             </div>
           ))}
         </div>
+        {blocks.length > 5 && (
+          <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'center' }}>
+            <button
+              type="button"
+              onClick={() => setBlocksLimit(prev => prev === 5 ? blocks.length : 5)}
+              style={{
+                background: 'var(--bg-primary)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '8px 18px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: '#3B82F6',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
+              }}
+            >
+              {blocksLimit === 5 ? (
+                <>▼ Show all {blocks.length} mined blocks ({blocks.length - 5} hidden)</>
+              ) : (
+                <>▲ Collapse ledger (show latest 5)</>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Interactive Metric Detail Modals ── */}

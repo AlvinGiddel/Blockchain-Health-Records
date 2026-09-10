@@ -22,6 +22,7 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
   const [orgStatusMsg, setOrgStatusMsg] = useState('');
   const [orgErrorMsg, setOrgErrorMsg] = useState('');
   const [orgSearch, setOrgSearch] = useState('');
+  const [orgLimit, setOrgLimit] = useState(5); // Default to showing top 5 clinics with expander
 
   // Statutory Oracle State (KMPDC Doctors & NCK Nurses)
   const [activeOracleTab, setActiveOracleTab] = useState('kmpdc'); // 'kmpdc' | 'nck'
@@ -32,6 +33,7 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
   const [loadingNckPractitioners, setLoadingNckPractitioners] = useState(false);
   const [showAddDoctorModal, setShowAddDoctorModal] = useState(false);
   const [practitionerSearch, setPractitionerSearch] = useState('');
+  const [oracleLimit, setOracleLimit] = useState(5); // Default to top 5 practitioners with expander
 
   // Add Practitioner Form State
   const [newLicense, setNewLicense] = useState('');
@@ -753,7 +755,7 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
           </div>
         </div>
 
-        <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
+        <div style={{ maxHeight: oracleLimit > 5 ? '480px' : '260px', overflowY: 'auto' }}>
           <table style={{ width: '100%', fontSize: '0.82rem', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--glass-border)', color: 'var(--text-secondary)', textAlign: 'left' }}>
@@ -779,6 +781,7 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
                       (doc.status && doc.status.toLowerCase().includes(q))
                     );
                   })
+                  .slice(0, practitionerSearch.trim() ? undefined : oracleLimit)
                   .map((doc, idx) => (
                     <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                       <td style={{ padding: '8px 6px', fontFamily: 'monospace', color: 'var(--color-primary)', fontWeight: 600 }}>{doc.license_number}</td>
@@ -815,6 +818,7 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
                       (nurse.status && nurse.status.toLowerCase().includes(q))
                     );
                   })
+                  .slice(0, practitionerSearch.trim() ? undefined : oracleLimit)
                   .map((nurse, idx) => (
                     <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                       <td style={{ padding: '8px 6px', fontFamily: 'monospace', color: '#60a5fa', fontWeight: 600 }}>{nurse.license_number}</td>
@@ -890,11 +894,49 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
             </tbody>
           </table>
         </div>
+
+        {/* Collapsible Expander for Statutory Oracle */}
+        {(() => {
+          const currentTotal = activeOracleTab === 'kmpdc' ? practitioners.length : nckPractitioners.length;
+          const isCollapsible = !practitionerSearch.trim() && currentTotal > 5;
+          return (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', paddingTop: '8px', borderTop: '1px solid var(--border)', flexWrap: 'wrap', gap: '8px' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Showing {Math.min(oracleLimit, currentTotal)} of {currentTotal} verified practitioners
+              </span>
+              {isCollapsible && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setOracleLimit(prev => prev === 5 ? currentTotal : 5)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '0.75rem',
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    background: 'var(--card)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-primary)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {oracleLimit > 5 ? (
+                    <>▲ Show fewer (top 5)</>
+                  ) : (
+                    <>▼ Show all {currentTotal} ({currentTotal - 5} hidden)</>
+                  )}
+                </button>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Multi-Tenant Organizations & Per-Clinic Kill-Switch Control Center (Super Admin Only) */}
       {user?.role === 'super_admin' && (
-        <div style={{ padding: '20px', borderRadius: '10px', background: 'rgba(15, 118, 110, 0.05)', border: '1px solid rgba(15, 118, 110, 0.2)' }}>
+        <div id="admin-sec-licensing" style={{ padding: '20px', borderRadius: '10px', background: 'rgba(15, 118, 110, 0.05)', border: '1px solid rgba(15, 118, 110, 0.2)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ background: '#E6F4F2', padding: '6px', borderRadius: '8px', border: '1px solid #A3E3CD' }}>
@@ -995,6 +1037,7 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
                       (org.status && org.status.toLowerCase().includes(q))
                     );
                   })
+                  .slice(0, orgSearch.trim() ? undefined : orgLimit)
                   .map(org => {
                   const isOrgSuspended = org.status === 'suspended' || org.status === 'disabled';
                   const isExpired = org.licenseExpiresAt && new Date(org.licenseExpiresAt) < new Date();
@@ -1076,6 +1119,52 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
               </tbody>
             </table>
           </div>
+
+          {/* Collapsible Expander for Multi-Tenant Clinics */}
+          {(() => {
+            const filtered = organizations.filter(org => {
+              if (!orgSearch.trim()) return true;
+              const q = orgSearch.toLowerCase();
+              return (
+                (org.name && org.name.toLowerCase().includes(q)) ||
+                (org.slug && org.slug.toLowerCase().includes(q)) ||
+                (org.status && org.status.toLowerCase().includes(q))
+              );
+            });
+            const isCollapsible = !orgSearch.trim() && filtered.length > 5;
+            return (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--border)', flexWrap: 'wrap', gap: '8px' }}>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                  Showing {Math.min(orgLimit, filtered.length)} of {filtered.length} registered clinics
+                </span>
+                {isCollapsible && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setOrgLimit(prev => prev === 5 ? filtered.length : 5)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '0.78rem',
+                      padding: '5px 14px',
+                      borderRadius: '20px',
+                      background: 'var(--card)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {orgLimit > 5 ? (
+                      <>▲ Collapse list (show top 5)</>
+                    ) : (
+                      <>▼ Show all {filtered.length} clinics ({filtered.length - 5} hidden)</>
+                    )}
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 
