@@ -614,79 +614,135 @@ export default function App() {
         className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''} ${mobileSidebarOpen ? 'open' : ''}`}
         style={!sidebarCollapsed ? { width: `${sidebarWidth}px` } : {}}
       >
-        <div className="sidebar-brand">
+        <div 
+          className="sidebar-brand" 
+          onClick={sidebarCollapsed && !mobileSidebarOpen ? toggleSidebar : undefined}
+          style={sidebarCollapsed && !mobileSidebarOpen ? { cursor: 'pointer' } : {}}
+          title={sidebarCollapsed && !mobileSidebarOpen ? "Expand Sidebar (Click to reveal labels)" : undefined}
+        >
           <button className="sidebar-toggle-btn" onClick={toggleSidebar} aria-label="Toggle Sidebar" title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}>
             {mobileSidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
-          <div className="brand-logo-text" onClick={() => handleNavClick('dashboard')} style={{ cursor: 'pointer' }}>
-            <img src={logoSvg} alt="Logo" style={{ width: '24px', height: '24px' }} />
+          <div className="brand-logo-text" onClick={(e) => { if (!sidebarCollapsed) handleNavClick('dashboard'); }} style={{ cursor: 'pointer' }} title="Blockchain Health Records">
+            <img src={logoSvg} alt="Logo" style={{ width: '24px', height: '24px', flexShrink: 0 }} />
             <span>BLOCKCHAIN HEALTH RECORDS</span>
           </div>
         </div>
 
         <nav className="sidebar-nav">
-          <button
-            className={`sidebar-link ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => handleNavClick('dashboard')}
-          >
-            <LayoutDashboard size={20} />
-            <span>{user.role === 'pharmacist' ? 'Dispensary Portal' : ((user.role === 'admin' || user.role === 'super_admin') ? 'Admin Panel' : 'Dashboard')}</span>
-          </button>
-          
-          {user.role !== 'admin' && user.role !== 'super_admin' && user.role !== 'pharmacist' && (
+          {/* ── 1. Workspace / Primary Role Navigation ── */}
+          <div className="sidebar-nav-group workspace-group">
             <button
-              className={`sidebar-link ${activeTab === 'records' ? 'active' : ''}`}
-              onClick={() => handleNavClick('records')}
+              className={`sidebar-link ${activeTab === 'dashboard' ? 'active' : ''}`}
+              onClick={() => handleNavClick('dashboard')}
+              title={user.role === 'pharmacist' ? 'Dispensary Portal' : ((user.role === 'admin' || user.role === 'super_admin') ? 'Admin Panel' : 'Dashboard')}
             >
-              <FileText size={20} />
-              <span>{user.role === 'patient' ? 'My Health Folder' : 'Patient Dossiers'}</span>
+              <LayoutDashboard size={20} />
+              <span>{user.role === 'pharmacist' ? 'Dispensary Portal' : ((user.role === 'admin' || user.role === 'super_admin') ? 'Admin Panel' : 'Dashboard')}</span>
             </button>
-          )}
+            
+            {user.role !== 'admin' && user.role !== 'super_admin' && user.role !== 'pharmacist' && (
+              <button
+                className={`sidebar-link ${activeTab === 'records' ? 'active' : ''}`}
+                onClick={() => handleNavClick('records')}
+                title={user.role === 'patient' ? 'My Health Folder' : 'Patient Dossiers'}
+              >
+                <FileText size={20} />
+                <span>{user.role === 'patient' ? 'My Health Folder' : 'Patient Dossiers'}</span>
+              </button>
+            )}
 
-          {user.role !== 'super_admin' && user.role !== 'pharmacist' && (
-            <button
-              className={`sidebar-link ${activeTab === 'prescriptions' ? 'active' : ''}`}
-              onClick={() => handleNavClick('prescriptions')}
-            >
-              <Pill size={20} />
-              <span>Prescriptions</span>
-            </button>
-          )}
-          
-          {user.role === 'patient' && (
-            <button
-              className={`sidebar-link ${activeTab === 'consent' ? 'active' : ''}`}
-              onClick={() => handleNavClick('consent')}
-            >
-              <KeyRound size={20} />
-              <span>Access & Consent</span>
-            </button>
-          )}
-          
-          {user.role !== 'patient' && (
-            <button
-              className={`sidebar-link ${activeTab === 'blockchain' ? 'active' : ''}`}
-              onClick={() => handleNavClick('blockchain')}
-            >
-              <Globe size={20} />
-              <span>Ledger Explorer</span>
-            </button>
-          )}
+            {user.role !== 'super_admin' && user.role !== 'pharmacist' && (
+              <button
+                className={`sidebar-link ${activeTab === 'prescriptions' ? 'active' : ''}`}
+                onClick={() => handleNavClick('prescriptions')}
+                title="Clinical Prescriptions & Pharmacy"
+              >
+                <Pill size={20} />
+                <span>Prescriptions</span>
+              </button>
+            )}
+            
+            {user.role === 'patient' && (
+              <button
+                className={`sidebar-link ${activeTab === 'consent' ? 'active' : ''}`}
+                onClick={() => handleNavClick('consent')}
+                title="Access & Consent Management"
+              >
+                <KeyRound size={20} />
+                <span>Access & Consent</span>
+              </button>
+            )}
+            
+            {user.role !== 'patient' && (
+              <button
+                className={`sidebar-link ${activeTab === 'blockchain' ? 'active' : ''}`}
+                onClick={() => handleNavClick('blockchain')}
+                title="Cryptographic Ledger Explorer"
+              >
+                <Globe size={20} />
+                <span>Ledger Explorer</span>
+              </button>
+            )}
+          </div>
 
-          <button
-            className={`sidebar-link ${activeTab === 'profile' ? 'active' : ''}`}
-            onClick={() => handleNavClick('profile')}
-          >
-            <UserCheck size={20} />
-            <span>My Profile</span>
-          </button>
+          {/* ── Divider 1 ── */}
+          <div className="sidebar-divider" />
+
+          {/* ── 2. Account Items Group ── */}
+          <div className="sidebar-nav-group account-group">
+            <button
+              className={`sidebar-link ${activeTab === 'profile' ? 'active' : ''}`}
+              onClick={() => handleNavClick('profile')}
+              title="My Profile & Identity Credentials"
+            >
+              <UserCheck size={20} />
+              <span>My Profile</span>
+            </button>
+
+            <button
+              className={`sidebar-link ${activeTab === 'settings' ? 'active' : ''}`}
+              onClick={() => handleNavClick('settings')}
+              title="Account Settings & Security"
+            >
+              <Shield size={20} />
+              <span>Settings</span>
+            </button>
+
+            <div className="sidebar-theme-item" title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+              <ThemeToggle 
+                variant={sidebarCollapsed && !mobileSidebarOpen ? 'icon' : 'pill'} 
+                className={sidebarCollapsed && !mobileSidebarOpen ? 'w-10 h-10 justify-center' : 'sidebar-action-btn w-full justify-start text-xs'} 
+              />
+            </div>
+          </div>
+
+          {/* ── Divider 2 ── */}
+          <div className="sidebar-divider" />
+
+          {/* ── 3. Log Out - Isolated at the bottom in Danger/Red ── */}
+          <div className="sidebar-nav-group logout-group">
+            <button
+              className="sidebar-link sidebar-logout-btn"
+              onClick={handleLogout}
+              title="Log Out (Terminate current session)"
+            >
+              <LogOut size={20} />
+              <span>Log Out</span>
+            </button>
+          </div>
         </nav>
 
+        {/* User Identity Info at Bottom */}
         <div className="sidebar-footer">
-          <div className="sidebar-user">
+          <div 
+            className="sidebar-user" 
+            onClick={() => handleNavClick('profile')}
+            style={{ cursor: 'pointer' }}
+            title={`Active User: ${user.name} (${user.role === 'patient' ? 'Patient' : (user.organizationName || user.role)})`}
+          >
             <div 
               className="user-avatar" 
-              title={`${user.name} (${user.role})`}
               style={{ overflow: 'hidden', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               {user.profilePhoto ? (
@@ -704,28 +760,6 @@ export default function App() {
                 }
               </span>
             </div>
-          </div>
-
-          <div className="sidebar-actions">
-            <button
-              className={`sidebar-action-btn ${activeTab === 'settings' ? 'active' : ''}`}
-              onClick={() => handleNavClick('settings')}
-              title="Account Settings"
-            >
-              <Shield size={16} />
-              <span>Settings</span>
-            </button>
-
-            <ThemeToggle className="sidebar-action-btn w-full justify-start text-xs" />
-
-            <button
-              className="sidebar-action-btn"
-              onClick={handleLogout}
-              title="Log Out"
-            >
-              <LogOut size={16} />
-              <span>Log Out</span>
-            </button>
           </div>
         </div>
 
@@ -746,7 +780,7 @@ export default function App() {
       {/* Main Content Wrapper */}
       <div 
         className={`main-wrapper ${sidebarCollapsed ? 'collapsed' : ''}`}
-        style={!sidebarCollapsed ? { marginLeft: `${sidebarWidth}px`, width: `calc(100% - ${sidebarWidth}px)` } : { marginLeft: 0, width: '100%' }}
+        style={!sidebarCollapsed ? { marginLeft: `${sidebarWidth}px`, width: `calc(100% - ${sidebarWidth}px)` } : {}}
       >
         {/* Top Minimal Header */}
         <header className="top-header" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
