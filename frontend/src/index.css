@@ -2,36 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
+:root,
+[data-theme="light"] {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  /* Clinical Trust Theme Tokens (Light-Mode Default) */
-  --bg-primary: #F8FAFC;
+  /* Clinical Trust Theme Tokens (Light-Mode: Eye-friendly, reduced-glare slate background & crisp surfaces) */
+  --bg-primary: #EEF2F6;
   --bg-secondary: #FFFFFF;
-  --bg-tertiary: #F1F5F9;
+  --bg-tertiary: #E2E8F0;
   
   --color-navy: #0B2545;
   --color-primary: #0F766E; /* Teal CTA */
   --color-primary-hover: #0D655E;
   --color-accent: #0F766E;
-  --color-success: #1D9E75; /* Reserved exclusively for Verified/Active states */
-  --color-success-glow: rgba(29, 158, 117, 0.12);
+  --color-success: #047857; /* Reserved exclusively for Verified/Active states */
+  --color-success-glow: rgba(4, 120, 87, 0.12);
   --color-error: #DC2626;
   --color-error-glow: rgba(220, 38, 38, 0.1);
-  --color-warning: #D97706;
+  --color-warning: #B45309;
 
   --text-primary: #0F172A;
-  --text-secondary: #334155;
+  --text-secondary: #1E293B;
   --text-muted: #475569;
 
   --glass-bg: #FFFFFF;
-  --glass-border: #E2E8F0;
+  --glass-border: #CBD5E1;
   --glass-glow: transparent;
 
   /* shadcn/ui Semantic CSS Variables (Light-Mode) */
-  --background: #F8FAFC;
+  --background: #EEF2F6;
   --foreground: #0F172A;
   --card: #FFFFFF;
   --card-foreground: #0F172A;
@@ -39,18 +40,32 @@
   --popover-foreground: #0F172A;
   --primary: #0F766E;
   --primary-foreground: #FFFFFF;
-  --secondary: #F1F5F9;
+  --secondary: #E2E8F0;
   --secondary-foreground: #0F172A;
-  --muted: #F1F5F9;
+  --muted: #E2E8F0;
   --muted-foreground: #475569;
   --accent: #0F766E;
   --accent-foreground: #FFFFFF;
   --destructive: #DC2626;
   --destructive-foreground: #FFFFFF;
-  --border: #E2E8F0;
-  --input: #E2E8F0;
+  --border: #CBD5E1;
+  --input: #CBD5E1;
   --ring: #0F766E;
   --radius: 0.5rem;
+
+  /* Super Admin High-Contrast Tokens */
+  --admin-cyan: #0F766E;
+  --admin-cyan-bg: rgba(15, 118, 110, 0.08);
+  --admin-cyan-border: rgba(15, 118, 110, 0.25);
+  --admin-amber: #B45309;
+  --admin-amber-bg: rgba(217, 119, 6, 0.1);
+  --admin-amber-border: rgba(217, 119, 6, 0.25);
+  --admin-green: #047857;
+  --admin-green-bg: rgba(4, 120, 87, 0.1);
+  --admin-green-border: rgba(4, 120, 87, 0.25);
+  --admin-blue: #1D4ED8;
+  --admin-blue-bg: rgba(29, 78, 216, 0.1);
+  --admin-blue-border: rgba(29, 78, 216, 0.25);
 
   color-scheme: light;
   background-color: var(--bg-primary);
@@ -99,6 +114,20 @@
   --border: #1E3A5F;
   --input: #1E3A5F;
   --ring: #14B8A6;
+
+  /* Super Admin High-Contrast Tokens */
+  --admin-cyan: #00D4FF;
+  --admin-cyan-bg: rgba(0, 212, 255, 0.1);
+  --admin-cyan-border: rgba(0, 212, 255, 0.25);
+  --admin-amber: #f59e0b;
+  --admin-amber-bg: rgba(245, 158, 11, 0.12);
+  --admin-amber-border: rgba(245, 158, 11, 0.25);
+  --admin-green: #10b981;
+  --admin-green-bg: rgba(16, 185, 129, 0.12);
+  --admin-green-border: rgba(16, 185, 129, 0.25);
+  --admin-blue: #3B82F6;
+  --admin-blue-bg: rgba(59, 130, 246, 0.12);
+  --admin-blue-border: rgba(59, 130, 246, 0.25);
 
   color-scheme: dark;
   background-color: var(--bg-primary);
@@ -1364,6 +1393,15 @@ select, option {
   margin-bottom: 28px;
 }
 
+[data-theme="light"] .admin-header-gradient {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 16px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+  padding: 24px 28px;
+  margin-bottom: 24px;
+}
+
 /* KPI stat cards */
 .admin-kpi-card {
   background: var(--card);
@@ -1393,6 +1431,46 @@ select, option {
   transform: translateY(-3px);
   border-color: var(--color-primary);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .admin-kpi-card {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+}
+
+[data-theme="light"] .admin-kpi-card:hover {
+  border-color: #0F766E;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="light"] .admin-kpi-value {
+  color: #0F172A;
+}
+
+[data-theme="light"] .admin-kpi-label {
+  color: #334155;
+  font-weight: 700;
+}
+
+[data-theme="light"] .admin-kpi-card.orange .admin-kpi-chip {
+  background: rgba(217, 119, 6, 0.12) !important;
+  color: #B45309 !important;
+}
+
+[data-theme="light"] .admin-kpi-card.teal .admin-kpi-chip {
+  background: rgba(15, 118, 110, 0.12) !important;
+  color: #0F766E !important;
+}
+
+[data-theme="light"] .admin-kpi-card.green .admin-kpi-chip {
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: #047857 !important;
+}
+
+[data-theme="light"] .admin-kpi-card.blue .admin-kpi-chip {
+  background: rgba(37, 99, 235, 0.12) !important;
+  color: #1D4ED8 !important;
 }
 
 [data-theme="dark"] .admin-kpi-card {
@@ -1461,6 +1539,12 @@ select, option {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
+[data-theme="light"] .admin-section-card {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+}
+
 [data-theme="dark"] .admin-section-card {
   background: rgba(17, 34, 57, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1527,6 +1611,44 @@ select, option {
   color: #8B5CF6;
 }
 
+[data-theme="light"] .admin-tab-chip {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #1E293B;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] .admin-tab-chip:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+  border-color: #94A3B8;
+}
+
+[data-theme="light"] .admin-tab-chip.active-teal {
+  background: #0F766E;
+  border-color: #0F766E;
+  color: #FFFFFF;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(15, 118, 110, 0.25);
+}
+
+[data-theme="light"] .admin-tab-chip.active-green {
+  background: #10B981;
+  border-color: #10B981;
+  color: #FFFFFF;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
+}
+
+[data-theme="light"] .admin-tab-chip.active-violet {
+  background: #7C3AED;
+  border-color: #7C3AED;
+  color: #FFFFFF;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+}
+
 /* Quick action buttons */
 .admin-quick-btn {
   display: flex;
@@ -1572,6 +1694,55 @@ select, option {
   background: var(--bg-tertiary);
   color: var(--text-primary);
   transform: translateX(2px);
+}
+
+[data-theme="light"] .admin-quick-btn.teal {
+  background: rgba(15, 118, 110, 0.08);
+  border-color: rgba(15, 118, 110, 0.3);
+  color: #0F766E;
+  font-weight: 700;
+}
+[data-theme="light"] .admin-quick-btn.teal:hover {
+  background: rgba(15, 118, 110, 0.16);
+}
+
+[data-theme="light"] .admin-quick-btn.violet {
+  background: rgba(124, 58, 237, 0.08);
+  border-color: rgba(124, 58, 237, 0.3);
+  color: #6D28D9;
+  font-weight: 700;
+}
+[data-theme="light"] .admin-quick-btn.violet:hover {
+  background: rgba(124, 58, 237, 0.16);
+}
+
+[data-theme="light"] .admin-quick-btn.ghost {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+  color: #0F172A;
+  font-weight: 600;
+}
+[data-theme="light"] .admin-quick-btn.ghost:hover {
+  background: #F1F5F9;
+  color: #0F172A;
+  border-color: #94A3B8;
+}
+
+[data-theme="light"] .admin-status-pill.online {
+  background: rgba(4, 120, 87, 0.08);
+  border: 1px solid rgba(4, 120, 87, 0.3);
+  color: #047857;
+}
+
+[data-theme="light"] .admin-status-pill.compromised {
+  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  color: #DC2626;
+}
+
+[data-theme="light"] .admin-terminal {
+  background: #0B192C;
+  border: 1px solid #CBD5E1;
 }
 
 /* Terminal log panel */

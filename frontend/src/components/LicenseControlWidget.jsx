@@ -519,7 +519,7 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
               resetAddDoctorForm('kmpdc');
               setShowAddDoctorModal(true);
             }}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '8px 14px', background: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.4)', color: '#34d399' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '8px 14px', background: 'var(--admin-green-bg)', borderColor: 'var(--admin-green-border)', color: 'var(--admin-green)', fontWeight: 600 }}
           >
             <Plus size={15} /> Add Doctor (KMPDC)
           </button>
@@ -532,7 +532,7 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
               resetAddDoctorForm('nck');
               setShowAddDoctorModal(true);
             }}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '8px 14px', background: 'rgba(59, 130, 246, 0.15)', borderColor: 'rgba(59, 130, 246, 0.4)', color: '#60a5fa' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', padding: '8px 14px', background: 'var(--admin-blue-bg)', borderColor: 'var(--admin-blue-border)', color: 'var(--admin-blue)', fontWeight: 600 }}
           >
             <Plus size={15} /> Add Nurse (NCK)
           </button>
@@ -550,16 +550,16 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
       </div>
 
       {statusMessage && (
-        <div style={{ padding: '10px 16px', borderRadius: '8px', backgroundColor: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#34d399', fontSize: '0.85rem', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '10px 16px', borderRadius: '8px', backgroundColor: 'var(--admin-green-bg)', border: '1px solid var(--admin-green-border)', color: 'var(--admin-green)', fontSize: '0.85rem', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600 }}>
           <span>{statusMessage}</span>
-          <button onClick={() => setStatusMessage('')} style={{ background: 'none', border: 'none', color: '#34d399', cursor: 'pointer' }}>✕</button>
+          <button onClick={() => setStatusMessage('')} style={{ background: 'none', border: 'none', color: 'var(--admin-green)', cursor: 'pointer' }}>✕</button>
         </div>
       )}
 
       {error && (
-        <div style={{ padding: '10px 16px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#f87171', fontSize: '0.85rem', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '10px 16px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#dc2626', fontSize: '0.85rem', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 600 }}>
           <span>⚠️ {error}</span>
-          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' }}>✕</button>
+          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer' }}>✕</button>
         </div>
       )}
 
@@ -571,9 +571,10 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
           style={{
             padding: '18px',
             borderRadius: '10px',
-            background: 'rgba(0,0,0,0.25)',
-            border: isActive ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(239, 68, 68, 0.4)',
-            position: 'relative'
+            background: 'var(--card)',
+            border: isActive ? '1px solid var(--admin-green-border)' : '1px solid rgba(239, 68, 68, 0.4)',
+            position: 'relative',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.04)'
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -587,13 +588,13 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {isActive ? (
               <>
-                <CheckCircle size={22} color="#1D9E75" />
-                <span style={{ fontSize: '1.15rem', fontWeight: 700, color: '#1D9E75' }}>ACTIVE & LICENSED</span>
+                <CheckCircle size={22} color="var(--admin-green)" />
+                <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--admin-green)' }}>ACTIVE & LICENSED</span>
               </>
             ) : (
               <>
-                <AlertTriangle size={22} color="#ef4444" />
-                <span style={{ fontSize: '1.15rem', fontWeight: 700, color: '#ef4444' }}>RESTRICTED / DISABLED</span>
+                <AlertTriangle size={22} color="#dc2626" />
+                <span style={{ fontSize: '1.15rem', fontWeight: 700, color: '#dc2626' }}>RESTRICTED / DISABLED</span>
               </>
             )}
           </div>
@@ -608,10 +609,11 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
           style={{
             padding: '18px',
             borderRadius: '10px',
-            background: 'rgba(0,0,0,0.05)',
-            border: '1px solid var(--glass-border)',
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
             cursor: 'pointer',
-            transition: 'all 0.2s'
+            transition: 'all 0.2s',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.04)'
           }}
           onMouseEnter={e => {
             e.currentTarget.style.transform = 'translateY(-2px)';
@@ -619,17 +621,17 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
           }}
           onMouseLeave={e => {
             e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = 'none';
+            e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.04)';
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>
               Fail-Closed Security Matrix
             </div>
-            <span style={{ fontSize: '0.7rem', color: '#0F766E', textDecoration: 'underline' }}>View Policy</span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--color-primary)', textDecoration: 'underline', fontWeight: 600 }}>View Policy</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Server size={22} color={failureCount === 0 ? 'var(--color-primary)' : '#f59e0b'} />
+            <Server size={22} color={failureCount === 0 ? 'var(--color-primary)' : 'var(--admin-amber)'} />
             <span style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
               {failureCount} / 3 Failures
             </span>
@@ -645,10 +647,11 @@ export default function LicenseControlWidget({ user, refreshTrigger }) {
           style={{
             padding: '18px',
             borderRadius: '10px',
-            background: 'rgba(0,0,0,0.05)',
-            border: '1px solid var(--glass-border)',
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
             cursor: 'pointer',
-            transition: 'all 0.2s'
+            transition: 'all 0.2s',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.04)'
           }}
           onMouseEnter={e => {
             e.currentTarget.style.transform = 'translateY(-2px)';

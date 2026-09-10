@@ -614,7 +614,7 @@ export default function SuperAdminPanel({ user }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-              <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: '#00D4FF', background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.25)', padding: '3px 10px', borderRadius: '20px' }}>
+              <span style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'var(--admin-cyan)', background: 'var(--admin-cyan-bg)', border: '1px solid var(--admin-cyan-border)', padding: '3px 10px', borderRadius: '20px' }}>
                 Platform Super Admin
               </span>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>› Command Center</span>
@@ -778,33 +778,33 @@ export default function SuperAdminPanel({ user }) {
 
       {/* ── Pending Clinic Approvals Queue ── */}
       {pendingClinics.length > 0 && (
-        <div className="admin-section-card alert-orange" style={{ marginBottom: '20px', border: '1px solid rgba(245,158,11,0.35)', boxShadow: '0 0 20px rgba(245,158,11,0.08)' }}>
+        <div className="admin-section-card alert-orange" style={{ marginBottom: '20px', border: '1px solid var(--admin-amber-border)', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '10px', padding: '9px' }}>
-                <Building2 size={20} color="#f59e0b" />
+              <div style={{ background: 'var(--admin-amber-bg)', border: '1px solid var(--admin-amber-border)', borderRadius: '10px', padding: '9px' }}>
+                <Building2 size={20} color="var(--admin-amber)" />
               </div>
               <div>
-                <h3 style={{ fontSize: '1rem', margin: 0, color: '#F8FAFC', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ fontSize: '1rem', margin: 0, color: 'var(--text-primary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   Pending Clinic Approvals
-                  <span style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '20px', fontWeight: 700 }}>
+                  <span style={{ background: 'var(--admin-amber-bg)', color: 'var(--admin-amber)', border: '1px solid var(--admin-amber-border)', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '20px', fontWeight: 700 }}>
                     {pendingClinics.length} Awaiting
                   </span>
                 </h3>
-                <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'rgba(248,250,252,0.45)' }}>
+                <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                   Review institutional registration before activating isolated blockchain ledgers
                 </p>
               </div>
             </div>
             <button type="button" className="btn btn-secondary" onClick={() => fetchAdminData(true)}
-              style={{ fontSize: '0.75rem', padding: '6px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(248,250,252,0.7)' }}>
+              style={{ fontSize: '0.75rem', padding: '6px 12px', background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
               Refresh Queue
             </button>
           </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', fontSize: '0.82rem', borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)', color: 'rgba(248,250,252,0.4)', textAlign: 'left' }}>
+                <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)', textAlign: 'left' }}>
                   <th style={{ padding: '8px 10px', fontWeight: 600, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Healthcare Facility</th>
                   <th style={{ padding: '8px 10px', fontWeight: 600, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Lead Administrator</th>
                   <th style={{ padding: '8px 10px', fontWeight: 600, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Admin Email</th>
@@ -816,20 +816,20 @@ export default function SuperAdminPanel({ user }) {
                 {pendingClinics.map(clinic => {
                   const isBusy = clinicActionLoading === clinic.id;
                   return (
-                    <tr key={clinic.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <td style={{ padding: '12px 10px', fontWeight: 600, color: '#F8FAFC' }}>
+                    <tr key={clinic.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '12px 10px', fontWeight: 600, color: 'var(--text-primary)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                          <Building2 size={14} color="#00D4FF" />
+                          <Building2 size={14} color="var(--admin-cyan)" />
                           {clinic.organizationName}
                         </div>
                       </td>
-                      <td style={{ padding: '12px 10px', color: 'rgba(248,250,252,0.8)' }}>{clinic.adminName || 'Pending Provision'}</td>
-                      <td style={{ padding: '12px 10px', color: 'rgba(248,250,252,0.5)', fontFamily: 'monospace', fontSize: '0.78rem' }}>{clinic.adminEmail || 'N/A'}</td>
-                      <td style={{ padding: '12px 10px', color: 'rgba(248,250,252,0.45)', fontSize: '0.78rem' }}>{clinic.createdAt ? new Date(clinic.createdAt).toLocaleDateString() : 'Recent'}</td>
+                      <td style={{ padding: '12px 10px', color: 'var(--text-secondary)' }}>{clinic.adminName || 'Pending Provision'}</td>
+                      <td style={{ padding: '12px 10px', color: 'var(--text-muted)', fontFamily: 'monospace', fontSize: '0.78rem' }}>{clinic.adminEmail || 'N/A'}</td>
+                      <td style={{ padding: '12px 10px', color: 'var(--text-muted)', fontSize: '0.78rem' }}>{clinic.createdAt ? new Date(clinic.createdAt).toLocaleDateString() : 'Recent'}</td>
                       <td style={{ padding: '12px 10px', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: '7px' }}>
                           <button type="button" className="btn btn-primary" onClick={() => handleApproveClinic(clinic.id)} disabled={isBusy}
-                            style={{ fontSize: '0.75rem', padding: '5px 11px', background: '#10b981', borderColor: '#10b981', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            style={{ fontSize: '0.75rem', padding: '5px 11px', background: 'var(--admin-green)', borderColor: 'var(--admin-green)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <CheckCircle size={13} /> {isBusy ? 'Approving…' : 'Approve (14d Trial)'}
                           </button>
                           <button type="button" className="btn btn-secondary" onClick={() => handleRejectClinic(clinic.id)} disabled={isBusy}
@@ -856,12 +856,12 @@ export default function SuperAdminPanel({ user }) {
             <div className="admin-section-card alert-orange">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '9px', padding: '8px' }}>
-                    <Building2 size={18} color="#10b981" />
+                  <div style={{ background: 'var(--admin-green-bg)', border: '1px solid var(--admin-green-border)', borderRadius: '9px', padding: '8px' }}>
+                    <Building2 size={18} color="var(--admin-green)" />
                   </div>
                   <div>
                     <h3 style={{ fontSize: '0.9rem', margin: 0, color: 'var(--text-primary)', fontWeight: 700 }}>Pending Clinic Approvals</h3>
-                    <span style={{ fontSize: '0.72rem', color: '#10b981', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', padding: '1px 7px', borderRadius: '20px', fontWeight: 700 }}>Queue Clear</span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--admin-green)', background: 'var(--admin-green-bg)', border: '1px solid var(--admin-green-border)', padding: '1px 7px', borderRadius: '20px', fontWeight: 700 }}>Queue Clear</span>
                   </div>
                 </div>
                 <button type="button" onClick={() => fetchAdminData(true)}
@@ -869,9 +869,9 @@ export default function SuperAdminPanel({ user }) {
                   Refresh
                 </button>
               </div>
-              <div style={{ padding: '18px', textAlign: 'center', background: 'rgba(16,185,129,0.04)', borderRadius: '8px', border: '1px dashed rgba(16,185,129,0.2)' }}>
-                <CheckCircle2 size={28} color="#10b981" style={{ margin: '0 auto 8px', display: 'block', opacity: 0.7 }} />
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>Queue is Clear — All registrations reviewed</span>
+              <div style={{ padding: '18px', textAlign: 'center', background: 'var(--admin-green-bg)', borderRadius: '8px', border: '1px dashed var(--admin-green-border)' }}>
+                <CheckCircle2 size={28} color="var(--admin-green)" style={{ margin: '0 auto 8px', display: 'block', opacity: 0.9 }} />
+                <span style={{ color: 'var(--text-primary)', fontSize: '0.82rem', fontWeight: 600 }}>Queue is Clear — All registrations reviewed</span>
               </div>
             </div>
           )}
@@ -931,10 +931,10 @@ export default function SuperAdminPanel({ user }) {
 
           {/* Pending Doctor Approvals */}
           {pendingDoctors.length > 0 && (
-            <div className="admin-section-card" style={{ border: '1px solid rgba(0,212,255,0.2)' }}>
+            <div className="admin-section-card" style={{ border: '1px solid var(--admin-cyan-border)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '10px' }}>
-                <h3 style={{ fontSize: '0.9rem', margin: 0, color: '#00D4FF', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '7px' }}>
-                  <Stethoscope size={16} color="#00D4FF" /> Pending Practitioners ({pendingDoctors.length})
+                <h3 style={{ fontSize: '0.9rem', margin: 0, color: 'var(--admin-cyan)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '7px' }}>
+                  <Stethoscope size={16} color="var(--admin-cyan)" /> Pending Practitioners ({pendingDoctors.length})
                 </h3>
                 <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                   <div style={{ position: 'relative', maxWidth: '200px' }}>
@@ -1016,7 +1016,7 @@ export default function SuperAdminPanel({ user }) {
                 {mempoolRecords.map((rec, i) => (
                   <div key={rec.recordId || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.15)', borderRadius: '8px', fontSize: '0.75rem' }}>
                     <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace' }}>{new Date(rec.timestamp).toLocaleTimeString()}</span>
-                    <span style={{ background: rec.txType === 'consent' ? 'rgba(16,185,129,0.1)' : 'rgba(0,212,255,0.1)', color: rec.txType === 'consent' ? '#10b981' : '#00D4FF', padding: '2px 7px', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700 }}>
+                    <span style={{ background: rec.txType === 'consent' ? 'rgba(16,185,129,0.1)' : 'var(--admin-cyan-bg)', color: rec.txType === 'consent' ? '#10b981' : 'var(--admin-cyan)', padding: '2px 7px', borderRadius: '20px', fontSize: '0.68rem', fontWeight: 700 }}>
                       {rec.txType === 'consent' ? 'Consent' : 'Clinical'}
                     </span>
                     <span style={{ background: 'rgba(16,185,129,0.08)', color: '#10b981', padding: '2px 7px', borderRadius: '20px', fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '3px' }}>
@@ -1034,7 +1034,7 @@ export default function SuperAdminPanel({ user }) {
           {/* Node Activity Log */}
           <div className="admin-section-card" style={{ flex: 1, border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <h3 style={{ margin: 0, fontSize: '0.9rem', color: '#00D4FF', display: 'flex', alignItems: 'center', gap: '7px', fontWeight: 700 }}>
+              <h3 style={{ margin: 0, fontSize: '0.9rem', color: 'var(--admin-cyan)', display: 'flex', alignItems: 'center', gap: '7px', fontWeight: 700 }}>
                 <Terminal size={16} /> Node Activity Log
               </h3>
               <span style={{ fontSize: '0.65rem', fontFamily: 'monospace', color: '#10b981', background: 'rgba(16,185,129,0.08)', padding: '2px 7px', borderRadius: '4px', border: '1px solid rgba(16,185,129,0.2)' }}>LIVE</span>
@@ -1107,7 +1107,7 @@ export default function SuperAdminPanel({ user }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
           <div>
             <h3 style={{ fontSize: '1rem', margin: 0, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Users size={18} color="#00D4FF" /> Network Node Directory &amp; Identity Governance
+              <Users size={18} color="var(--admin-cyan)" /> Network Node Directory &amp; Identity Governance
             </h3>
             <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '3px 0 0' }}>
               Manage licensed clinical node operators and patient accounts across the health network
@@ -1195,7 +1195,7 @@ export default function SuperAdminPanel({ user }) {
                       padding: '8px 18px',
                       fontSize: '0.8rem',
                       fontWeight: 600,
-                      color: '#00D4FF',
+                      color: 'var(--admin-cyan)',
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1260,7 +1260,7 @@ export default function SuperAdminPanel({ user }) {
                       padding: '8px 18px',
                       fontSize: '0.8rem',
                       fontWeight: 600,
-                      color: '#10b981',
+                      color: 'var(--admin-green)',
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1284,8 +1284,8 @@ export default function SuperAdminPanel({ user }) {
       {/* ── Mined Block Heights Explorer ── */}
       <div id="admin-sec-ledger" className="admin-section-card" style={{ marginBottom: '20px' }}>
         <h3 style={{ fontSize: '1rem', marginBottom: '8px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Layers size={18} color="#3B82F6" /> Mined Block Heights Explorer
-          <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', background: 'rgba(59,130,246,0.1)', color: '#3B82F6', border: '1px solid rgba(59,130,246,0.25)', padding: '2px 8px', borderRadius: '20px' }}>
+          <Layers size={18} color="var(--admin-blue)" /> Mined Block Heights Explorer
+          <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', background: 'var(--admin-blue-bg)', color: 'var(--admin-blue)', border: '1px solid var(--admin-blue-border)', padding: '2px 8px', borderRadius: '20px' }}>
             Height: {blocks.length}
           </span>
         </h3>
@@ -1297,7 +1297,7 @@ export default function SuperAdminPanel({ user }) {
             <div key={block.id || block.hash || `${block.organizationId || 'org'}_${block.index}_${bIdx}`} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '8px', marginBottom: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span className="badge badge-primary" style={{ fontSize: '0.8rem', padding: '3px 9px', background: 'rgba(59,130,246,0.12)', color: '#3B82F6', border: '1px solid rgba(59,130,246,0.25)' }}>Block #{block.index}</span>
+                  <span className="badge badge-primary" style={{ fontSize: '0.8rem', padding: '3px 9px', background: 'var(--admin-blue-bg)', color: 'var(--admin-blue)', border: '1px solid var(--admin-blue-border)' }}>Block #{block.index}</span>
                   <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Mined: {new Date(block.timestamp).toLocaleString()}</span>
                 </div>
                 <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Nonce: <strong style={{ color: 'var(--text-primary)' }}>{block.nonce}</strong></span>
@@ -1305,7 +1305,7 @@ export default function SuperAdminPanel({ user }) {
               <div className="grid-2" style={{ gap: '10px', fontSize: '0.73rem' }}>
                 <div>
                   <span style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Current Block Hash</span>
-                  <span style={{ fontFamily: 'monospace', color: '#10b981', wordBreak: 'break-all', fontSize: '0.7rem' }}>{block.hash}</span>
+                  <span style={{ fontFamily: 'monospace', color: 'var(--admin-green)', wordBreak: 'break-all', fontSize: '0.7rem' }}>{block.hash}</span>
                 </div>
                 <div>
                   <span style={{ color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Previous Block Hash</span>
@@ -1333,7 +1333,7 @@ export default function SuperAdminPanel({ user }) {
                 padding: '8px 18px',
                 fontSize: '0.8rem',
                 fontWeight: 600,
-                color: '#3B82F6',
+                color: 'var(--admin-blue)',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
