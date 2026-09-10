@@ -7,22 +7,40 @@ import clinicalBg from './assets/clinical_login_bg.jpg';
 import { useTheme } from './context/ThemeContext';
 import { ThemeToggle } from './components/ui/theme-toggle';
 
-// Code-split heavy routes & widgets with React.lazy for instant initial loads & zero lag
-const Login = lazy(() => import('./components/Login'));
-const Dashboard = lazy(() => import('./components/Dashboard'));
-const MedicalRecords = lazy(() => import('./components/MedicalRecords'));
-const BlockchainExplorer = lazy(() => import('./components/BlockchainExplorer'));
-const AdminPanel = lazy(() => import('./components/AdminPanel'));
-const ResetPassword = lazy(() => import('./components/ResetPassword'));
-const Profile = lazy(() => import('./components/Profile'));
-const Settings = lazy(() => import('./components/Settings'));
-const PublicCertificateView = lazy(() => import('./components/PublicCertificateView'));
-const PrescriptionsManager = lazy(() => import('./components/PrescriptionsManager'));
-const PrescriptionVerificationView = lazy(() => import('./components/PrescriptionVerificationView'));
-const PatientConsentPortal = lazy(() => import('./components/PatientConsentPortal'));
-const PaystackRenewalModal = lazy(() => import('./components/PaystackRenewalModal'));
-const PharmacyDashboard = lazy(() => import('./components/PharmacyDashboard'));
-const LandingPage = lazy(() => import('./components/LandingPage'));
+// Resilient lazy import helper that automatically refreshes the window when an outdated chunk hash is requested after deployment
+const lazyWithRetry = (componentImport) =>
+  lazy(async () => {
+    const pageHasBeenForceRefreshed = sessionStorage.getItem('chunk_force_refreshed') === 'true';
+    try {
+      const component = await componentImport();
+      sessionStorage.setItem('chunk_force_refreshed', 'false');
+      return component;
+    } catch (error) {
+      if (!pageHasBeenForceRefreshed) {
+        sessionStorage.setItem('chunk_force_refreshed', 'true');
+        window.location.reload();
+        return new Promise(() => {}); // prevent throwing while browser reloads
+      }
+      throw error;
+    }
+  });
+
+// Code-split routes with lazyWithRetry for instant initial loads & resilience against deployment chunk mismatch
+const Login = lazyWithRetry(() => import('./components/Login'));
+const Dashboard = lazyWithRetry(() => import('./components/Dashboard'));
+const MedicalRecords = lazyWithRetry(() => import('./components/MedicalRecords'));
+const BlockchainExplorer = lazyWithRetry(() => import('./components/BlockchainExplorer'));
+const AdminPanel = lazyWithRetry(() => import('./components/AdminPanel'));
+const ResetPassword = lazyWithRetry(() => import('./components/ResetPassword'));
+const Profile = lazyWithRetry(() => import('./components/Profile'));
+const Settings = lazyWithRetry(() => import('./components/Settings'));
+const PublicCertificateView = lazyWithRetry(() => import('./components/PublicCertificateView'));
+const PrescriptionsManager = lazyWithRetry(() => import('./components/PrescriptionsManager'));
+const PrescriptionVerificationView = lazyWithRetry(() => import('./components/PrescriptionVerificationView'));
+const PatientConsentPortal = lazyWithRetry(() => import('./components/PatientConsentPortal'));
+const PaystackRenewalModal = lazyWithRetry(() => import('./components/PaystackRenewalModal'));
+const PharmacyDashboard = lazyWithRetry(() => import('./components/PharmacyDashboard'));
+const LandingPage = lazyWithRetry(() => import('./components/LandingPage'));
 
 function WorkspaceLoader() {
   return (

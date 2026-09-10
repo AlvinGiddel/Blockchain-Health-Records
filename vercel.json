@@ -20,7 +20,10 @@
     },
     {
       "src": "/assets/(.*)",
-      "dest": "frontend/assets/$1"
+      "dest": "frontend/assets/$1",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
     },
     {
       "src": "/((?!api/).*\\.[a-zA-Z0-9]+)$",
@@ -28,7 +31,10 @@
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/index.html"
+      "dest": "frontend/index.html",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
+      }
     }
   ]
 }
