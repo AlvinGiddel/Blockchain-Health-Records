@@ -1,26 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Shield, LayoutDashboard, FileText, Globe, LogOut, UserCheck, Sun, Moon, Menu, X, ArrowLeft, Clock, AlertTriangle, Pill, KeyRound } from 'lucide-react';
 import logoSvg from './assets/logo.svg';
-import Login from './components/Login';
-import Dashboard from './components/Dashboard';
-import MedicalRecords from './components/MedicalRecords';
-import BlockchainExplorer from './components/BlockchainExplorer';
-import AdminPanel from './components/AdminPanel';
-import ResetPassword from './components/ResetPassword';
-import Profile from './components/Profile';
-import Settings from './components/Settings';
-import PublicCertificateView from './components/PublicCertificateView';
-import PrescriptionsManager from './components/PrescriptionsManager';
-import PrescriptionVerificationView from './components/PrescriptionVerificationView';
-import PatientConsentPortal from './components/PatientConsentPortal';
-import PaystackRenewalModal from './components/PaystackRenewalModal';
-import PharmacyDashboard from './components/PharmacyDashboard';
 import { safeFetch } from './utils/api';
 import { Toaster } from './components/ui/sonner';
 import clinicalBg from './assets/clinical_login_bg.jpg';
 import { useTheme } from './context/ThemeContext';
 import { ThemeToggle } from './components/ui/theme-toggle';
-import LandingPage from './components/LandingPage';
+
+// Code-split heavy routes & widgets with React.lazy for instant initial loads & zero lag
+const Login = lazy(() => import('./components/Login'));
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const MedicalRecords = lazy(() => import('./components/MedicalRecords'));
+const BlockchainExplorer = lazy(() => import('./components/BlockchainExplorer'));
+const AdminPanel = lazy(() => import('./components/AdminPanel'));
+const ResetPassword = lazy(() => import('./components/ResetPassword'));
+const Profile = lazy(() => import('./components/Profile'));
+const Settings = lazy(() => import('./components/Settings'));
+const PublicCertificateView = lazy(() => import('./components/PublicCertificateView'));
+const PrescriptionsManager = lazy(() => import('./components/PrescriptionsManager'));
+const PrescriptionVerificationView = lazy(() => import('./components/PrescriptionVerificationView'));
+const PatientConsentPortal = lazy(() => import('./components/PatientConsentPortal'));
+const PaystackRenewalModal = lazy(() => import('./components/PaystackRenewalModal'));
+const PharmacyDashboard = lazy(() => import('./components/PharmacyDashboard'));
+const LandingPage = lazy(() => import('./components/LandingPage'));
+
+function WorkspaceLoader() {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center min-h-[300px] p-8 text-center">
+      <div className="relative w-8 h-8 mb-3">
+        <div className="absolute inset-0 rounded-full border-2 border-[#0F766E]/20" />
+        <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[#0F766E] animate-spin" />
+      </div>
+      <p className="text-xs font-semibold tracking-wide text-[#0B2545] dark:text-slate-300">
+        Loading workspace...
+      </p>
+    </div>
+  );
+}
 
 
 // Helper to normalize pathnames (strips trailing slashes, handles empty/root)
@@ -469,15 +485,17 @@ export default function App() {
           </div>
         </header>
         <main className="main-content">
-          <ResetPassword
-            token={resetToken}
-            onResetSuccess={() => {
-              setResetToken(null);
-              // Clean the query parameter from URL bar
-              const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-              window.history.replaceState({}, document.title, cleanUrl);
-            }}
-          />
+          <Suspense fallback={<WorkspaceLoader />}>
+            <ResetPassword
+              token={resetToken}
+              onResetSuccess={() => {
+                setResetToken(null);
+                // Clean the query parameter from URL bar
+                const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+              }}
+            />
+          </Suspense>
         </main>
       </div>
     );
@@ -486,42 +504,50 @@ export default function App() {
   // Intercept render cycle if QR code scan verification is active in URL
   if (publicRecordId) {
     return (
-      <PublicCertificateView
-        recordId={publicRecordId}
-        onDismiss={() => {
-          setPublicRecordId(null);
-          const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-          window.history.replaceState({}, document.title, cleanUrl);
-        }}
-      />
+      <Suspense fallback={<WorkspaceLoader />}>
+        <PublicCertificateView
+          recordId={publicRecordId}
+          onDismiss={() => {
+            setPublicRecordId(null);
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+          }}
+        />
+      </Suspense>
     );
   }
 
   // Intercept render cycle if Prescription QR Token verification is active in URL
   if (publicPrescriptionToken) {
     return (
-      <PrescriptionVerificationView
-        qrToken={publicPrescriptionToken}
-        onDismiss={() => {
-          setPublicPrescriptionToken(null);
-          const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-          window.history.replaceState({}, document.title, cleanUrl);
-        }}
-      />
+      <Suspense fallback={<WorkspaceLoader />}>
+        <PrescriptionVerificationView
+          qrToken={publicPrescriptionToken}
+          onDismiss={() => {
+            setPublicPrescriptionToken(null);
+            const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+          }}
+        />
+      </Suspense>
     );
   }
 
   // Intercept render cycle for public marketing landing page (root route '/')
   if (currentPath === '/') {
     return (
-      <>
+      <Suspense fallback={
+        <div className="min-h-screen bg-white dark:bg-[#0B192C] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-[#0F766E]/20 border-t-[#0F766E] animate-spin" />
+        </div>
+      }>
         <LandingPage
           onNavigateLogin={(query = '') => navigate('/login', query)}
           onGoToDashboard={() => navigate('/app')}
           isLoggedIn={!!user}
         />
         <Toaster position="top-right" richColors />
-      </>
+      </Suspense>
     );
   }
 
@@ -567,11 +593,13 @@ export default function App() {
           
           {/* Elevated form container */}
           <div className="relative z-10 w-full flex justify-center">
-            <Login 
-              key={`${currentPath}${currentSearch}`}
-              onLoginSuccess={handleLoginSuccess}
-              onNavigateHome={() => navigate('/')}
-            />
+            <Suspense fallback={<WorkspaceLoader />}>
+              <Login 
+                key={`${currentPath}${currentSearch}`}
+                onLoginSuccess={handleLoginSuccess}
+                onNavigateHome={() => navigate('/')}
+              />
+            </Suspense>
           </div>
         </main>
         <Toaster position="top-right" richColors />
@@ -782,7 +810,9 @@ export default function App() {
 
         {/* Workspace content */}
         <main className="main-content">
-          {renderTabContent()}
+          <Suspense fallback={<WorkspaceLoader />}>
+            {renderTabContent()}
+          </Suspense>
         </main>
 
         {/* Footer info */}
@@ -860,19 +890,21 @@ export default function App() {
       )}
 
       {/* Standalone Paystack Renewal Modal */}
-      <PaystackRenewalModal
-        organization={{
-          id: user?.organization_id,
-          name: user?.organizationName || 'My Health Facility',
-          license_expires_at: user?.organizationExpiry || null
-        }}
-        user={user}
-        isOpen={showPaystackModal}
-        onClose={() => setShowPaystackModal(false)}
-        onSuccess={() => {
-          setIsTrialExpired(false);
-        }}
-      />
+      <Suspense fallback={null}>
+        <PaystackRenewalModal
+          organization={{
+            id: user?.organization_id,
+            name: user?.organizationName || 'My Health Facility',
+            license_expires_at: user?.organizationExpiry || null
+          }}
+          user={user}
+          isOpen={showPaystackModal}
+          onClose={() => setShowPaystackModal(false)}
+          onSuccess={() => {
+            setIsTrialExpired(false);
+          }}
+        />
+      </Suspense>
       <Toaster position="top-right" richColors />
     </div>
   );

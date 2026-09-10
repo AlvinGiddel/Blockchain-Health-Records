@@ -10,6 +10,18 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     }
   },
+  build: {
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-icons': ['lucide-react']
+        }
+      }
+    },
+    chunkSizeWarningLimit: 800
+  },
   server: {
     port: 3000,
     proxy: {

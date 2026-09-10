@@ -11,25 +11,42 @@ import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { safeFetch } from '../utils/api';
 
-/* ── Scroll-reveal wrapper ──────────────────────────────────────────── */
+/* ── High-performance scroll-reveal singleton (GPU-accelerated, zero re-renders) ── */
+const sharedRevealObserver = typeof window !== 'undefined' && 'IntersectionObserver' in window
+  ? new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-revealed');
+            sharedRevealObserver.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.05, rootMargin: '60px' }
+    )
+  : null;
+
 function Reveal({ children, className = '', delay = 0 }) {
   const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
+
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => { setVisible(entry.isIntersecting); },
-      { threshold: 0.1 }
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
+    if (!sharedRevealObserver) {
+      el.classList.add('is-revealed');
+      return;
+    }
+    sharedRevealObserver.observe(el);
+    return () => {
+      try { sharedRevealObserver.unobserve(el); } catch (_) {}
+    };
   }, []);
+
   return (
     <div
       ref={ref}
-      className={`transition-all duration-[400ms] ease-out ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'} ${className}`}
-      style={{ transitionDelay: visible ? `${delay}ms` : '0ms' }}
+      className={`reveal-wrapper ${className}`}
+      style={{ '--reveal-delay': `${delay}ms` }}
     >
       {children}
     </div>
@@ -46,6 +63,19 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
     safeFetch('/api/organizations/active')
       .then(d => { if (active && Array.isArray(d)) setFacilityCount(d.length); })
       .catch(() => {});
+
+    // Background prefetch login bundle during idle time so click-through is instant
+    if (typeof window !== 'undefined') {
+      const prefetch = () => {
+        import('./Login').catch(() => {});
+      };
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(prefetch);
+      } else {
+        setTimeout(prefetch, 1500);
+      }
+    }
+
     return () => { active = false; };
   }, []);
 
@@ -277,7 +307,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
               <div className="relative">
                 <div className="absolute -inset-6 bg-[#0F766E]/10 dark:bg-[#0F766E]/15 rounded-3xl blur-2xl pointer-events-none" />
                 <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-[#E2E8F0] dark:border-[#1E3A5F] ring-1 ring-black/5">
-                  <img src={dashboardMockup} alt="Block Health Chain dashboard — patient health records" className="w-full object-cover" />
+                  <img src={dashboardMockup} alt="Block Health Chain dashboard — patient health records" className="w-full object-cover" loading="lazy" decoding="async" />
                 </div>
                 <div className="absolute -bottom-4 -left-4 bg-white dark:bg-[#112239] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-xl px-4 py-2.5 shadow-lg flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-[#0F766E]/10 text-[#0F766E] flex items-center justify-center shrink-0">
