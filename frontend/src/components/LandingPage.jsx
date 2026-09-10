@@ -147,12 +147,12 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
   ];
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0B192C] text-[#0B2545] dark:text-white font-sans antialiased">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B192C] text-[#0B2545] dark:text-white font-sans antialiased">
 
       {/* ============================================================== */}
       {/* NAV                                                             */}
       {/* ============================================================== */}
-      <header className="sticky top-0 z-50 bg-white/90 dark:bg-[#0B192C]/90 backdrop-blur-md border-b border-[#E2E8F0] dark:border-[#1E3A5F]">
+      <header className="sticky top-0 z-50 bg-[#F8FAFC]/90 dark:bg-[#0B192C]/90 backdrop-blur-md border-b border-[#CBD5E1] dark:border-[#1E3A5F]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-6">
           <button onClick={() => scroll('hero')} className="flex items-center gap-2 shrink-0">
             <img src={logoSvg} alt="Block Health Chain" className="h-8 w-8" />
@@ -205,13 +205,13 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
         </div>
 
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-[#E2E8F0] dark:border-[#1E3A5F] bg-white dark:bg-[#0B192C] px-4 py-4 space-y-1">
+          <div className="md:hidden border-t border-[#CBD5E1] dark:border-[#1E3A5F] bg-[#F8FAFC] dark:bg-[#0B192C] px-4 py-4 space-y-1">
             {['features', 'pricing', 'contact'].map(id => (
-              <button key={id} onClick={() => scroll(id)} className="block w-full text-left px-3 py-2.5 text-sm font-medium text-[#475569] dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-[#112239] rounded-lg capitalize">
+              <button key={id} onClick={() => scroll(id)} className="block w-full text-left px-3 py-2.5 text-sm font-medium text-[#475569] dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#112239] rounded-lg capitalize">
                 {id}
               </button>
             ))}
-            <div className="pt-3 border-t border-[#E2E8F0] dark:border-[#1E3A5F] space-y-2">
+            <div className="pt-3 border-t border-[#CBD5E1] dark:border-[#1E3A5F] space-y-2">
               <Button variant="outline" onClick={() => { setMobileMenuOpen(false); onNavigateLogin(); }} className="w-full justify-center border-[#CBD5E1] dark:border-[#1E3A5F]">Sign in</Button>
               <Button onClick={() => { setMobileMenuOpen(false); onNavigateLogin('?register=clinic'); }} className="w-full bg-[#0F766E] text-white justify-center">Register Facility</Button>
               <button onClick={() => { setMobileMenuOpen(false); onNavigateLogin('?register=pharmacy'); }} className="w-full text-center text-xs font-semibold text-[#0F766E] py-1.5 hover:underline">
@@ -223,9 +223,10 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
       </header>
 
       {/* ============================================================== */}
-      {/* HERO — Split layout                                             */}
+      {/* HERO — Split layout with soft clinical gradient & ambient glow  */}
       {/* ============================================================== */}
-      <section id="hero" className="relative overflow-hidden bg-white dark:bg-[#0B192C] pt-16 pb-24 lg:pt-24 lg:pb-32">
+      <section id="hero" className="relative overflow-hidden bg-gradient-to-b from-[#F1F5F9] via-[#F8FAFC] to-[#EEF2F6] dark:from-[#0B192C] dark:via-[#0E223D] dark:to-[#0B192C] pt-16 pb-24 lg:pt-24 lg:pb-32">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-gradient-to-tr from-[#0F766E]/10 via-[#2DD4BF]/8 to-transparent rounded-full blur-3xl pointer-events-none" />
         <div
           className="absolute inset-0 opacity-[0.035] dark:opacity-[0.055] pointer-events-none"
           style={{ backgroundImage: 'radial-gradient(circle, #0F766E 1px, transparent 1px)', backgroundSize: '28px 28px' }}
@@ -236,7 +237,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
             {/* Left: Copy */}
             <div className="space-y-8 text-center lg:text-left">
               <Reveal>
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-[#0F766E]/10 text-[#0F766E] dark:text-[#2DD4BF] border border-[#0F766E]/20">
+                <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#0F766E]/10 text-[#0F766E] dark:text-[#2DD4BF] border border-[#0F766E]/20 shadow-xs">
                   <Zap className="w-3.5 h-3.5" /> Kenya's Blockchain Health Records Platform
                 </span>
               </Reveal>
@@ -290,7 +291,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                     { label: 'PPB', sub: 'Pharmacy Verified' },
                     { label: 'KDPA 2019', sub: 'Compliant' },
                   ].map(b => (
-                    <div key={b.label} className="flex items-center gap-2 bg-[#F8FAFC] dark:bg-[#112239] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-lg px-3 py-1.5">
+                    <div key={b.label} className="flex items-center gap-2 bg-white dark:bg-[#112239] border border-[#CBD5E1] dark:border-[#1E3A5F] rounded-lg px-3 py-1.5 shadow-xs">
                       <CheckCircle2 className="w-3.5 h-3.5 text-[#1D9E75] shrink-0" />
                       <div>
                         <p className="text-[10px] font-bold text-[#0B2545] dark:text-white leading-none">{b.label}</p>
@@ -306,10 +307,10 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
             <Reveal delay={200} className="hidden lg:block">
               <div className="relative">
                 <div className="absolute -inset-6 bg-[#0F766E]/10 dark:bg-[#0F766E]/15 rounded-3xl blur-2xl pointer-events-none" />
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-[#E2E8F0] dark:border-[#1E3A5F] ring-1 ring-black/5">
+                <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-[#CBD5E1] dark:border-[#1E3A5F] ring-1 ring-black/5">
                   <img src={dashboardMockup} alt="Block Health Chain dashboard — patient health records" className="w-full object-cover" loading="lazy" decoding="async" />
                 </div>
-                <div className="absolute -bottom-4 -left-4 bg-white dark:bg-[#112239] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-xl px-4 py-2.5 shadow-lg flex items-center gap-2.5">
+                <div className="absolute -bottom-4 -left-4 bg-white dark:bg-[#112239] border border-[#CBD5E1] dark:border-[#1E3A5F] rounded-xl px-4 py-2.5 shadow-xl flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-[#0F766E]/10 text-[#0F766E] flex items-center justify-center shrink-0">
                     <Shield className="w-4 h-4" />
                   </div>
@@ -318,7 +319,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                     <p className="text-[10px] text-[#64748B] dark:text-slate-400">Every record cryptographically signed</p>
                   </div>
                 </div>
-                <div className="absolute -top-4 -right-4 bg-white dark:bg-[#112239] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-xl px-4 py-2.5 shadow-lg flex items-center gap-2.5">
+                <div className="absolute -top-4 -right-4 bg-white dark:bg-[#112239] border border-[#CBD5E1] dark:border-[#1E3A5F] rounded-xl px-4 py-2.5 shadow-xl flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-[#1D9E75]/10 text-[#1D9E75] flex items-center justify-center shrink-0">
                     <CheckCircle2 className="w-4 h-4" />
                   </div>
@@ -336,7 +337,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
       {/* ============================================================== */}
       {/* STATS STRIP                                                     */}
       {/* ============================================================== */}
-      <section className="border-y border-[#E2E8F0] dark:border-[#1E3A5F] bg-[#F8FAFC] dark:bg-[#07182D] py-10">
+      <section className="border-y border-[#CBD5E1] dark:border-[#1E3A5F] bg-[#EEF2F6] dark:bg-[#07182D] py-10 shadow-inner">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {[
@@ -347,7 +348,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
             ].map((s, i) => (
               <Reveal key={i} delay={i * 60}>
                 <p className="text-2xl font-extrabold text-[#0F766E] dark:text-[#2DD4BF]">{s.value}</p>
-                <p className="text-xs text-[#64748B] dark:text-slate-400 mt-1">{s.label}</p>
+                <p className="text-xs text-[#475569] dark:text-slate-400 mt-1">{s.label}</p>
               </Reveal>
             ))}
           </div>
@@ -357,7 +358,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
       {/* ============================================================== */}
       {/* WHO THIS IS FOR                                                 */}
       {/* ============================================================== */}
-      <section className="py-20 bg-white dark:bg-[#0B192C]">
+      <section className="py-20 bg-[#F8FAFC] dark:bg-[#0B192C]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Reveal className="text-center mb-14">
             <p className="text-xs font-bold uppercase tracking-widest text-[#0F766E] dark:text-[#2DD4BF] mb-3">Built for Kenya's healthcare ecosystem</p>
@@ -372,7 +373,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
               { icon: <Heart className="w-6 h-6" />, colorClass: 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-900', title: 'Patients', desc: 'Own your complete health history as a portable, cryptographically-sealed QR passport. Share it with any BHC-connected facility — no paper, no repeating tests.', cta: 'Create patient account →', action: () => onNavigateLogin('?register=patient') },
             ].map((card, i) => (
               <Reveal key={i} delay={i * 80}>
-                <div className="relative group h-full bg-[#F8FAFC] dark:bg-[#0F243E] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-2xl p-7 flex flex-col gap-5 hover:shadow-md hover:-translate-y-1 transition-all duration-200 cursor-pointer" onClick={card.action}>
+                <div className="relative group h-full bg-white dark:bg-[#0F243E] border border-[#CBD5E1] dark:border-[#1E3A5F] rounded-2xl p-7 flex flex-col gap-5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 cursor-pointer" onClick={card.action}>
                   {card.badge && <span className="absolute top-4 right-4 text-[9px] font-bold bg-[#0F766E] text-white px-2 py-0.5 rounded-full">{card.badge}</span>}
                   <div className={`w-11 h-11 rounded-xl border flex items-center justify-center ${card.colorClass}`}>{card.icon}</div>
                   <div>
@@ -390,7 +391,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
       {/* ============================================================== */}
       {/* FEATURES — 3 alternating spotlights                            */}
       {/* ============================================================== */}
-      <section id="features" className="py-20 bg-[#F8FAFC] dark:bg-[#07182D] border-y border-[#E2E8F0] dark:border-[#1E3A5F]">
+      <section id="features" className="py-20 bg-[#EEF2F6] dark:bg-[#07182D] border-y border-[#CBD5E1] dark:border-[#1E3A5F]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-24">
           <Reveal className="text-center max-w-2xl mx-auto">
             <p className="text-xs font-bold uppercase tracking-widest text-[#0F766E] dark:text-[#2DD4BF] mb-3">Core capabilities</p>
@@ -422,7 +423,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
               </div>
             </Reveal>
             <Reveal delay={120}>
-              <div className="bg-white dark:bg-[#112239] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-2xl p-8 shadow-sm flex flex-col items-center gap-5">
+              <div className="bg-white dark:bg-[#112239] border border-[#CBD5E1] dark:border-[#1E3A5F] rounded-2xl p-8 shadow-md flex flex-col items-center gap-5">
                 <div className="w-24 h-24 bg-[#0F766E]/10 rounded-2xl flex items-center justify-center">
                   <QrCode className="w-14 h-14 text-[#0F766E] dark:text-[#2DD4BF]" />
                 </div>
@@ -462,7 +463,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
               </div>
             </Reveal>
             <Reveal className="lg:order-1">
-              <div className="bg-white dark:bg-[#112239] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-2xl p-8 shadow-sm">
+              <div className="bg-white dark:bg-[#112239] border border-[#CBD5E1] dark:border-[#1E3A5F] rounded-2xl p-8 shadow-md">
                 <div className="flex items-start gap-4 pb-4 mb-4 border-b border-[#E2E8F0] dark:border-[#1E3A5F]">
                   <div className="w-12 h-12 rounded-xl bg-[#1D9E75]/10 text-[#1D9E75] flex items-center justify-center shrink-0"><UserCheck className="w-6 h-6" /></div>
                   <div className="flex-1">
@@ -510,7 +511,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
               </div>
             </Reveal>
             <Reveal delay={120}>
-              <div className="bg-white dark:bg-[#112239] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-2xl p-8 shadow-sm">
+              <div className="bg-white dark:bg-[#112239] border border-[#CBD5E1] dark:border-[#1E3A5F] rounded-2xl p-8 shadow-md">
                 <div className="mb-4 pb-4 border-b border-[#E2E8F0] dark:border-[#1E3A5F]">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-bold text-[#0B2545] dark:text-white">Prescription Verified</span>
@@ -536,10 +537,10 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
       {/* ============================================================== */}
       {/* SOCIAL PROOF                                                    */}
       {/* ============================================================== */}
-      <section className="py-16 bg-white dark:bg-[#0B192C] border-b border-[#E2E8F0] dark:border-[#1E3A5F]">
+      <section className="py-16 bg-[#F8FAFC] dark:bg-[#0B192C] border-b border-[#CBD5E1] dark:border-[#1E3A5F]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Reveal>
-            <div className="max-w-2xl mx-auto bg-[#F8FAFC] dark:bg-[#112239] border border-[#E2E8F0] dark:border-[#1E3A5F] rounded-2xl p-8 relative">
+            <div className="max-w-2xl mx-auto bg-white dark:bg-[#112239] border border-[#CBD5E1] dark:border-[#1E3A5F] rounded-2xl p-8 shadow-md relative">
               <div className="absolute top-4 right-4">
                 <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800">Beta Participant</span>
               </div>
@@ -564,7 +565,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
       {/* ============================================================== */}
       {/* PRICING                                                         */}
       {/* ============================================================== */}
-      <section id="pricing" className="py-20 bg-[#F8FAFC] dark:bg-[#07182D] border-b border-[#E2E8F0] dark:border-[#1E3A5F]">
+      <section id="pricing" className="py-20 bg-[#EEF2F6] dark:bg-[#07182D] border-b border-[#CBD5E1] dark:border-[#1E3A5F]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Reveal className="text-center max-w-3xl mx-auto mb-14 space-y-3">
             <Badge className="bg-[#1D9E75]/10 text-[#1D9E75] dark:text-[#34D399] border-[#1D9E75]/20 text-xs font-semibold px-3 py-1">
@@ -577,7 +578,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
             {tiers.map((tier, i) => (
               <Reveal key={tier.id} delay={i * 80}>
-                <div className={`relative flex flex-col h-full rounded-2xl p-8 ${tier.popular ? 'bg-white dark:bg-[#112239] border-2 border-[#0F766E] dark:border-[#2DD4BF] shadow-lg lg:-translate-y-3' : 'bg-white dark:bg-[#0F243E] border border-[#E2E8F0] dark:border-[#1E3A5F]'}`}>
+                <div className={`relative flex flex-col h-full rounded-2xl p-8 ${tier.popular ? 'bg-white dark:bg-[#112239] border-2 border-[#0F766E] dark:border-[#2DD4BF] shadow-xl lg:-translate-y-3' : 'bg-white dark:bg-[#0F243E] border border-[#CBD5E1] dark:border-[#1E3A5F] shadow-sm hover:shadow-md'}`}>
                   {tier.popular && (
                     <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                       <span className="bg-[#0F766E] text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-md">Most Popular</span>
@@ -590,7 +591,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                       <span className="text-xs text-[#64748B] dark:text-[#94A3B8]">/month</span>
                     </div>
                     <p className="text-xs text-[#64748B] dark:text-slate-400 mb-6">{tier.best}</p>
-                    <div className="pt-5 border-t border-[#E2E8F0] dark:border-[#1E3A5F] space-y-1">
+                    <div className="pt-5 border-t border-[#CBD5E1] dark:border-[#1E3A5F] space-y-1">
                       <p className="text-[11px] font-bold uppercase tracking-wider text-[#0B2545] dark:text-slate-300 mb-3">{tier.practitioners}</p>
                       {tier.features.map((f, j) => (
                         <div key={j} className="flex items-center gap-2.5 py-1.5 text-xs">
@@ -624,7 +625,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
               <p className="text-sm text-[#475569] dark:text-slate-300">One plan. Everything included. 14-day trial for new pharmacies.</p>
             </Reveal>
             <Reveal delay={80}>
-              <div className="max-w-lg mx-auto bg-white dark:bg-[#112239] border-2 border-[#0F766E] dark:border-[#2DD4BF] rounded-2xl p-8 shadow-lg">
+              <div className="max-w-lg mx-auto bg-white dark:bg-[#112239] border-2 border-[#0F766E] dark:border-[#2DD4BF] rounded-2xl p-8 shadow-xl">
                 <div className="flex items-start justify-between mb-6">
                   <div>
                     <h4 className="text-xl font-bold text-[#0B2545] dark:text-white">Pharmacy Monthly Subscription</h4>
@@ -639,7 +640,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                   </div>
                   <span className="text-[11px] text-[#0F766E] dark:text-[#2DD4BF] font-medium">Billed via M-Pesa or Card · Paystack Encrypted</span>
                 </div>
-                <ul className="space-y-2.5 mb-8 pt-4 border-t border-[#E2E8F0] dark:border-[#1E3A5F]">
+                <ul className="space-y-2.5 mb-8 pt-4 border-t border-[#CBD5E1] dark:border-[#1E3A5F]">
                   {['PPB premises license verification & registration', 'Prescription QR token scanning & full posology disclosure', 'Batch number & expiry date dispensation tracking', 'Rival-fill collision prevention (duplicate dispensing blocked)', 'Multi-tenant isolation — your dispensations are private', 'Full dispensation audit trail & compliance read-only mode', '14-day free trial upon Super Admin approval'].map((f, i) => (
                     <li key={i} className="flex items-start gap-2.5 text-xs text-[#475569] dark:text-slate-300">
                       <CheckCircle2 className="w-4 h-4 text-[#1D9E75] shrink-0 mt-0.5" /><span>{f}</span>
@@ -663,7 +664,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
       {/* ============================================================== */}
       {/* CTA BANNER                                                      */}
       {/* ============================================================== */}
-      <section className="py-20 bg-white dark:bg-[#0B192C]">
+      <section className="py-20 bg-[#F8FAFC] dark:bg-[#0B192C]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Reveal>
             <div className="bg-[#0B2545] dark:bg-[#0F243E] rounded-3xl p-10 sm:p-14 text-white relative overflow-hidden">
@@ -694,7 +695,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
       {/* ============================================================== */}
       {/* FOOTER                                                          */}
       {/* ============================================================== */}
-      <footer id="contact" className="bg-[#F8FAFC] dark:bg-[#07182D] border-t border-[#E2E8F0] dark:border-[#1E3A5F] py-14">
+      <footer id="contact" className="bg-[#EEF2F6] dark:bg-[#07182D] border-t border-[#CBD5E1] dark:border-[#1E3A5F] py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
             <div className="space-y-4">
@@ -702,12 +703,12 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
                 <img src={logoSvg} alt="BHC" className="h-7 w-7" />
                 <span className="font-extrabold text-sm text-[#0B2545] dark:text-white">Block Health Chain</span>
               </div>
-              <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">Decentralized, tamper-evident health records infrastructure connecting healthcare facilities and pharmacies across the Republic of Kenya.</p>
+              <p className="text-xs text-[#475569] dark:text-[#94A3B8] leading-relaxed">Decentralized, tamper-evident health records infrastructure connecting healthcare facilities and pharmacies across the Republic of Kenya.</p>
               <p className="text-[11px] text-[#1D9E75] font-semibold flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Verified Kenyan Healthcare Node</p>
             </div>
             <div className="space-y-3">
               <p className="text-xs font-bold uppercase tracking-wider text-[#0B2545] dark:text-white">Platform</p>
-              <ul className="space-y-2 text-xs text-[#64748B] dark:text-slate-300">
+              <ul className="space-y-2 text-xs text-[#475569] dark:text-slate-300">
                 {[{ label: 'Universal Health Passport', id: 'features' }, { label: 'KMPDC / NCK Verification', id: 'features' }, { label: 'Pharmacy Dispensing Portal', id: 'pharmacy-pricing' }, { label: 'Clinic Subscription Plans', id: 'pricing' }].map((item, i) => (
                   <li key={i}><button onClick={() => scroll(item.id)} className="hover:text-[#0F766E] transition-colors text-left">{item.label}</button></li>
                 ))}
@@ -716,7 +717,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
             </div>
             <div className="space-y-3">
               <p className="text-xs font-bold uppercase tracking-wider text-[#0B2545] dark:text-white">Get Started</p>
-              <ul className="space-y-2 text-xs text-[#64748B] dark:text-slate-300">
+              <ul className="space-y-2 text-xs text-[#475569] dark:text-slate-300">
                 {[{ label: 'Register a Clinic', route: '?register=clinic' }, { label: 'Register a Hospital', route: '?register=clinic' }, { label: 'Register a Pharmacy', route: '?register=pharmacy' }, { label: 'Patient Registration', route: '?register=patient' }, { label: 'Doctor Registration', route: '?register=doctor' }].map((item, i) => (
                   <li key={i}><button onClick={() => onNavigateLogin(item.route)} className="hover:text-[#0F766E] transition-colors text-left">{item.label}</button></li>
                 ))}
@@ -724,7 +725,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
             </div>
             <div className="space-y-3">
               <p className="text-xs font-bold uppercase tracking-wider text-[#0B2545] dark:text-white">Contact</p>
-              <ul className="space-y-2.5 text-xs text-[#64748B] dark:text-slate-300">
+              <ul className="space-y-2.5 text-xs text-[#475569] dark:text-slate-300">
                 <li className="flex items-start gap-2"><Mail className="w-3.5 h-3.5 text-[#0F766E] shrink-0 mt-0.5" /><span>support@blockhealthchain.co.ke</span></li>
                 <li className="flex items-start gap-2"><Phone className="w-3.5 h-3.5 text-[#0F766E] shrink-0 mt-0.5" /><span>+254 700 000 000</span></li>
                 <li className="flex items-start gap-2"><MapPin className="w-3.5 h-3.5 text-[#0F766E] shrink-0 mt-0.5" /><span>Nairobi, Kenya</span></li>
@@ -735,7 +736,7 @@ export default function LandingPage({ onNavigateLogin, onGoToDashboard, isLogged
               </div>
             </div>
           </div>
-          <div className="mt-10 pt-6 border-t border-[#E2E8F0] dark:border-[#1E3A5F] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#64748B] dark:text-[#94A3B8]">
+          <div className="mt-10 pt-6 border-t border-[#CBD5E1] dark:border-[#1E3A5F] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#475569] dark:text-[#94A3B8]">
             <p>&copy; {new Date().getFullYear()} Block Health Chain. All rights reserved.</p>
             <p className="text-[11px] text-[#94A3B8]">Built for Kenya's healthcare ecosystem · Clinics, Hospitals &amp; Licensed Pharmacies</p>
           </div>
