@@ -1,0 +1,84 @@
+services:
+  # ============================================================================
+  # 1. PostgreSQL Database Service
+  # Runs official Postgres 16 Alpine and automatically replays all migrations
+  # from backend/migrations/ (00 to 11) in alphabetical order on initial startup
+  # ============================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: bhc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: healthchain
+    ports:
+      - "5432:5432"
+    volumes:
+      # Persistent PostgreSQL data volume
+      - postgres_data:/var/lib/postgresql/data
+      # Mount migrations directory: executes all *.sql files alphabetically on initial DB boot
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d healthchain"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
+  # 2. Backend Express API Service
+  # Connects to the local postgres container and serves REST endpoints
+  # ============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bhc-backend
+    restart: unless-stopped
+    env_file:
+      - .env.docker
+    environment:
+      DATABASE_URL: postgresql://postgres:postgrespassword@postgres:5432/healthchain?sslmode=disable
+      DB_SSL: "false"
+      PORT: 5000
+      FRONTEND_URL: http://localhost:3000
+    ports:
+      - "5000:5000"
+    volumes:
+      # Mount backend source code for instant local updates
+      - ./backend:/app
+      # Preserve container node_modules from host filesystem collision
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: node server.js
+
+  # ============================================================================
+  # 3. Frontend React / Vite Dev Server
+  # Runs Vite dev server with live hot-reloading for local development
+  # ============================================================================
+  frontend:
+    image: node:20-alpine
+    container_name: bhc-frontend
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      VITE_API_URL: http://localhost:5000
+      # Enable filesystem polling for reliable hot-reloading on Windows / Docker mounts
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount frontend source code for hot code reload
+      - ./frontend:/app
+      # Preserve container node_modules
+      - /app/node_modules
+    depends_on:
+      - backend
+    # Ensure dependencies are available and start Vite bound to 0.0.0.0
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
+
+volumes:
+  postgres_data:

@@ -16,6 +16,7 @@ yarn-error.log*
 
 # Environment files
 .env
+.env.docker
 .env.local
 .env.development.local
 .env.test.local

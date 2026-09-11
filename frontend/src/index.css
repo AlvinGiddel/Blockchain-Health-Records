@@ -1971,21 +1971,8 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* High-performance scroll reveal using only composite properties (GPU-accelerated) */
+/* Direct stable render without pop-in delays or layout jumps */
 .reveal-wrapper {
-  opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 0.38s cubic-bezier(0.16, 1, 0.3, 1), transform 0.38s cubic-bezier(0.16, 1, 0.3, 1);
-  transition-delay: var(--reveal-delay, 0ms);
-  will-change: opacity, transform;
-}
-
-.reveal-wrapper.is-revealed {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Reduce layout jank for media elements */
-img, svg {
-  content-visibility: auto;
+  opacity: 1 !important;
+  transform: none !important;
 }

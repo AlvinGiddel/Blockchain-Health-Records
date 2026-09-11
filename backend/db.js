@@ -13,6 +13,22 @@ if (!connectionString) {
     console.warn('WARNING: DATABASE_URL is not defined in the environment variables. Ensure .env is configured.');
 }
 
+// Determine SSL requirement:
+// Supabase ALWAYS requires SSL. Local development (localhost, 127.0.0.1, internal docker 'postgres', or sslmode=disable) skips SSL.
+const isExplicitLocalOrDisabled = connectionString && (
+    connectionString.includes('localhost') ||
+    connectionString.includes('127.0.0.1') ||
+    connectionString.includes('@postgres:') ||
+    connectionString.includes('sslmode=disable') ||
+    process.env.DB_SSL === 'false'
+);
+const isSupabase = connectionString && (
+    connectionString.includes('supabase.co') ||
+    connectionString.includes('supabase.com')
+);
+// Structural guard: If the connection is to Supabase, SSL can NEVER be disabled
+const useSsl = isSupabase || !isExplicitLocalOrDisabled;
+
 const pool = new Pool({
     connectionString,
     max: 20,
@@ -20,10 +36,7 @@ const pool = new Pool({
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
     keepAlive: true,
-    // Enable SSL since Supabase requires SSL connections (skip for localhost testing)
-    ssl: (connectionString && (connectionString.includes('localhost') || connectionString.includes('127.0.0.1'))) 
-        ? false 
-        : { rejectUnauthorized: false }
+    ssl: useSsl ? { rejectUnauthorized: false } : false
 });
 
 // PGTZ natively configures session timezone during connection handshake without racing queries

@@ -216,6 +216,58 @@ npm install
 npm run dev
 ```
 
+### Option C: Local Development with Docker Compose
+
+Run the entire platform (PostgreSQL database, Node.js backend, and Vite frontend) with hot-reloading:
+
+1. **Prepare Environment File:**
+   ```bash
+   cp .env.docker.example .env.docker
+   ```
+2. **Start All Services:**
+   ```bash
+   docker compose up --build
+   ```
+   - **PostgreSQL**: Starts `postgres:16-alpine` and automatically executes all migration scripts in `backend/migrations/` (`00_init_base_schema.sql` through `10_ppb_premises_registry.sql`) in order.
+   - **Backend API**: Accessible at `http://localhost:5000` (live hot-reload on file edits).
+   - **Frontend Web App**: Accessible at `http://localhost:3000` (live hot-reload on file edits with polling enabled for Windows).
+3. **Pre-Seeded Credentials for Local Docker Dev:**
+   - **Super Admin Email**: `superadmin@bhc.local`
+   - **Super Admin Password**: `SuperAdmin#Secure2026!`
+   - **Test Facilities**: Pre-seeded with *Nairobi Hospital*, *Mama Lucy Hospital*, and *Kilimani Hospital*.
+4. **Stop System:**
+   ```bash
+   docker compose down
+   # Or to wipe local database volume:
+   docker compose down -v
+   ```
+
+---
+
+## 🐳 Production Deployment with Docker (DigitalOcean App Platform)
+
+Both the backend and frontend include standalone, multi-stage production Dockerfiles ready for deployment on **DigitalOcean App Platform** or any Docker-compatible container cloud:
+
+### 1. Backend Service (`backend/Dockerfile`)
+- **Multi-Stage Build**: Installs production dependencies in stage 1, and runs a minimal `node:20-alpine` production image.
+- **Port**: Listens on `PORT` environment variable (default: `5000`).
+- **Health Check**: Probes `/api/health` automatically.
+- **DigitalOcean App Platform Setup**:
+  - Source Type: **Dockerfile**
+  - Dockerfile Path: `backend/Dockerfile`
+  - HTTP Port: `5000`
+  - Environment Variables: Provide `DATABASE_URL` (Supabase or Managed Postgres), `JWT_SECRET`, `ENCRYPTION_KEY`, `FRONTEND_URL`, etc.
+
+### 2. Frontend Static Service (`frontend/Dockerfile`)
+- **Multi-Stage Build**: Compiles Vite SPA in stage 1 (`node:20-alpine`), and serves static files using `nginx:1.25-alpine`.
+- **Build Arguments**: Passes `VITE_API_URL` and `VITE_APP_URL` at build time so they are baked into the compiled client bundles.
+- **SPA Routing & Caching**: Includes custom `nginx.conf` with gzip compression, security headers, immutable caching for `/assets/`, and fallback routing (`try_files $uri $uri/ /index.html;`).
+- **DigitalOcean App Platform Setup**:
+  - Source Type: **Dockerfile**
+  - Dockerfile Path: `frontend/Dockerfile`
+  - Build Arguments: `VITE_API_URL=https://your-backend-api-domain.com`
+  - HTTP Port: `80`
+
 ---
 
 ## 🧪 Automated Testing & Security Scanning
