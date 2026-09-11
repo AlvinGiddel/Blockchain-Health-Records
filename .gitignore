@@ -7,6 +7,7 @@ frontend/node_modules/
 .tools/
 frontend/dist/
 frontend/build/
+*.timestamp-*.mjs
 
 # Logs
 *.log
