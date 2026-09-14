@@ -1970,9 +1970,3 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
-/* Direct stable render without pop-in delays or layout jumps */
-.reveal-wrapper {
-  opacity: 1 !important;
-  transform: none !important;
-}
