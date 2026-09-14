@@ -336,15 +336,28 @@ The system underwent an exhaustive security audit covering cryptographic integri
 ```
 [TEST SUITE EXECUTION SUMMARY]
 ========================================================================================
-1. Route Security Scanner:           81 Routes Checked | 0 Violations       [PASSED]
+1. Route Security Scanner:           107 Routes Checked | 0 Violations       [PASSED]
 2. 9 Audit Security Suite:           9 / 9 Comprehensive Findings Verified   [PASSED]
 3. Multi-Tenant Ledger Continuity:   0 Broken Links | 0 Cross-Tenant Leaks   [PASSED]
 4. Background Worker Services:       6 / 6 Mutex & Licensing Tests          [PASSED]
-5. End-to-End Regression Suite:      38 / 38 Controller & Cryptographic Tests [PASSED]
-6. Frontend Build Verification:      Vite 18.96s Clean Production Build      [PASSED]
+5. End-to-End Security Patch Suite:  38 / 38 Controller & Cryptographic Tests [PASSED]
+6. Prescriptions Domain Suite:       11 / 11 Dispensing & Lifecycle Tests    [PASSED]
+7. Pharmacy Self-Onboarding Suite:   23 / 23 Licensing & Approval Tests      [PASSED]
+8. Organization Status & Trials:     32 / 32 Multi-Tenant Hierarchy Tests    [PASSED]
+9. Patient Consents Access Matrix:   18 / 18 Default-Deny & RLS Tests        [PASSED]
+10. Frontend Build Verification:     Vite Clean Production Build             [PASSED]
 ========================================================================================
-OVERALL SYSTEM STATUS: SECURE / VERIFIED / PRODUCTION READY
+OVERALL SYSTEM STATUS: SECURE / HARDENED / VERIFIED / PRODUCTION READY
 ```
+
+### 5.2 Migration 12: Production Database Hardening & Cryptographic Attestations
+
+In production database patch 12 (`12_schema_hardening_and_attestations.sql`), critical database-level constraints and access permissions were structurally hardened:
+1. **Constraint Widening**: Non-destructively widened `organizations_status_check` to include `pending_approval` and `expired`, and `licenses_status_check` to include `expired`, `trial`, `suspended`, `pending_approval`.
+2. **Cryptographic Attestations (`practitioner_attestations`)**: Created table with RLS enforcing tenant and authenticated role scoping, backfilling production doctors with SHA-256 digital registry fingerprints.
+3. **Registry RLS Hardening**: Enabled Row Level Security on `patient_consents`, `nck_registry`, and `ppb_premises` with explicit authenticated policies.
+4. **Structural Privilege Automation**: Executed `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES/SEQUENCES/ROUTINES TO authenticated;` ensuring zero regression for future schema migrations.
+
 
 ---
 

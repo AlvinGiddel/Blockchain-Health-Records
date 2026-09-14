@@ -1,7 +1,7 @@
 import { getAuthToken } from '../storage/secureVault';
 
-// Default to live production backend.
-export const BASE_API_URL = 'https://bhcrecords.co.ke/api';
+// Default to live production backend, configurable via EXPO_PUBLIC_API_URL
+export const BASE_API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://bhcrecords.co.ke/api';
 
 /**
  * Universal Mobile API Client

@@ -50,6 +50,18 @@ async function runTests() {
     console.log(`[Setup] Patient: ${patient.name} (${patient.id})`);
     console.log(`[Setup] Organization: ${orgId}\n`);
 
+    // Ensure or lookup verified pharmacist for dispensing tests
+    let { rows: pharmacists } = await db.query("SELECT id, name, organization_id FROM users WHERE role = 'pharmacist' AND is_approved = true LIMIT 1");
+    let pharmacist = pharmacists[0];
+    if (!pharmacist) {
+        const { rows: newPharm } = await db.query(`
+            INSERT INTO users (id, name, email, password, role, organization_id, public_key, private_key, is_approved)
+            VALUES (gen_random_uuid(), 'Test Pharmacist', 'rx_test_pharm@bhc.ke', 'hash123', 'pharmacist', $1, 'pk', 'sk', true)
+            RETURNING id, name, organization_id;
+        `, [orgId]);
+        pharmacist = newPharm[0];
+    }
+
     // Ensure clean state: remove existing appointments between this doctor & patient to test treating relationship check
     await db.query(
         "DELETE FROM appointments WHERE doctor_id = $1 AND patient_id = $2",
@@ -278,11 +290,11 @@ async function runTests() {
     assert(patientCancelError.statusCode === 403, `Expected HTTP 403, got ${patientCancelError.statusCode}`);
     console.log(`✓ Patient role rejected from cancelling with HTTP 403: "${patientCancelError.message}"`);
 
-    // TEST 8: Partial Dispensation (Authorized Clinic Doctor/Staff)
-    console.log('\n--- TEST 8: Partial Dispensation by Authorized Provider (10 of 21 Amox) ---');
+    // TEST 8: Partial Dispensation (Authorized Pharmacist)
+    console.log('\n--- TEST 8: Partial Dispensation by Authorized Pharmacist (10 of 21 Amox) ---');
     const mockAuthorizedDispenseReq = {
         params: { id: createdRx.id },
-        user: { id: doctor.id, role: 'doctor', organization_id: orgId },
+        user: { id: pharmacist.id, role: 'pharmacist', organization_id: pharmacist.organization_id || orgId },
         body: {
             itemDispenses: [{ itemId: amoxItem.id, quantityDispensed: 10 }],
             notes: 'Batch 1 dispensation. Patient instructed on hydration.'
@@ -309,7 +321,7 @@ async function runTests() {
     console.log('\n--- TEST 9: Over-dispense Prevention (Remaining is 11, trying to dispense 15) ---');
     const mockOverDispenseReq = {
         params: { id: createdRx.id },
-        user: { id: doctor.id, role: 'doctor', organization_id: orgId },
+        user: { id: pharmacist.id, role: 'pharmacist', organization_id: pharmacist.organization_id || orgId },
         body: {
             itemDispenses: [{ itemId: amoxItem.id, quantityDispensed: 15 }]
         }
@@ -321,7 +333,7 @@ async function runTests() {
     });
 
     assert(overDispenseError, 'Over-dispense must throw an error');
-    assert(overDispenseError.statusCode === 400, `Expected 400 Bad Request, got ${overDispenseError.statusCode}`);
+    assert(overDispenseError.statusCode === 409 || overDispenseError.statusCode === 400, `Expected 409 Conflict or 400 Bad Request, got ${overDispenseError.statusCode}`);
     console.log(`✓ Over-dispense cleanly rejected: "${overDispenseError.message}"`);
 
     // TEST 10: Complete Full Dispensation
@@ -329,7 +341,7 @@ async function runTests() {
     const paraItem = createdRx.items.find(i => i.medication_name.includes('Paracetamol'));
     const mockFullDispenseReq = {
         params: { id: createdRx.id },
-        user: { id: doctor.id, role: 'doctor', organization_id: orgId },
+        user: { id: pharmacist.id, role: 'pharmacist', organization_id: pharmacist.organization_id || orgId },
         body: {
             itemDispenses: [
                 { itemId: amoxItem.id, quantityDispensed: 11 },

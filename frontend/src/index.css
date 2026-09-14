@@ -1176,7 +1176,7 @@ select, option {
 
 /* Login Page Specific Background & Adjustments */
 .login-page {
-  background-image: linear-gradient(rgba(10, 11, 16, 0.5), rgba(10, 11, 16, 0.85)), url('./assets/login_background.png');
+  background-image: linear-gradient(rgba(10, 11, 16, 0.5), rgba(10, 11, 16, 0.85)), url('./assets/clinical_login_bg.jpg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

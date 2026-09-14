@@ -6,10 +6,12 @@
 const express = require('express');
 const router = express.Router();
 const consentController = require('../controllers/consentController');
+const { requireAuth } = require('../middleware/auth');
 
 // All consent endpoints are authenticated
-router.get('/consents', consentController.getConsents);
-router.post('/consents', consentController.grantConsent);
-router.post('/consents/:id/revoke', consentController.revokeConsent);
+router.get('/consents', requireAuth, consentController.getConsents);
+router.post('/consents', requireAuth, consentController.grantConsent);
+router.post('/consents/:id/revoke', requireAuth, consentController.revokeConsent);
 
 module.exports = router;
+

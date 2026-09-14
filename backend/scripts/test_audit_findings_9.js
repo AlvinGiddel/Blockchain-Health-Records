@@ -270,7 +270,12 @@ async function runAuditTests() {
             headers: { authorization: `Bearer ${tokenB}` }
         };
         const resCross = createMockRes();
-        await recordsController.addSpecialistNote(reqCross, resCross);
+        await recordsController.addSpecialistNote(reqCross, resCross, (err) => {
+            if (err) {
+                resCross.statusCode = err.statusCode || 500;
+                resCross.data = { error: err.message };
+            }
+        });
         assert.strictEqual(resCross.statusCode, 403, 'Cross-tenant specialist note must be rejected with 403');
 
         // Doctor A adds note to Record A (same tenant) with spoofed specialistDoctorName in body

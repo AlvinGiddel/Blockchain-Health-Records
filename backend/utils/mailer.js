@@ -1,5 +1,4 @@
 const nodemailer = require('nodemailer');
-const { google } = require('googleapis');
 
 const REDIRECT_URI = 'https://developers.google.com/oauthplayground';
 
@@ -28,6 +27,9 @@ async function sendMail({ to, subject, html, text }) {
             'Missing Gmail OAuth2 configuration. Please check GMAIL_USER, GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, and GMAIL_REFRESH_TOKEN in Vercel Environment Variables.'
         );
     }
+
+    // Lazily load googleapis discovery descriptors only when Gmail OAuth credentials exist
+    const { google } = require('googleapis');
 
     // 1. Create a fresh OAuth2 client per request
     const oauth2Client = new google.auth.OAuth2(
