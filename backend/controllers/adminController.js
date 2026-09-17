@@ -20,7 +20,7 @@ const {
     checkLicense
 } = require('../services/licenseCheck');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
+const { JWT_SECRET } = require('../config');
 
 /**
  * 1. Remote License Diagnostic Route (Super-Admin Only)

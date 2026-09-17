@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Route Security Scanner & Architectural Enforcement Guard
  *
  * Traverses Express router stack, validates all registered routes against the
@@ -221,7 +221,7 @@ async function runRouteSecurityScanner() {
                         body: res.body,
                         reason: `Expected HTTP 401 Unauthorized, but got HTTP ${res.status}`
                     });
-                    console.error(`❌ [VIOLATION]    ${routeKey} -> Returned ${res.status} instead of 401!`);
+                    console.error(`âŒ [VIOLATION]    ${routeKey} -> Returned ${res.status} instead of 401!`);
                 }
             } catch (reqErr) {
                 violations.push({
@@ -229,7 +229,7 @@ async function runRouteSecurityScanner() {
                     testPath,
                     reason: `Request failed with error: ${reqErr.message}`
                 });
-                console.error(`❌ [ERROR]        ${routeKey} -> Error: ${reqErr.message}`);
+                console.error(`âŒ [ERROR]        ${routeKey} -> Error: ${reqErr.message}`);
             }
         }
 
@@ -253,10 +253,10 @@ async function runRouteSecurityScanner() {
         for (const target of twelveVulnerabilities) {
             const found = allRoutes.some(r => `${r.method} ${r.path}` === target);
             if (!found) {
-                console.warn(`⚠️ Warning: Patched route signature ${target} not found directly in stack.`);
+                console.warn(`âš ï¸ Warning: Patched route signature ${target} not found directly in stack.`);
                 twelveAllGuarded = false;
             } else {
-                console.log(`✅ Verified patched signature guarded: ${target}`);
+                console.log(`âœ… Verified patched signature guarded: ${target}`);
             }
         }
 
@@ -270,14 +270,14 @@ async function runRouteSecurityScanner() {
         console.log('================================================================\n');
 
         if (violations.length > 0) {
-            console.error(`\n🚨 CRITICAL SECURITY TEST FAILURE: ${violations.length} route(s) failed auth enforcement!`);
+            console.error(`\nðŸš¨ CRITICAL SECURITY TEST FAILURE: ${violations.length} route(s) failed auth enforcement!`);
             for (const v of violations) {
                 console.error(` - [${v.routeKey}] on path ${v.testPath}: ${v.reason}`);
             }
             process.exit(1);
         }
 
-        console.log('🎉 ALL ROUTES COMPLY WITH DEFAULT-DENY ARCHITECTURAL POLICY!');
+        console.log('ðŸŽ‰ ALL ROUTES COMPLY WITH DEFAULT-DENY ARCHITECTURAL POLICY!');
         process.exit(0);
 
     } finally {

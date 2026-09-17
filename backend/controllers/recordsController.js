@@ -12,7 +12,7 @@ const {
     verifyAuthToken
 } = require('../utils/helpers');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
+const { JWT_SECRET } = require('../config');
 
 /**
  * 1. Add new medical record (requires Doctor)

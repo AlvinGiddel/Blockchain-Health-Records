@@ -1,4 +1,4 @@
-/**
+﻿/**
  * test_audit_findings_9.js
  * Comprehensive automated regression tests for all 9 Security Audit Findings:
  * 1. Admin records scoping (GET /api/admin/records)
@@ -22,7 +22,7 @@ const adminController = require('../controllers/adminController');
 const authController = require('../controllers/authController');
 const appointmentsController = require('../controllers/appointmentsController');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
+const JWT_SECRET = process.env.JWT_SECRET; if (!JWT_SECRET) { console.error('[ERROR] JWT_SECRET env var is required. Run with JWT_SECRET set.'); process.exit(1); }
 
 function createMockRes() {
     const res = {
@@ -50,7 +50,7 @@ async function runAuditTests() {
 
     const test = async (title, fn) => {
         try {
-            process.stdout.write(`• Testing [${title}] ... `);
+            process.stdout.write(`â€¢ Testing [${title}] ... `);
             await fn();
             console.log('PASSED');
             passed++;

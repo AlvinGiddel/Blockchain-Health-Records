@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Integration Test Suite for Medical Records & Blockchain Domain
  */
 
@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../db');
 const createRecordsRouter = require('../routes/records');
 const { Blockchain, generateKeyPair } = require('../blockchain');
-const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
+const JWT_SECRET = process.env.JWT_SECRET; if (!JWT_SECRET) { console.error('[ERROR] JWT_SECRET env var is required. Run with JWT_SECRET set.'); process.exit(1); }
 
 async function runRecordsTests() {
     console.log('======================================================');
@@ -21,10 +21,10 @@ async function runRecordsTests() {
 
     function assert(condition, name, details = '') {
         if (condition) {
-            console.log(`✅ [PASS] ${name}`);
+            console.log(`âœ… [PASS] ${name}`);
             passed++;
         } else {
-            console.error(`❌ [FAIL] ${name} -> ${details}`);
+            console.error(`âŒ [FAIL] ${name} -> ${details}`);
             failed++;
         }
     }

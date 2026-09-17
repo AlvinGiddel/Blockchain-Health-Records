@@ -1,4 +1,4 @@
-const http = require('http');
+﻿const http = require('http');
 const express = require('express');
 const practitionerRoutes = require('../routes/practitioners');
 const db = require('../db');
@@ -13,10 +13,10 @@ async function runPractitionerRouteTests() {
 
     function assert(condition, testName, details = '') {
         if (condition) {
-            console.log(`✅ [PASS] ${testName}`);
+            console.log(`âœ… [PASS] ${testName}`);
             passed++;
         } else {
-            console.error(`❌ [FAIL] ${testName} -> ${details}`);
+            console.error(`âŒ [FAIL] ${testName} -> ${details}`);
             failed++;
         }
     }

@@ -175,15 +175,26 @@ async function handleWebhook(req, res, blockchainInstance = null) {
         const signature = req.headers['x-paystack-signature'];
         const rawBody = req.rawBody || JSON.stringify(req.body);
 
-        // In production with real keys, strictly verify signature
+        // ── Webhook signature verification — ALWAYS enforced, no bypass ───────
+        // If PAYSTACK_SECRET_KEY is not configured, we must reject the webhook
+        // rather than silently accept it. A missing secret is a server config error.
         const secret = process.env.PAYSTACK_SECRET_KEY;
-        if (secret && secret.startsWith('sk_')) {
-            const isValid = verifyWebhookSignature(rawBody, signature);
-            if (!isValid) {
-                console.warn('[Payments Webhook] Invalid signature received from IP:', req.ip);
-                return res.status(401).send('Invalid webhook signature');
-            }
+        if (!secret || secret.trim().length === 0) {
+            console.error('[Payments Webhook] PAYSTACK_SECRET_KEY is not set. Cannot verify webhook. Rejecting request from IP:', req.ip);
+            return res.status(500).send('Webhook misconfiguration: payment secret not configured.');
         }
+
+        if (!signature) {
+            console.warn('[Payments Webhook] Missing x-paystack-signature header. Rejecting request from IP:', req.ip);
+            return res.status(401).send('Webhook signature missing.');
+        }
+
+        const isValid = verifyWebhookSignature(rawBody, signature);
+        if (!isValid) {
+            console.warn('[Payments Webhook] Invalid HMAC signature. Rejecting request from IP:', req.ip);
+            return res.status(401).send('Invalid webhook signature.');
+        }
+        // ─────────────────────────────────────────────────────────────────────
 
         const event = req.body;
         if (event && event.event === 'charge.success') {

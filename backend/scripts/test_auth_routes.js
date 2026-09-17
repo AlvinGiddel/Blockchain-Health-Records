@@ -1,4 +1,4 @@
-process.env.VERCEL = '1';
+﻿process.env.VERCEL = '1';
 const http = require('http');
 const app = require('../server');
 
@@ -41,7 +41,7 @@ async function runTests() {
         if (res1.status !== 200 || typeof res1.body.exists !== 'boolean') {
             throw new Error('Check phone test failed');
         }
-        console.log('✅ Check phone endpoint verified!');
+        console.log('âœ… Check phone endpoint verified!');
 
         console.log('\n--- 2. Testing POST /api/auth/login with empty body ---');
         const res2 = await request('/api/auth/login', 'POST', {});
@@ -49,7 +49,7 @@ async function runTests() {
         if (res2.status !== 400) {
             throw new Error('Login empty body validation failed');
         }
-        console.log('✅ Login empty body validation verified!');
+        console.log('âœ… Login empty body validation verified!');
 
         console.log('\n--- 3. Testing POST /api/auth/login with invalid credentials ---');
         const res3 = await request('/api/auth/login', 'POST', { email: 'nonexistent_test_user@example.com', password: 'wrongpassword' });
@@ -57,7 +57,7 @@ async function runTests() {
         if (res3.status !== 401 || res3.body.error !== 'Invalid credentials.') {
             throw new Error('Login invalid credentials test failed');
         }
-        console.log('✅ Login invalid credentials response verified!');
+        console.log('âœ… Login invalid credentials response verified!');
 
         console.log('\n--- 4. Testing POST /api/auth/register with illegal role ---');
         const res4 = await request('/api/auth/register', 'POST', { name: 'Test', email: 'test@test.com', password: 'password', role: 'admin' });
@@ -65,7 +65,7 @@ async function runTests() {
         if (res4.status !== 400) {
             throw new Error('Register illegal role test failed');
         }
-        console.log('✅ Register role restriction verified!');
+        console.log('âœ… Register role restriction verified!');
 
         console.log('\n--- 5. Testing GET /api/auth/break-glass/status (Requires Auth) ---');
         const res5 = await request('/api/auth/break-glass/status');
@@ -73,9 +73,9 @@ async function runTests() {
         if (res5.status !== 401) {
             throw new Error('Break glass status unauthenticated test failed');
         }
-        console.log('✅ Break glass status auth guard verified (401)!');
+        console.log('âœ… Break glass status auth guard verified (401)!');
 
-        console.log('\n🎉 ALL 5 AUTH ROUTE INTEGRATION TESTS PASSED CLEANLY!\n');
+        console.log('\nðŸŽ‰ ALL 5 AUTH ROUTE INTEGRATION TESTS PASSED CLEANLY!\n');
     } finally {
         server.close();
         process.exit(0);

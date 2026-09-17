@@ -1,4 +1,4 @@
-const path = require('path');
+﻿const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const db = require('../db');
 
@@ -46,9 +46,9 @@ async function testCrossTenantRLS() {
 
     console.log(`Result count: ${queryResult.length} row(s) returned.`);
     if (queryResult.length === 0) {
-      console.log('✅ PASS: Record was silently excluded by PostgreSQL RLS without throwing an error.');
+      console.log('âœ… PASS: Record was silently excluded by PostgreSQL RLS without throwing an error.');
     } else {
-      console.error('❌ FAIL: Cross-tenant record was returned! RLS did not exclude the row.');
+      console.error('âŒ FAIL: Cross-tenant record was returned! RLS did not exclude the row.');
     }
 
     // 4. Now query Nairobi Hospital's own records to confirm the doctor CAN see their own

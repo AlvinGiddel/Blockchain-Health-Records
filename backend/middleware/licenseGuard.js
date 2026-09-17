@@ -10,7 +10,7 @@
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
+const { JWT_SECRET } = require('../config');
 
 // Whitelisted public, onboarding, & diagnostic path prefixes
 const EXEMPT_PATHS = [

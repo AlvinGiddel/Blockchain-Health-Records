@@ -1,4 +1,4 @@
-process.env.VERCEL = '1';
+﻿process.env.VERCEL = '1';
 const http = require('http');
 const crypto = require('crypto');
 const app = require('../server');
@@ -60,12 +60,12 @@ async function testWebhookSignatures() {
 
         if (secret.startsWith('sk_')) {
             if (resInvalid.status === 401 && resInvalid.body.includes('Invalid webhook signature')) {
-                console.log('✅ Correctly rejected invalid webhook signature with HTTP 401!');
+                console.log('âœ… Correctly rejected invalid webhook signature with HTTP 401!');
             } else {
                 throw new Error(`Expected HTTP 401 for invalid signature, got: ${resInvalid.status}`);
             }
         } else {
-            console.log('ℹ️ Secret key not configured with sk_ prefix; signature enforcement skipped as expected in dev mode.');
+            console.log('â„¹ï¸ Secret key not configured with sk_ prefix; signature enforcement skipped as expected in dev mode.');
         }
 
         // 2. Test with VALID HMAC SHA512 signature
@@ -78,7 +78,7 @@ async function testWebhookSignatures() {
         const resValid = await sendWebhook(payload, validSig);
         console.log('Response Status:', resValid.status, 'Body:', resValid.body);
         if (resValid.status === 200) {
-            console.log('✅ Valid webhook signature accepted with HTTP 200!');
+            console.log('âœ… Valid webhook signature accepted with HTTP 200!');
         } else {
             throw new Error(`Expected HTTP 200 for valid signature, got: ${resValid.status}`);
         }

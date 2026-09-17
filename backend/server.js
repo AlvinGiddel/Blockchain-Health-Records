@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
+const { JWT_SECRET } = require('./config');
 const db = require('./db');
 const { tenantStorage } = db;
 const licenseGuard = require('./middleware/licenseGuard');
@@ -29,7 +30,6 @@ const AppError = require('./utils/AppError');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
 const jwt = require('jsonwebtoken');
 
 // ==================== CORE MIDDLEWARE ====================
@@ -51,10 +51,10 @@ if (process.env.FRONTEND_URL) {
     }
 }
 
-// CORS configured to allow web clients with standard REST headers, dynamically reflecting valid origins
+// CORS configured with a strict explicit allowlist. Any origin not on the list is rejected.
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow requests with no origin (e.g. mobile apps, curl, Postman, server-to-server)
+        // Allow requests with no origin (mobile apps, curl, Postman, server-to-server)
         if (!origin) return callback(null, true);
 
         // Allow explicitly listed domains
@@ -72,8 +72,10 @@ app.use(cors({
             return callback(null, true);
         }
 
-        // Dynamic reflection fallback so legitimate requests are never blocked
-        return callback(null, true);
+        // ── Explicit rejection — do NOT add a wildcard fallback here ──────────
+        // All unlisted origins are rejected. Use ALLOWED_ORIGINS or the env
+        // variable FRONTEND_URL to add a new trusted origin.
+        return callback(new Error(`CORS: Origin "${origin}" is not permitted.`));
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

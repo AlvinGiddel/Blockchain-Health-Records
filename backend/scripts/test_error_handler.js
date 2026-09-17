@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Centralized Error Handler Status Code Preservation & Safety Regression Suite
  *
  * Verifies:
@@ -89,10 +89,10 @@ async function runErrorHandlerTests() {
 
     function assert(condition, message, details = '') {
         if (condition) {
-            console.log(`✅ [PASS] ${message}`);
+            console.log(`âœ… [PASS] ${message}`);
             passed++;
         } else {
-            console.error(`❌ [FAIL] ${message} - ${details}`);
+            console.error(`âŒ [FAIL] ${message} - ${details}`);
             failed++;
         }
     }

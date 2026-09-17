@@ -14,7 +14,7 @@ const AppError = require('../utils/AppError');
 const catchAsync = require('../utils/catchAsync');
 const { sendSms } = require('../services/smsService');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
+const { JWT_SECRET } = require('../config');
 
 // In-memory LRU Cache for drug searches (TTL: 10 minutes)
 const drugSearchCache = new Map();

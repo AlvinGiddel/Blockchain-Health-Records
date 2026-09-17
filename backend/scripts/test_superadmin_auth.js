@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification of Super Admin Login & Rate Limiter against running server / logic
  */
 
@@ -28,7 +28,7 @@ async function testSuperAdminAuth() {
         throw new Error('Password mismatch for super admin');
     }
 
-    console.log('✅ Super Admin credentials verified successfully with bcrypt!');
+    console.log('âœ… Super Admin credentials verified successfully with bcrypt!');
     process.exit(0);
 }
 

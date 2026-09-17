@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Automated Verification Suite for KMPDC Off-Chain Medical License Verification
  */
 
@@ -21,10 +21,10 @@ async function runKmpdcTests() {
 
     function assert(condition, testName, details = '') {
         if (condition) {
-            console.log(`✅ [PASS] ${testName}`);
+            console.log(`âœ… [PASS] ${testName}`);
             passed++;
         } else {
-            console.error(`❌ [FAIL] ${testName} -> ${details}`);
+            console.error(`âŒ [FAIL] ${testName} -> ${details}`);
             failed++;
         }
     }

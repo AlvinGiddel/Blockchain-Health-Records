@@ -161,8 +161,15 @@ async function verifyTransaction(reference) {
  * @param {string} signatureHeader
  */
 function verifyWebhookSignature(rawBody, signatureHeader) {
-    const secret = process.env.PAYSTACK_SECRET_KEY || PAYSTACK_SECRET_KEY;
-    if (!secret || !signatureHeader) return false;
+    const secret = process.env.PAYSTACK_SECRET_KEY;
+
+    // A missing secret is a server misconfiguration, not an invalid signature.
+    // Throw so the caller (handleWebhook) surfaces this as a 500, not a silent pass.
+    if (!secret || secret.trim().length === 0) {
+        throw new Error('[PaystackService] PAYSTACK_SECRET_KEY is not configured. Cannot verify webhook signature.');
+    }
+
+    if (!signatureHeader) return false;
 
     try {
         const hash = crypto

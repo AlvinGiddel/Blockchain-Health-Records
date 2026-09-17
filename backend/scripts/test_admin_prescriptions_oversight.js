@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test Suite: Super Admin Prescription Privacy-by-Design Oversight
  *
  * Validates:
@@ -18,7 +18,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../db');
 const app = require('../server');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
+const JWT_SECRET = process.env.JWT_SECRET; if (!JWT_SECRET) { console.error('[ERROR] JWT_SECRET env var is required. Run with JWT_SECRET set.'); process.exit(1); }
 
 async function runTests() {
     console.log('================================================================');
@@ -88,7 +88,7 @@ async function runTests() {
         if (!saBrowseRes.data?.error?.includes('Direct unrestricted prescription browsing is disabled for Super Admin')) {
             throw new Error('Expected custom error message regarding disabled unrestricted browsing');
         }
-        console.log('✓ Super Admin successfully blocked from unrestricted prescription list with HTTP 403.\n');
+        console.log('âœ“ Super Admin successfully blocked from unrestricted prescription list with HTTP 403.\n');
 
         // -------------------------------------------------------------
         // TEST 2: Doctor access to GET /api/prescriptions is untouched
@@ -104,7 +104,7 @@ async function runTests() {
             if (!Array.isArray(docBrowseRes.data?.prescriptions)) {
                 throw new Error('Doctor should receive prescription array');
             }
-            console.log('✓ Clinical Doctor prescription endpoint operates normally (200 OK).\n');
+            console.log('âœ“ Clinical Doctor prescription endpoint operates normally (200 OK).\n');
         }
 
         // -------------------------------------------------------------
@@ -123,7 +123,7 @@ async function runTests() {
         if (unauthDrill.status !== 401) {
             throw new Error(`Unauthenticated drill-down must return 401, got ${unauthDrill.status}`);
         }
-        console.log('✓ Both endpoints strictly reject unauthenticated calls with HTTP 401.\n');
+        console.log('âœ“ Both endpoints strictly reject unauthenticated calls with HTTP 401.\n');
 
         // -------------------------------------------------------------
         // TEST 4: Super Admin gets aggregated prescription counts (Zero PII)
@@ -147,7 +147,7 @@ async function runTests() {
                 throw new Error('Aggregate must NOT contain patientName or medicationName');
             }
         }
-        console.log(`✓ Retrieved counts for ${countsRes.data.organizations.length} organizations with zero clinical PII.\n`);
+        console.log(`âœ“ Retrieved counts for ${countsRes.data.organizations.length} organizations with zero clinical PII.\n`);
 
         // -------------------------------------------------------------
         // TEST 5: Reason length validation (min. 10 chars)
@@ -164,7 +164,7 @@ async function runTests() {
         if (!shortReasonRes.data?.error?.includes('minimum 10 characters')) {
             throw new Error('Expected minimum 10 characters error message');
         }
-        console.log('✓ Short justification (< 10 chars) cleanly rejected with HTTP 400.\n');
+        console.log('âœ“ Short justification (< 10 chars) cleanly rejected with HTTP 400.\n');
 
         // -------------------------------------------------------------
         // TEST 6: Justified drill-down succeeds & creates audit log
@@ -191,16 +191,16 @@ async function runTests() {
         if (auditRows.length === 0 || !auditRows[0].details.includes(validReason)) {
             throw new Error('Audit log record not found or does not contain justification reason');
         }
-        console.log(`✓ Audit log verified in PostgreSQL: event_type = "${auditRows[0].event_type}", actor = "${auditRows[0].doctor_name}".\n`);
+        console.log(`âœ“ Audit log verified in PostgreSQL: event_type = "${auditRows[0].event_type}", actor = "${auditRows[0].doctor_name}".\n`);
 
         console.log('================================================================');
-        console.log(' 🎉 ALL 6 PRIVACY-BY-DESIGN OVERSIGHT TESTS PASSED (100%)       ');
+        console.log(' ðŸŽ‰ ALL 6 PRIVACY-BY-DESIGN OVERSIGHT TESTS PASSED (100%)       ');
         console.log('================================================================');
         server.close();
         process.exit(0);
 
     } catch (err) {
-        console.error('❌ Test failed:', err);
+        console.error('âŒ Test failed:', err);
         server.close();
         process.exit(1);
     }

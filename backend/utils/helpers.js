@@ -2,8 +2,7 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 const { getKenyanTimestamp } = require('../blockchain');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
+const { JWT_SECRET, ENCRYPTION_KEY } = require('../config');
 
 /**
  * Normalizes phone numbers by stripping all non-digit characters.
@@ -108,8 +107,7 @@ function checkSuperAdminRateLimit(ip) {
     return { allowed: true };
 }
 
-const rawEncryptionKey = process.env.ENCRYPTION_KEY || 'f8e7d6c5b4a39281706f5e4d3c2b1a09f8e7d6c5b4a39281706f5e4d3c2b1a09';
-const ENCRYPTION_KEY = Buffer.from(rawEncryptionKey, 'hex'); // 32 bytes
+// ENCRYPTION_KEY (32-byte Buffer) is imported from config.js which validates it at startup.
 const IV_LENGTH = 16;
 
 /**

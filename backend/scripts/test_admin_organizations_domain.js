@@ -1,10 +1,10 @@
-process.env.VERCEL = '1';
+﻿process.env.VERCEL = '1';
 const http = require('http');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 const app = require('../server');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
+const JWT_SECRET = process.env.JWT_SECRET; if (!JWT_SECRET) { console.error('[ERROR] JWT_SECRET env var is required. Run with JWT_SECRET set.'); process.exit(1); }
 
 async function runAdminOrgTests() {
     console.log('===============================================================');
@@ -16,10 +16,10 @@ async function runAdminOrgTests() {
 
     function assert(condition, testName, details = '') {
         if (condition) {
-            console.log(`✅ [PASS] ${testName}`);
+            console.log(`âœ… [PASS] ${testName}`);
             passed++;
         } else {
-            console.error(`❌ [FAIL] ${testName} -> ${details}`);
+            console.error(`âŒ [FAIL] ${testName} -> ${details}`);
             failed++;
         }
     }

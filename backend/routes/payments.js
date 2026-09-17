@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../db');
 const paymentsController = require('../controllers/paymentsController');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
+const { JWT_SECRET } = require('../config');
 
 const { requireAuth } = require('../middleware/auth');
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Comprehensive Automated Verification Suite for Super Admin & Remote Kill-Switch
  * 
  * Tests:
@@ -17,7 +17,7 @@ const jwt = require('jsonwebtoken');
 const { getLicenseStatus, checkLicense } = require('../services/licenseCheck');
 const licenseGuard = require('../middleware/licenseGuard');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
+const JWT_SECRET = process.env.JWT_SECRET; if (!JWT_SECRET) { console.error('[ERROR] JWT_SECRET env var is required. Run with JWT_SECRET set.'); process.exit(1); }
 
 // Mock Express Req/Res helpers
 function createMockReqRes(path, headers = {}) {
@@ -64,10 +64,10 @@ async function runTests() {
 
     function assert(condition, testName) {
         if (condition) {
-            console.log(`✅ [PASS] ${testName}`);
+            console.log(`âœ… [PASS] ${testName}`);
             passed++;
         } else {
-            console.error(`❌ [FAIL] ${testName}`);
+            console.error(`âŒ [FAIL] ${testName}`);
             failed++;
         }
     }

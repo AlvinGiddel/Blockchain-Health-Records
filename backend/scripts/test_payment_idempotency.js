@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Test Suite: Paystack Payment Idempotency & Fair Expiration Calculation
  * 
  * Tests:
@@ -34,7 +34,7 @@ async function runIdempotencyAndExtensionTests() {
 
         const testOrg = orgRows[0];
         testOrgId = testOrg.id;
-        console.log(`✓ Created test organization: "${testOrg.name}" with expiry in +15 days: ${testOrg.license_expires_at}`);
+        console.log(`âœ“ Created test organization: "${testOrg.name}" with expiry in +15 days: ${testOrg.license_expires_at}`);
 
         // 2. Fetch any valid user ID for the payment FK
         const { rows: userRows } = await db.pool.query('SELECT id, email FROM users LIMIT 1');
@@ -60,7 +60,7 @@ async function runIdempotencyAndExtensionTests() {
             ) VALUES ($1, $2, $3, 2500.00, 250000, 'KES', 'license_renewal', 30, 'Standard Monthly Renewal', 'pending', $4);
         `, [testOrgId, testUserId, testReference, userRows[0].email]);
 
-        console.log(`✓ Created pending payment record with reference: ${testReference}`);
+        console.log(`âœ“ Created pending payment record with reference: ${testReference}`);
 
         // Mock blockchain ledger
         const mockBlockchain = {
@@ -97,7 +97,7 @@ async function runIdempotencyAndExtensionTests() {
         if (newExpiryMs < expectedMinExpiryMs || newExpiryMs > expectedMaxExpiryMs) {
             throw new Error(`Fair extension failed: Expiration ${firstResult.organization.license_expires_at} did not preserve remaining days!`);
         }
-        console.log('✓ Fair extension verified: Expiration successfully advanced from +15 days to ~45 days (no remaining days lost).');
+        console.log('âœ“ Fair extension verified: Expiration successfully advanced from +15 days to ~45 days (no remaining days lost).');
 
         // 5. SECOND CALL: Simulate asynchronous Paystack Webhook arriving afterwards
         console.log('\n--- Test Step 2: Second Execution (Duplicate / Late Webhook) ---');
@@ -120,7 +120,7 @@ async function runIdempotencyAndExtensionTests() {
         if (secondExpiryMs !== newExpiryMs) {
             throw new Error('Double extension detected! Expiration date changed on the second call.');
         }
-        console.log('✓ Idempotency verified: Duplicate webhook was a safe no-op. License was NOT double-extended.');
+        console.log('âœ“ Idempotency verified: Duplicate webhook was a safe no-op. License was NOT double-extended.');
 
         // 6. Verify payments table state in DB
         const { rows: finalPaymentRows } = await db.pool.query(
@@ -141,7 +141,7 @@ async function runIdempotencyAndExtensionTests() {
         console.log('================================================================\n');
 
     } catch (err) {
-        console.error('\n❌ Test failed with error:', err);
+        console.error('\nâŒ Test failed with error:', err);
         process.exit(1);
     } finally {
         // Cleanup test data

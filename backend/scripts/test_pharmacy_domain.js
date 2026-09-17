@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Phase 2 Pharmacy Portal & Dispensing Workflow - End-to-End Verification Test
  * 
  * Verifies all 8 items in the verification plan:
@@ -20,7 +20,7 @@ const jwt = require('jsonwebtoken');
 const db = require('../db');
 const app = require('../server');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
+const JWT_SECRET = process.env.JWT_SECRET; if (!JWT_SECRET) { console.error('[ERROR] JWT_SECRET env var is required. Run with JWT_SECRET set.'); process.exit(1); }
 
 async function runPharmacyTests() {
     console.log('========================================================================');
@@ -33,11 +33,11 @@ async function runPharmacyTests() {
 
     function recordAssertion(itemNumber, testName, condition, details = '') {
         if (condition) {
-            console.log(`✅ [PASS] [Item ${itemNumber}] ${testName}`);
+            console.log(`âœ… [PASS] [Item ${itemNumber}] ${testName}`);
             passed++;
             testResults.push({ item: itemNumber, test: testName, status: 'PASSED', details });
         } else {
-            console.error(`❌ [FAIL] [Item ${itemNumber}] ${testName} -> ${details}`);
+            console.error(`âŒ [FAIL] [Item ${itemNumber}] ${testName} -> ${details}`);
             failed++;
             testResults.push({ item: itemNumber, test: testName, status: 'FAILED', details });
         }

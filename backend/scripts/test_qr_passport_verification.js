@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Verification Test: QR Health Passport Server-Side Verification & Scannable Token/URL
  */
 const assert = require('assert');
@@ -45,7 +45,7 @@ async function runTest() {
     });
 
     assert(qrDataUrl.startsWith('data:image/png;base64,'), 'QR code must be a valid PNG base64 data URL');
-    console.log('✓ QRCode.toDataURL generated a valid high-resolution PNG data URL');
+    console.log('âœ“ QRCode.toDataURL generated a valid high-resolution PNG data URL');
 
     // 4. Test Server-Side Verification Endpoint via recordsController.verifyBlockchainProof
     console.log('\n--- Testing verifyBlockchainProof for targetId ---');
@@ -69,7 +69,7 @@ async function runTest() {
     assert(responseData.verified === true, 'Response verified field must be true');
     assert(responseData.patientName === patient.name, 'Patient name must match');
     assert(responseData.blockchainSealStatus, 'Must have blockchainSealStatus');
-    console.log(`✓ Proof verified successfully: Patient "${responseData.patientName}", Status: "${responseData.blockchainSealStatus}"`);
+    console.log(`âœ“ Proof verified successfully: Patient "${responseData.patientName}", Status: "${responseData.blockchainSealStatus}"`);
 
     // 5. Test Revocation Enforcement
     console.log('\n--- Testing Revocation / Expiry Enforcement ---');
@@ -92,11 +92,11 @@ async function runTest() {
         console.log(`[Revocation Result] Status: ${revStatusCode}, Error: ${revResponseData?.error}`);
         assert(revStatusCode === 403, `Expected 403 Forbidden for revoked patient, got ${revStatusCode}`);
         assert(revResponseData.verified === false, 'Verified must be false for revoked patient');
-        console.log('✓ Revocation check passed: 403 Forbidden properly returned when patient is deactivated');
+        console.log('âœ“ Revocation check passed: 403 Forbidden properly returned when patient is deactivated');
     } finally {
         // Restore patient status
         await db.query("UPDATE users SET is_rejected = $1 WHERE id = $2", [patient.is_rejected || false, patient.id]);
-        console.log('✓ Patient status cleanly restored to original value in database');
+        console.log('âœ“ Patient status cleanly restored to original value in database');
     }
 
     console.log('\n================================================================');

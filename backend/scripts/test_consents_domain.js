@@ -1,11 +1,11 @@
-/**
+﻿/**
  * Test Suite: Patient Consent & Granular Access Delegation + Emergency Break-Glass Independence
  * 
  * Verifies:
  * 1. Consent Grant creation with SHA-256 cryptographic non-repudiation hash.
  * 2. Treating Relationship authorization via 3rd pillar (Active Patient Consent).
  * 3. Consent Revocation and access revocation.
- * 4. User-Mandated Test Case: Break-Glass independence — Doctor maintains emergency access within
+ * 4. User-Mandated Test Case: Break-Glass independence â€” Doctor maintains emergency access within
  *    the 1-hour window even if the patient explicitly revokes consent.
  * 5. Expired consent auto-invalidation.
  * 6. Scoped Doctor Search (limited to tenant_memberships of the patient).
@@ -29,10 +29,10 @@ async function runConsentTests() {
 
     function assert(condition, testName, details = '') {
         if (condition) {
-            console.log(`✅ [PASS] ${testName}`);
+            console.log(`âœ… [PASS] ${testName}`);
             passed++;
         } else {
-            console.error(`❌ [FAIL] ${testName} -> ${details}`);
+            console.error(`âŒ [FAIL] ${testName} -> ${details}`);
             failed++;
         }
     }

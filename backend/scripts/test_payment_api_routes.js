@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Test Suite: Payment API HTTP Endpoints Verification
  */
 
@@ -9,7 +9,7 @@ process.env.VERCEL = '1';
 const db = require('../db');
 const app = require('../server');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
+const JWT_SECRET = process.env.JWT_SECRET; if (!JWT_SECRET) { console.error('[ERROR] JWT_SECRET env var is required. Run with JWT_SECRET set.'); process.exit(1); }
 
 async function testPaymentRoutes() {
     console.log('================================================================');
@@ -29,7 +29,7 @@ async function testPaymentRoutes() {
         // 1. Test /api/payments/plans (Public)
         const plansRes = await fetch(`${baseUrl}/api/payments/plans`);
         const plansData = await plansRes.json();
-        console.log('✓ /api/payments/plans response status:', plansRes.status);
+        console.log('âœ“ /api/payments/plans response status:', plansRes.status);
         console.log('  Plans returned:', plansData.plans?.map(p => `${p.name} (KES ${p.amountKES})`).join(', '));
         if (!plansData.plans || plansData.plans.length === 0) {
             throw new Error('No plans returned from /api/payments/plans');
@@ -62,7 +62,7 @@ async function testPaymentRoutes() {
             }
         });
         const clinicLicData = await clinicLicRes.json();
-        console.log('✓ /api/payments/clinic-license status:', clinicLicRes.status);
+        console.log('âœ“ /api/payments/clinic-license status:', clinicLicRes.status);
         console.log('  Organization name:', clinicLicData.organization?.name);
         if (clinicLicData.organization?.id !== testOrgId) {
             throw new Error('Clinic license organization ID mismatch');
@@ -82,7 +82,7 @@ async function testPaymentRoutes() {
             })
         });
         const initData = await initRes.json();
-        console.log('✓ /api/payments/initialize status:', initRes.status);
+        console.log('âœ“ /api/payments/initialize status:', initRes.status);
         console.log('  Reference generated:', initData.reference);
         console.log('  Authorization URL:', initData.authorization_url);
         if (!initData.reference) {
@@ -96,7 +96,7 @@ async function testPaymentRoutes() {
             }
         });
         const verifyData = await verifyRes.json();
-        console.log('✓ /api/payments/verify status:', verifyRes.status);
+        console.log('âœ“ /api/payments/verify status:', verifyRes.status);
         console.log('  Verification message:', verifyData.message);
         console.log('  New expiry:', verifyData.organization?.license_expires_at);
         if (!verifyData.success) {
@@ -111,7 +111,7 @@ async function testPaymentRoutes() {
             }
         });
         const historyData = await historyRes.json();
-        console.log('✓ /api/payments/history status:', historyRes.status);
+        console.log('âœ“ /api/payments/history status:', historyRes.status);
         console.log(`  Found ${historyData.payments?.length} payment history records`);
         if (!historyData.payments || historyData.payments.length === 0) {
             throw new Error('Expected at least 1 payment history item');

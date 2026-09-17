@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Prescriptions Domain Comprehensive Integration Test Suite
  * 
  * Validates:
@@ -83,7 +83,7 @@ async function runTests() {
     await prescriptionsController.searchDrugs(mockSearchReq, mockSearchRes, () => {});
     assert(searchResult && searchResult.results, 'Search must return results array');
     assert(searchResult.results.length > 0, 'Search for "amox" must return at least 1 drug');
-    console.log(`✓ Drug search returned ${searchResult.results.length} matches. First: "${searchResult.results[0].name}"`);
+    console.log(`âœ“ Drug search returned ${searchResult.results.length} matches. First: "${searchResult.results[0].name}"`);
 
     // TEST 2: Treating-Relationship Enforcement (Rejection)
     console.log('\n--- TEST 2: Treating Relationship Enforcement (Rejection without Appointment/Break-Glass) ---');
@@ -127,7 +127,7 @@ async function runTests() {
 
     assert(treatingRelError, 'Must reject doctor without treating relationship');
     assert(treatingRelError.statusCode === 403, `Expected HTTP 403, got ${treatingRelError.statusCode}`);
-    console.log(`✓ Non-treating doctor successfully rejected with HTTP 403: "${treatingRelError.message}"`);
+    console.log(`âœ“ Non-treating doctor successfully rejected with HTTP 403: "${treatingRelError.message}"`);
 
     // Now establish confirmed appointment between doctor and patient to satisfy treating relationship
     console.log('\n[Setup] Establishing confirmed clinical appointment between doctor and patient...');
@@ -138,7 +138,7 @@ async function runTests() {
             $1, $2, $3, $4, $5, CURRENT_DATE, '10:00:00', 'Confirmed', 'Clinical consultation'
         )
     `, [patient.id, doctor.id, patient.name, doctor.name, orgId]);
-    console.log('✓ Confirmed appointment created.');
+    console.log('âœ“ Confirmed appointment created.');
 
     // Ensure patient profile has Penicillin allergy and a known DOB (e.g. 1992-04-15)
     await db.query(`
@@ -166,9 +166,9 @@ async function runTests() {
     assert(allergyBlockStatus === 400, `Expected HTTP 400, got ${allergyBlockStatus}`);
     assert(allergyBlockRes && allergyBlockRes.requiresOverride === true, 'Response must indicate requiresOverride: true');
     assert(allergyBlockRes.allergyWarnings.length > 0, 'Must include allergy warnings');
-    console.log(`✓ Allergy hard block successfully triggered with HTTP 400`);
-    console.log(`✓ Alert message: "${allergyBlockRes.message}"`);
-    console.log(`✓ Warnings flagged: "${allergyBlockRes.allergyWarnings[0].allergyAlert}"`);
+    console.log(`âœ“ Allergy hard block successfully triggered with HTTP 400`);
+    console.log(`âœ“ Alert message: "${allergyBlockRes.message}"`);
+    console.log(`âœ“ Warnings flagged: "${allergyBlockRes.allergyWarnings[0].allergyAlert}"`);
 
     // TEST 4: Allergy Contraindication Success with Clinical Override Justification
     console.log('\n--- TEST 4: Issue Prescription with Clinical Allergy Override Justification ---');
@@ -197,9 +197,9 @@ async function runTests() {
     assert(createdRx.status === 'ISSUED', `Status must be ISSUED, got ${createdRx.status}`);
     assert(createdRx.qr_token && createdRx.qr_token.startsWith('rx_'), 'QR token must start with rx_');
     assert(createdRx.items.length === 2, `Expected 2 items, got ${createdRx.items.length}`);
-    console.log(`✓ Prescription issued with ID: ${createdRx.id}`);
-    console.log(`✓ QR Token generated: ${createdRx.qr_token}`);
-    console.log(`✓ Override justification recorded: "${mockOverrideReq.body.overrideJustification.slice(0, 50)}..."`);
+    console.log(`âœ“ Prescription issued with ID: ${createdRx.id}`);
+    console.log(`âœ“ QR Token generated: ${createdRx.qr_token}`);
+    console.log(`âœ“ Override justification recorded: "${mockOverrideReq.body.overrideJustification.slice(0, 50)}..."`);
 
     // TEST 5: Tiered QR Token Verification (Redacted vs Unlocked)
     console.log('\n--- TEST 5A: Public QR Verification - Anonymous Redacted Tier ---');
@@ -225,8 +225,8 @@ async function runTests() {
     assert(anonVerifyRes.items[0].medicationName.includes('Protected Clinical Medication'), 'Medication name must be masked in anonymous tier');
     assert(anonVerifyRes.items[0].dosage === '***', 'Dosage must be masked');
     assert(anonVerifyRes.instructions.includes('Protected clinical posology'), 'Instructions must be masked');
-    console.log(`✓ Anonymous tier correctly protects sensitive medications: "${anonVerifyRes.items[0].medicationName}"`);
-    console.log(`✓ Posology instructions protected: "${anonVerifyRes.instructions}"`);
+    console.log(`âœ“ Anonymous tier correctly protects sensitive medications: "${anonVerifyRes.items[0].medicationName}"`);
+    console.log(`âœ“ Posology instructions protected: "${anonVerifyRes.instructions}"`);
 
     console.log('\n--- TEST 5B: Public QR Verification - Unlocked Tier (Patient Birth Year Challenge) ---');
     const mockUnlockedVerifyReq = {
@@ -250,8 +250,8 @@ async function runTests() {
     assert(unlockedVerifyRes.items[0].dosage === '500mg', 'Real dosage must be visible after unlock');
     assert(unlockedVerifyRes.instructions.includes('Take medications with food'), 'Real instructions must be visible after unlock');
     assert(unlockedVerifyRes.overrideJustification, 'Clinical override justification must be visible after unlock');
-    console.log(`✓ Unlocked tier successfully discloses medication: "${unlockedVerifyRes.items[0].medicationName}" (${unlockedVerifyRes.items[0].dosage})`);
-    console.log(`✓ Override rationale disclosed: "${unlockedVerifyRes.overrideJustification}"`);
+    console.log(`âœ“ Unlocked tier successfully discloses medication: "${unlockedVerifyRes.items[0].medicationName}" (${unlockedVerifyRes.items[0].dosage})`);
+    console.log(`âœ“ Override rationale disclosed: "${unlockedVerifyRes.overrideJustification}"`);
 
     // TEST 6: Patient Role Rejection on Dispense
     console.log('\n--- TEST 6: Patient Role Rejection on Dispense (HTTP 403) ---');
@@ -271,7 +271,7 @@ async function runTests() {
 
     assert(patientDispenseError, 'Patient must be rejected from dispensing');
     assert(patientDispenseError.statusCode === 403, `Expected HTTP 403, got ${patientDispenseError.statusCode}`);
-    console.log(`✓ Patient role rejected from dispensing with HTTP 403: "${patientDispenseError.message}"`);
+    console.log(`âœ“ Patient role rejected from dispensing with HTTP 403: "${patientDispenseError.message}"`);
 
     // TEST 7: Patient Role Rejection on Cancel
     console.log('\n--- TEST 7: Patient Role Rejection on Cancel (HTTP 403) ---');
@@ -288,7 +288,7 @@ async function runTests() {
 
     assert(patientCancelError, 'Patient must be rejected from cancelling prescription');
     assert(patientCancelError.statusCode === 403, `Expected HTTP 403, got ${patientCancelError.statusCode}`);
-    console.log(`✓ Patient role rejected from cancelling with HTTP 403: "${patientCancelError.message}"`);
+    console.log(`âœ“ Patient role rejected from cancelling with HTTP 403: "${patientCancelError.message}"`);
 
     // TEST 8: Partial Dispensation (Authorized Pharmacist)
     console.log('\n--- TEST 8: Partial Dispensation by Authorized Pharmacist (10 of 21 Amox) ---');
@@ -314,8 +314,8 @@ async function runTests() {
     assert(partiallyFilledRx.status === 'PARTIALLY_FILLED', `Expected PARTIALLY_FILLED, got ${partiallyFilledRx.status}`);
     const updatedAmox = partiallyFilledRx.items.find(i => i.id === amoxItem.id);
     assert(updatedAmox.quantity_dispensed === 10, `Expected 10 dispensed, got ${updatedAmox.quantity_dispensed}`);
-    console.log(`✓ Status transitioned to: ${partiallyFilledRx.status}`);
-    console.log(`✓ Quantity dispensed: ${updatedAmox.quantity_dispensed} / ${updatedAmox.quantity_prescribed}`);
+    console.log(`âœ“ Status transitioned to: ${partiallyFilledRx.status}`);
+    console.log(`âœ“ Quantity dispensed: ${updatedAmox.quantity_dispensed} / ${updatedAmox.quantity_prescribed}`);
 
     // TEST 9: Over-dispense Prevention
     console.log('\n--- TEST 9: Over-dispense Prevention (Remaining is 11, trying to dispense 15) ---');
@@ -334,7 +334,7 @@ async function runTests() {
 
     assert(overDispenseError, 'Over-dispense must throw an error');
     assert(overDispenseError.statusCode === 409 || overDispenseError.statusCode === 400, `Expected 409 Conflict or 400 Bad Request, got ${overDispenseError.statusCode}`);
-    console.log(`✓ Over-dispense cleanly rejected: "${overDispenseError.message}"`);
+    console.log(`âœ“ Over-dispense cleanly rejected: "${overDispenseError.message}"`);
 
     // TEST 10: Complete Full Dispensation
     console.log('\n--- TEST 10: Complete Full Dispensation (Remaining 11 Amox + 6 Paracetamol) ---');
@@ -362,8 +362,8 @@ async function runTests() {
 
     const fullyFilledRx = fullDispenseResponse.prescription;
     assert(fullyFilledRx.status === 'FILLED', `Expected status FILLED, got ${fullyFilledRx.status}`);
-    console.log(`✓ Status transitioned to: ${fullyFilledRx.status}`);
-    console.log(`✓ All items completely fulfilled across ${fullyFilledRx.dispenseLogs.length} dispensation logs`);
+    console.log(`âœ“ Status transitioned to: ${fullyFilledRx.status}`);
+    console.log(`âœ“ All items completely fulfilled across ${fullyFilledRx.dispenseLogs.length} dispensation logs`);
 
     // TEST 11: Audit Logs Compliance Verification
     console.log('\n--- TEST 11: Centralized Audit Trail Verification in audit_logs ---');
@@ -378,11 +378,11 @@ async function runTests() {
 
     assert(auditEvents.length > 0, 'Must find prescription audit events in audit_logs');
     const eventTypes = auditEvents.map(e => e.event_type);
-    console.log(`✓ Total matched audit events in audit_logs: ${auditEvents.length}`);
-    console.log(`✓ Audit event types found: ${eventTypes.join(', ')}`);
+    console.log(`âœ“ Total matched audit events in audit_logs: ${auditEvents.length}`);
+    console.log(`âœ“ Audit event types found: ${eventTypes.join(', ')}`);
     assert(eventTypes.includes('prescription_issued') || eventTypes.includes('prescription_allergy_override'), 'Must record prescription_issued or override');
     assert(eventTypes.includes('prescription_dispensed'), 'Must record prescription_dispensed in audit_logs');
-    console.log(`✓ Verified tamper-evident audit trail entry: "${auditEvents[0].event_type}" - ${auditEvents[0].details.slice(0, 70)}...`);
+    console.log(`âœ“ Verified tamper-evident audit trail entry: "${auditEvents[0].event_type}" - ${auditEvents[0].details.slice(0, 70)}...`);
 
     // Clean up test records
     console.log('\n--- Cleaning up test records ---');
@@ -390,15 +390,15 @@ async function runTests() {
     await db.query("DELETE FROM prescription_items WHERE prescription_id = $1", [createdRx.id]);
     await db.query("DELETE FROM prescriptions WHERE id = $1", [createdRx.id]);
     await db.query("DELETE FROM appointments WHERE doctor_id = $1 AND patient_id = $2", [doctor.id, patient.id]);
-    console.log('✓ Test prescription and temporary appointment cleanly purged.');
+    console.log('âœ“ Test prescription and temporary appointment cleanly purged.');
 
     console.log('\n================================================================');
-    console.log('   🎉 ALL 11 PRESCRIPTION INTEGRATION TESTS PASSED WITH 100%   ');
+    console.log('   ðŸŽ‰ ALL 11 PRESCRIPTION INTEGRATION TESTS PASSED WITH 100%   ');
     console.log('================================================================');
     process.exit(0);
 }
 
 runTests().catch(err => {
-    console.error('❌ Test failed with error:', err);
+    console.error('âŒ Test failed with error:', err);
     process.exit(1);
 });

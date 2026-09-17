@@ -21,7 +21,7 @@ const {
     verifyAuthToken
 } = require('../utils/helpers');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'blockchain_health_secret_key_12345';
+const { JWT_SECRET } = require('../config');
 
 /**
  * Real-time phone number availability check
